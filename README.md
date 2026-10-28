@@ -92,9 +92,11 @@ the rooms.
 
 The **code** in this repository is MIT licensed — see [LICENSE](LICENSE).
 
-The **art** is not covered by that license. Every art pack keeps its own
-license, and those license files live in `assets/licenses/`. Please keep them,
-and keep the credit lines in `pet.json` and `scene.json` if you share a pack.
+The **art** in `assets/` is **not** covered by that license. Every art pack
+keeps its own license, and those license files live in `assets/licenses/`.
+Please keep them, and keep the credit lines in `pet.json` and `scene.json` if
+you share a pack. In particular the default Pug model is CC-BY 3.0, which
+requires that its credit line stay visible.
 
 ## Credits
 
