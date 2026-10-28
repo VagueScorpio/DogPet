@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "role": "walk",
+  "name": "Park Path",
+  "background": {
+    "type": "generated",
+    "style": "park",
+    "sky_top": "#f6c98a",
+    "sky_bottom": "#fde8c4",
+    "ground": "#6fb35d",
+    "path": "#d9c39a",
+    "ground_ratio": 0.4,
+    "scroll": true,
+    "scroll_speed_px": 60
+  },
+  "props": [],
+  "transition": "slide"
+}

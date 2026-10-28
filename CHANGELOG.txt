@@ -1,0 +1,84 @@
+DOGPET CHANGELOG
+================
+
+TABLE OF CONTENTS
+  v1.2 - GitHub repo and auto-save
+  v1.1 - Pug credit and license links
+  v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.2 - GitHub repo and auto-save
+------------------------------------------------------------
+
+What
+  - Added section 11 to CLAUDE.md: Git and GitHub.
+  - Added phase 0, in which Claude Code creates the public DogPet repo.
+  - Added .gitignore and .gitattributes.
+
+Why
+  - The owner wants Claude Code to create the repo and save work to
+    GitHub automatically.
+  - Public repo, with a commit and push after every working step.
+
+How
+  - Claude Code creates the repo with the GitHub CLI, connected GitHub
+    tools, or a repo the owner makes by hand, in that order.
+  - A commit and push after each working step. WIP commits if a session
+    stops mid-step.
+  - Each phase ends with a version bump and a git tag. Phase 6 ends with
+    a GitHub Release with the zip attached.
+  - .gitignore keeps saves, builds, logs and the Godot cache out of
+    the repo.
+  - The public README must carry the CC-BY credit for the Pug.
+
+
+------------------------------------------------------------
+v1.1 - Pug credit and license links
+------------------------------------------------------------
+
+What
+  - Set the Pug credit to: Pug by Smirnoff Alexander [CC-BY]
+    (https://creativecommons.org/licenses/by/3.0/) via Poly Pizza
+    (https://poly.pizza/m/3nFZQW8yojl)
+  - Added optional "license", "license_url" and "source_url" fields to
+    the pet and scene file format.
+  - Added assets/CREDITS.txt.
+  - Settings > About now shows clickable license and source links.
+  - Removed the sharing warning from assets/README.txt.
+
+Why
+  - The Pug model is CC-BY 3.0, which requires visible credit.
+  - The owner confirmed the DogPack and Cozy Pets licenses allow use in
+    personal and commercial projects.
+
+How
+  - Edited assets/pets/pug_3d/pet.json, assets/README.txt and CLAUDE.md
+    (sections 5.1, 8, 10 and 12).
+
+
+------------------------------------------------------------
+v1.0 - Starter kit and build blueprint
+------------------------------------------------------------
+
+What
+  - Added CLAUDE.md, the full build spec for Claude Code.
+  - Added the assets/ folder with three pet packs (pug_3d, pawsome_3d,
+    pug_pixel), four scene packs (home, eat, play, walk) and a UI pack.
+  - Added icons/app_icon.ico and icons/app_icon.png for the exe.
+  - Added .gdignore files in assets/ and saves/.
+
+Why
+  - The app loads all art from a loose assets/ folder so pets and rooms
+    can be swapped without rebuilding.
+  - pug_3d is the default pet.
+  - The .gdignore files stop Godot from importing the loose art, so the
+    editor behaves the same as the shipped app.
+
+How
+  - 3D models copied as-is. Both are static meshes with no rig or
+    animations, so the spec calls for procedural animation.
+  - 2D art copied from Nasha's Cozy Pets Pack and DogPack.
+  - Tray icons made from the DogPack pug (sprite 2). The alert icon adds
+    a red dot.
+  - The exe icon is the same pug scaled 8x with nearest-neighbor.

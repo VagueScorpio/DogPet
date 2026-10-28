@@ -1,0 +1,12 @@
+Allowed:
+- Use the assets in personal projects.
+- Use the assets in commercial projects (products, apps, games, services).
+- Modify, adapt, transform, or combine the assets with other materials for your projects.
+- Include the assets in a larger work (for example: as part of a game, website, or application) that you sell or distribute.
+Not allowed:
+- Sell, sublicense, or redistribute the assets as standalone files (original or modified).
+- Include the assets in an asset pack, stock library, or any product whose primary value is the assets themselves.
+- Offer the assets for direct download, extraction, or reuse by others in a way that allows them to obtain the raw assets without purchasing the larger work.
+- Claim the assets as your original work (you may claim your modifications, but not that you originally created the supplied asset if it was created by someone else).
+
+By using these assets, you agree to the terms above.

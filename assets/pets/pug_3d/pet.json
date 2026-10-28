@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "id": "pug_3d",
+  "name": "Pug",
+  "kind": "model3d",
+  "model": "model.glb",
+  "target_height": 1.0,
+  "rotation_y_degrees": -29,
+  "animations": {},
+  "credit": "Pug by Smirnoff Alexander [CC-BY] (https://creativecommons.org/licenses/by/3.0/) via Poly Pizza (https://poly.pizza/m/3nFZQW8yojl)",
+  "license": "CC-BY 3.0",
+  "license_url": "https://creativecommons.org/licenses/by/3.0/",
+  "source_url": "https://poly.pizza/m/3nFZQW8yojl",
+  "notes": "Static mesh, no rig, no animation clips. All motion is procedural. Tune rotation_y_degrees if the dog does not face the camera."
+}

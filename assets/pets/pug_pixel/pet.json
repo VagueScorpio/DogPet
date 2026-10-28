@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "id": "pug_pixel",
+  "name": "Pixel Pug",
+  "kind": "sprite2d",
+  "pixel_art": true,
+  "display_height_px": 160,
+  "faces": "right",
+  "animations": {
+    "idle": {
+      "file": "idle.png",
+      "frames": 1,
+      "fps": 1
+    },
+    "walk": {
+      "file": "walk.png",
+      "frames": 4,
+      "fps": 6
+    }
+  },
+  "credit": "Nasha's Cozy Pets Pack",
+  "notes": "Only idle and walk exist. Missing states (eat, play, sad, happy) fall back to idle plus procedural motion."
+}

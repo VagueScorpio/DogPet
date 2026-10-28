@@ -1,0 +1,18 @@
+DOGPET ART CREDITS
+==================
+
+Pug (default 3D pet, pets/pug_3d/)
+  Pug by Smirnoff Alexander [CC-BY]
+  (https://creativecommons.org/licenses/by/3.0/)
+  via Poly Pizza (https://poly.pizza/m/3nFZQW8yojl)
+
+Pawsome (pets/pawsome_3d/)
+  Pawsome by Orlando Perez
+
+Pixel Pug, rooms, props and icons (pets/pug_pixel/, scenes/, ui/)
+  Nasha's Cozy Pets Pack
+  License: licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt
+
+Tray icons (ui/tray_icon.png, ui/tray_icon_alert.png) and exe icon
+  DogPack
+  License: licenses/DogPack_LICENSE.txt

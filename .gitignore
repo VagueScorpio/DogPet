@@ -1,0 +1,23 @@
+# Godot cache and imports (rebuilt automatically)
+.godot/
+*.import.tmp
+
+# Build output
+build/
+
+# Player saves and logs (keep the folder marker only)
+saves/*
+!saves/.gdignore
+*.log
+
+# Asset import backups made by the app
+assets/_backup/
+
+# Temp files
+*.tmp
+*.bak
+
+# OS clutter
+Thumbs.db
+desktop.ini
+.DS_Store

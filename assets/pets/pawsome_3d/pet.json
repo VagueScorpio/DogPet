@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "id": "pawsome_3d",
+  "name": "Pawsome",
+  "kind": "model3d",
+  "model": "model.glb",
+  "target_height": 1.0,
+  "rotation_y_degrees": 0,
+  "animations": {},
+  "credit": "Pawsome by Orlando Perez",
+  "notes": "Static mesh, no rig, no animation clips. All motion is procedural."
+}

@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "tray_icon": "tray_icon.png",
+  "tray_icon_alert": "tray_icon_alert.png",
+  "icons": {
+    "hunger": "icon_hunger.png",
+    "happiness": "icon_happiness.png",
+    "energy": "icon_energy.png"
+  },
+  "buttons": {
+    "feed": "button_feed.png",
+    "play": "button_play.png",
+    "walk": "button_walk.png"
+  },
+  "icon_scale": 3
+}
