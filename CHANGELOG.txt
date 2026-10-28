@@ -2,9 +2,41 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.3 - Phase 0: public GitHub repo created
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.3 - Phase 0: public GitHub repo created
+------------------------------------------------------------
+
+What
+  - Ran git init -b main in the project root.
+  - Added README.md, the repo front page.
+  - Added an MIT LICENSE for the code, at the owner's request.
+  - Created the public repo https://github.com/VagueScorpio/DogPet and
+    pushed main.
+  - Tagged v1.3.
+
+Why
+  - Phase 0 of the build plan. The work is on GitHub from the start, so
+    every later phase can commit and push as it goes and nothing is lost.
+  - The owner chose MIT for the code. The art is not MIT: each pack keeps
+    its own license, so the LICENSE file and the README both say so.
+
+How
+  - git init, then gh repo create DogPet --public --source . --push.
+  - The first commit is "Phase 0: starter kit v1.2": the blueprint, the
+    loose assets/ folder, the exe icons and this changelog.
+  - .gitignore keeps saves/, build/, .godot/ and logs out. git status was
+    checked before committing; only saves/.gdignore went in.
+  - README.md carries the CC-BY credit for the default Pug, as the
+    license requires, plus the credits for all four art packs.
+  - There is no project.godot yet, so the version lives only here for
+    now. Phase 1 creates project.godot with
+    application/config/version set to the then-current version.
 
 
 ------------------------------------------------------------
