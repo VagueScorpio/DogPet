@@ -5,6 +5,13 @@ extends SceneTree
 ##
 ##   godot --headless --path . --script res://tests/test_needs.gd
 ##
+## On a fresh clone, run this once first so Godot builds its caches:
+##
+##   godot --headless --path . --import
+##
+## Without it the tests still pass, but the autoloads - which load
+## alongside and do use class names - print parse errors on the way past.
+##
 ## Prints PASS or FAIL for every check, then exits 0 only if everything
 ## passed, so a build script can rely on the exit code.
 ##

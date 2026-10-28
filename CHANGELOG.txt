@@ -2,10 +2,68 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.4 - Phase 1: skeleton, needs, saves and the debug screen
   v1.3 - Phase 0: public GitHub repo created
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.4 - Phase 1: skeleton, needs, saves and the debug screen
+------------------------------------------------------------
+
+What
+  - Added project.godot: Compatibility renderer, 540x760 window with a
+    420x600 minimum, canvas_items stretch, nearest-neighbour texture
+    filtering, and four autoloads.
+  - Added the autoloads Paths, Log, Settings and Needs.
+  - Added the pure logic classes NeedsModel, CareSettings and SaveFile.
+  - Added Main.tscn, NeedsBar.tscn and AwayCard.tscn with their scripts:
+    the three bars, their countdowns, the care-interval picker, the Demo
+    Speed toggle, instant care buttons and the "While you were away" card.
+  - Added tests/test_needs.gd: 129 checks, all passing.
+  - Bumped the version to 1.4 and ticked phase 1 in README.md.
+
+Why
+  - Phase 1 of the build plan: the plumbing under the pet, before there is
+    a pet. Needs that tick in real time, save to disk, and catch up on the
+    time the app was closed.
+  - The maths is split away from the nodes so it can be tested headlessly,
+    which is what section 6.6 asks for. Settings got the same treatment:
+    the data and lookups live in CareSettings, apart from the autoload,
+    because a --script run cannot reach an autoload at all.
+
+How
+  - Drain is linear at 100 / interval per second, clamped at the bad end.
+    The dog never dies or runs away; it stays sad until cared for.
+  - Saves are written to pet.json.tmp and moved into place, keeping the
+    file they replace as pet.json.bak. A pet.json that will not parse
+    falls back to the backup.
+  - Catch-up always uses the real care setting, never Demo Speed, so a
+    demo session cannot max every bar the moment the app reopens.
+  - Paths tests that it can really write a file in saves/, not just that
+    the folder exists, and falls back to the Windows user data folder if
+    not, with a notice on screen saying where saves went.
+
+Fixed
+  - A need that drained to exactly 70% of its interval read as Fine
+    rather than Getting low. 100/10800*7560 is 69.99999, so it sat a hair
+    under the threshold and its warning would never have fired. The
+    warning check now has the floating-point slack the critical check
+    already had. Caught by the tests.
+  - The away card sat on the default panel, which is translucent, so the
+    screen behind showed through its own text.
+  - A progress bar fill with rounded corners still draws a sliver at
+    value 0, so an empty bar looked very slightly full.
+  - The Demo Speed toggle only knew about clicks on itself, so a change
+    made anywhere else left it showing the old state.
+
+Known
+  - The care buttons apply their effects instantly. The animations, the
+    rooms and the action timings arrive in phase 3.
+  - The need icons from assets/ui/ are not drawn yet; the asset loader is
+    phase 2. The bars use text labels in the meantime.
 
 
 ------------------------------------------------------------
