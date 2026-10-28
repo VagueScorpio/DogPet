@@ -1,0 +1,57 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/needs_bar.gd" id="1_needsbar"]
+
+[node name="NeedsBar" type="VBoxContainer"]
+theme_override_constants/separation = 2
+script = ExtResource("1_needsbar")
+
+[node name="TopRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="TopRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Need"
+
+[node name="TopSpacer" type="Control" parent="TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusLabel" type="Label" parent="TopRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Fine"
+horizontal_alignment = 2
+
+[node name="Bar" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+max_value = 100.0
+value = 50.0
+show_percentage = false
+
+[node name="BottomRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="CountdownLabel" type="Label" parent="BottomRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_font_sizes/font_size = 12
+text = "needs care in ~1h"
+
+[node name="BottomSpacer" type="Control" parent="BottomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HintLabel" type="Label" parent="BottomRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.45)
+theme_override_font_sizes/font_size = 12
+text = "full bar = bad"
+horizontal_alignment = 2

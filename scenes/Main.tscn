@@ -1,0 +1,182 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.11, 0.14, 1)
+
+[node name="Layout" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="Column" type="VBoxContainer" parent="Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderRow" type="HBoxContainer" parent="Layout/Column"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Layout/Column/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "DogPet"
+
+[node name="HeaderSpacer" type="Control" parent="Layout/Column/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DemoBadge" type="Label" parent="Layout/Column/HeaderRow"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.99, 0.83, 0.3, 1)
+theme_override_font_sizes/font_size = 14
+text = "DEMO SPEED"
+vertical_alignment = 1
+
+[node name="NoticePanel" type="PanelContainer" parent="Layout/Column"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="NoticePad" type="MarginContainer" parent="Layout/Column/NoticePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="NoticeRow" type="HBoxContainer" parent="Layout/Column/NoticePanel/NoticePad"]
+layout_mode = 2
+
+[node name="NoticeLabel" type="Label" parent="Layout/Column/NoticePanel/NoticePad/NoticeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.99, 0.83, 0.3, 1)
+theme_override_font_sizes/font_size = 12
+text = "Notice"
+autowrap_mode = 3
+
+[node name="NoticeDismiss" type="Button" parent="Layout/Column/NoticePanel/NoticePad/NoticeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "OK"
+
+[node name="Bars" type="VBoxContainer" parent="Layout/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PetArea" type="PanelContainer" parent="Layout/Column"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PetPlaceholder" type="Label" parent="Layout/Column/PetArea"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.35)
+text = "the dog arrives in phase 2"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ReactionLabel" type="Label" parent="Layout/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Biscuit is doing just fine."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ActionLabel" type="Label" parent="Layout/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.45)
+theme_override_font_sizes/font_size = 12
+text = "Care actions - instant for now; the animations and rooms come in phase 3."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ActionRow" type="HBoxContainer" parent="Layout/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FeedButton" type="Button" parent="Layout/Column/ActionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Feed"
+
+[node name="PlayButton" type="Button" parent="Layout/Column/ActionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Play"
+
+[node name="WalkButton" type="Button" parent="Layout/Column/ActionRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Walk"
+
+[node name="DebugRow" type="HBoxContainer" parent="Layout/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DemoToggle" type="CheckButton" parent="Layout/Column/DebugRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Demo Speed"
+
+[node name="DebugSpacer" type="Control" parent="Layout/Column/DebugRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="IntervalPicker" type="OptionButton" parent="Layout/Column/DebugRow"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ResetButton" type="Button" parent="Layout/Column/DebugRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Reset"
+
+[node name="FooterLabel" type="Label" parent="Layout/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.35)
+theme_override_font_sizes/font_size = 11
+text = "v0.0"
+autowrap_mode = 3
+
+[node name="AwayCard" parent="." instance=ExtResource("2_awaycard")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
