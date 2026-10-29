@@ -61,8 +61,14 @@ Write-Host "    $version"
 
 # The templates are a separate download and are the usual reason a first
 # build fails, so say so plainly rather than letting Godot's error through.
+# Godot makes this folder whether or not anything is in it, so look for an
+# actual template rather than just the folder.
 $templateRoot = Join-Path $env:APPDATA "Godot\export_templates"
-if (-not (Test-Path $templateRoot)) {
+$haveTemplate = $false
+if (Test-Path $templateRoot) {
+    $haveTemplate = @(Get-ChildItem -Path $templateRoot -Recurse -File -Filter "windows_release_x86_64.exe" -ErrorAction SilentlyContinue).Count -gt 0
+}
+if (-not $haveTemplate) {
     Fail @"
 No Godot export templates are installed, so there is nothing to build an
 .exe from. In the Godot editor:
@@ -92,14 +98,31 @@ $ZipPath   = Join-Path $BuildRoot "$StageName.zip"
 if (-not $SkipTests) {
     Write-Step "Running the tests"
     $suites = @("test_needs", "test_pets", "test_scenes", "test_notify", "test_packs")
-    foreach ($suite in $suites) {
-        $output = & $GodotExe --headless --path $ProjectRoot --script "res://tests/$suite.gd" 2>&1
-        $summary = $output | Select-String -Pattern '^\d+ passed, \d+ failed$' | Select-Object -Last 1
-        if ($LASTEXITCODE -ne 0) {
-            $output | Select-String -Pattern "FAIL" | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
-            Fail "$suite failed."
+
+    # Capturing a native program's stderr in Windows PowerShell wraps every
+    # line as an error, and with ErrorActionPreference Stop that aborts the
+    # build. The tests deliberately provoke engine errors - test_needs feeds
+    # a corrupt file to the JSON parser on purpose - so those lines are
+    # expected output, not failures. The exit code is what decides.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        foreach ($suite in $suites) {
+            $output = & $GodotExe --headless --path $ProjectRoot --script "res://tests/$suite.gd" 2>&1
+            $exitCode = $LASTEXITCODE
+            $summary = $output | Select-String -Pattern '^\d+ passed, \d+ failed$' | Select-Object -Last 1
+            if ($exitCode -ne 0) {
+                $output | Select-String -Pattern "^  FAIL" | ForEach-Object {
+                    Write-Host "    $_" -ForegroundColor Red
+                }
+                $ErrorActionPreference = $previous
+                Fail "$suite failed."
+            }
+            Write-Host ("    {0,-14} {1}" -f $suite, $summary)
         }
-        Write-Host ("    {0,-14} {1}" -f $suite, $summary)
+    }
+    finally {
+        $ErrorActionPreference = $previous
     }
 }
 
