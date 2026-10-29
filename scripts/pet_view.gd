@@ -173,9 +173,12 @@ func _apply_pose_3d(pose: PetPose) -> void:
 	var unit: float = _pack.target_height
 	_pivot.position = Vector3(pose.offset.x * unit, pose.offset.y * unit, 0.0)
 	_pivot.scale = Vector3(pose.scale.x, pose.scale.y, pose.scale.x)
+	# Only yaw turns a 3D dog. pose.facing is a sprite instruction - mirror
+	# yourself - and a model cannot mirror, it can only turn, which at 180
+	# degrees means showing the camera its backside.
 	_pivot.rotation_degrees = Vector3(
 		pose.pitch_degrees,
-		pose.yaw_degrees + (0.0 if pose.facing >= 0.0 else 180.0),
+		pose.yaw_degrees,
 		pose.roll_degrees
 	)
 	# Tinting the whole rendered viewport is the cheapest way to take the

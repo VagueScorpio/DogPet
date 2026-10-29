@@ -1,0 +1,48 @@
+{
+  "format_version": 1,
+  "role": "play",
+  "name": "Back Yard",
+  "background": {
+    "type": "generated",
+    "style": "yard",
+    "sky_top": "#8ec9f0",
+    "sky_bottom": "#d6efff",
+    "ground": "#7cc36a",
+    "ground_ratio": 0.42
+  },
+  "props": [
+    {
+      "file": "small_dog_agility_jump_hurdle.png",
+      "x": 0.2,
+      "y": 0.7,
+      "scale": 3
+    },
+    {
+      "file": "knotted_rope_tug_toy.png",
+      "x": 0.82,
+      "y": 0.88,
+      "scale": 3
+    },
+    {
+      "file": "squeaky_bone_toy.png",
+      "x": 0.12,
+      "y": 0.9,
+      "scale": 3
+    },
+    {
+      "file": "tennis_ball.png",
+      "x": 0.74,
+      "y": 0.8,
+      "scale": 3,
+      "role": "toy"
+    },
+    {
+      "file": "red_frisbee.png",
+      "x": 0.4,
+      "y": 0.92,
+      "scale": 3,
+      "role": "toy_alt"
+    }
+  ],
+  "transition": "fade"
+}

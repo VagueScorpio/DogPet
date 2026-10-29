@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "role": "eat",
+  "name": "Kitchen",
+  "background": {
+    "type": "tiled",
+    "wall": "wall.png",
+    "floor": "floor.png",
+    "floor_ratio": 0.38,
+    "tile_scale": 4
+  },
+  "props": [
+    {
+      "file": "wall_shelf_with_pet_treat_jars.png",
+      "x": 0.5,
+      "y": 0.25,
+      "scale": 3
+    },
+    {
+      "file": "big_bag_of_dog_food_with_a_bone_picture.png",
+      "x": 0.15,
+      "y": 0.72,
+      "scale": 3
+    },
+    {
+      "file": "raised_wooden_pet_feeding_station_with_two_bowls.png",
+      "x": 0.78,
+      "y": 0.78,
+      "scale": 3,
+      "role": "food_bowl"
+    },
+    {
+      "file": "bowl_of_dry_kibble.png",
+      "x": 0.3,
+      "y": 0.95,
+      "scale": 3,
+      "role": "food_bowl_alt"
+    }
+  ],
+  "transition": "fade"
+}

@@ -116,6 +116,23 @@ func live_interval_for(key: StringName) -> float:
 	return float(live_intervals().get(key, 0.0))
 
 
+## Which room the owner picked for a slot, or "" for the first one found.
+func room_for(role: String) -> String:
+	var rooms: Dictionary = data.get("rooms", {})
+	return str(rooms.get(role, ""))
+
+
+func set_room(role: String, id: String) -> void:
+	var rooms: Dictionary = data.get("rooms", {})
+	if str(rooms.get(role, "")) == id:
+		return
+	rooms[role] = id
+	data["rooms"] = rooms
+	_save()
+	Log.info("Room for %s set to %s" % [role, id])
+	changed.emit("rooms")
+
+
 func action_effects() -> Dictionary:
 	return data.get("action_effects", {})
 

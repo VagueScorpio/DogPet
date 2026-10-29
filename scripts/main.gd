@@ -26,6 +26,12 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _pet_picker: OptionButton = %PetPicker
 @onready var _state_picker: OptionButton = %StatePicker
 @onready var _pet_view: Control = %PetView
+@onready var _pet_area: PanelContainer = %PetArea
+@onready var _role_picker: OptionButton = %RolePicker
+@onready var _room_picker: OptionButton = %RoomPicker
+
+var _stage: SceneStage = null
+var _runner: ActionRunner = null
 @onready var _footer_label: Label = %FooterLabel
 @onready var _away_card: Control = %AwayCard
 
@@ -33,10 +39,13 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 func _ready() -> void:
 	get_window().min_size = MIN_WINDOW_SIZE
 
+	_build_stage()
 	_build_bars()
 	_fill_interval_picker()
 	_fill_pet_picker()
 	_fill_state_picker()
+	_fill_role_picker()
+	_fill_room_picker()
 	_connect_controls()
 	_refresh_window_title()
 	_refresh_demo_badge()
@@ -47,13 +56,10 @@ func _ready() -> void:
 	Needs.pet_name_changed.connect(_on_pet_name_changed)
 	AssetLibrary.library_reloaded.connect(_fill_pet_picker)
 	AssetLibrary.pet_changed.connect(_on_pet_changed)
+	AssetLibrary.scene_changed.connect(_on_scene_changed)
 
 	# The autoloads all finish before this scene exists, so there was nobody
 	# listening when the catch-up happened. Needs held the summary for us.
-	var summary: Dictionary = Needs.take_away_summary()
-	if not summary.is_empty():
-		_away_card.show_summary(summary, Needs.pet_name)
-
 
 func _process(_delta: float) -> void:
 	var line: String = Needs.reaction_line()
@@ -111,6 +117,8 @@ func _connect_controls() -> void:
 	_reset_button.pressed.connect(Needs.reset_to_cared)
 	_pet_picker.item_selected.connect(_on_pet_selected)
 	_state_picker.item_selected.connect(_on_state_selected)
+	_role_picker.item_selected.connect(_on_role_selected)
+	_room_picker.item_selected.connect(_on_room_selected)
 	_reset_button.tooltip_text = "Put all three needs back to fully cared for."
 	_notice_dismiss.pressed.connect(_notice_panel.hide)
 
@@ -118,7 +126,90 @@ func _connect_controls() -> void:
 # --- Reacting to changes -------------------------------------------------
 
 func _on_action_pressed(action: StringName) -> void:
-	Needs.apply_action(action)
+	_runner.run(action)
+
+
+# The room goes underneath the dog, inside the same panel, so the dog
+# stands in front of whatever room is showing.
+func _build_stage() -> void:
+	_stage = SceneStage.new()
+	_pet_area.add_child(_stage)
+	_pet_area.move_child(_stage, 0)
+
+	_runner = ActionRunner.new()
+	_runner.name = "ActionRunner"
+	add_child(_runner)
+	_runner.setup(_stage, _pet_view)
+	_runner.started.connect(_on_action_started)
+	_runner.finished.connect(_on_action_finished)
+
+
+# While an action is running the buttons are locked, so nothing can be
+# started twice or interrupted halfway through.
+func _on_action_started(_action: StringName) -> void:
+	_set_actions_enabled(false)
+
+
+func _on_action_finished(_action: StringName) -> void:
+	_set_actions_enabled(true)
+	_fill_role_picker()
+	_fill_room_picker()
+
+
+func _set_actions_enabled(enabled: bool) -> void:
+	for button in [_feed_button, _play_button, _walk_button]:
+		button.disabled = not enabled
+	_state_picker.disabled = not enabled
+	_role_picker.disabled = not enabled
+	_reset_button.disabled = not enabled
+
+
+# Which of the four slots to look at, without running an action for it.
+func _fill_role_picker() -> void:
+	_role_picker.clear()
+	for index in ScenePack.ROLES.size():
+		var role: String = ScenePack.ROLES[index]
+		_role_picker.add_item("Show: " + role.capitalize())
+		if _stage != null and _stage.current_role == role:
+			_role_picker.select(index)
+
+
+# Every room offering itself for the slot being shown.
+func _fill_room_picker() -> void:
+	_room_picker.clear()
+	var role: String = _stage.current_role if _stage != null else ScenePack.HOME
+	var rooms: Array[ScenePack] = AssetLibrary.scenes_for(role)
+	var active: ScenePack = AssetLibrary.active_scene(role)
+	for index in rooms.size():
+		_room_picker.add_item(rooms[index].display_name)
+		if active != null and rooms[index].id == active.id:
+			_room_picker.select(index)
+	_room_picker.disabled = rooms.size() < 2
+	if rooms.size() < 2 and rooms.size() == 1:
+		_room_picker.tooltip_text = "Add another folder under assets/scenes to get a choice here."
+
+
+func _on_role_selected(index: int) -> void:
+	if index < 0 or index >= ScenePack.ROLES.size() or _stage == null:
+		return
+	var role: String = ScenePack.ROLES[index]
+	_stage.show_role(role)
+	var room: ScenePack = AssetLibrary.active_scene(role)
+	if room != null:
+		_pet_view.set_pet_spot(room.pet_spot)
+	_fill_room_picker()
+
+
+func _on_room_selected(index: int) -> void:
+	var role: String = _stage.current_role if _stage != null else ScenePack.HOME
+	var rooms: Array[ScenePack] = AssetLibrary.scenes_for(role)
+	if index < 0 or index >= rooms.size():
+		return
+	AssetLibrary.set_active_scene(role, rooms[index].id)
+
+
+func _on_scene_changed(_role: String, _pack: ScenePack) -> void:
+	_fill_room_picker()
 
 
 # Every valid pet pack the loader found, so switching bodies can be tried
@@ -198,11 +289,11 @@ func _refresh_demo_badge() -> void:
 
 
 func _refresh_footer() -> void:
-	_footer_label.text = "v%s    saves: %s    assets: %s" % [
-		Log.app_version(),
-		Paths.saves_dir,
-		Paths.assets_dir,
-	]
+	# Kept to one line so it cannot wrap and push the window out of shape.
+	# The full paths are in the tooltip, and in Settings > About later.
+	_footer_label.text = "v%s    saves and assets are beside the app" % Log.app_version()
+	_footer_label.tooltip_text = "saves: %s
+assets: %s" % [Paths.saves_dir, Paths.assets_dir]
 
 
 # Anything Paths had to say at startup: saves moved because the app folder

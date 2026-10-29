@@ -138,8 +138,10 @@ static func _play(time: float) -> PetPose:
 		pose.pitch_degrees = -4.0
 		pose.roll_degrees = 3.0 * sin(time * TAU * 1.5)
 
-	# Turning back and forth after the toy.
+	# Turning back and forth after the toy. A 3D dog angles itself; a sprite
+	# mirrors. Both are said here, and PetView uses whichever it can.
 	pose.facing = 1.0 if sin(time * TAU / pounce_cycle) >= 0.0 else -1.0
+	pose.yaw_degrees = 50.0 * pose.facing
 	return pose
 
 
@@ -164,6 +166,7 @@ static func _restless(time: float, variation: float) -> PetPose:
 	pose.offset.y = 0.05 * absf(sin(time * TAU * 5.0))
 	# Face the way it is actually travelling.
 	pose.facing = 1.0 if cos(time * TAU / pace_cycle) >= 0.0 else -1.0
+	pose.yaw_degrees = 60.0 * pose.facing
 
 	# Every five seconds or so, a spin. The variation shifts when it lands,
 	# so two restless dogs are not in lockstep.
@@ -171,7 +174,7 @@ static func _restless(time: float, variation: float) -> PetPose:
 	var zoomie_phase: float = fmod(time + variation * zoomie_cycle, zoomie_cycle) / zoomie_cycle
 	if zoomie_phase > 0.88:
 		var spin: float = (zoomie_phase - 0.88) / 0.12
-		pose.yaw_degrees = 360.0 * smoothstep(0.0, 1.0, spin)
+		pose.yaw_degrees += 360.0 * smoothstep(0.0, 1.0, spin)
 	return pose
 
 

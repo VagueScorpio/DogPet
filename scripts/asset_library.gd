@@ -11,10 +11,13 @@ extends Node
 ## app must never come up with no dog at all.
 
 signal pet_changed(pack: PetPack)
+signal scene_changed(role: String, pack: ScenePack)
 signal library_reloaded()
 
 const PETS_SUBDIR := "pets"
+const SCENES_SUBDIR := "scenes"
 const BUILTIN_PETS_DIR := "res://builtin/pets"
+const BUILTIN_SCENES_DIR := "res://builtin/scenes"
 
 ## Every pack good enough to show, in folder order.
 var pets: Array[PetPack] = []
@@ -23,8 +26,16 @@ var pets: Array[PetPack] = []
 ## the built-in pack is missing.
 var active_pet: PetPack = null
 
-## True when we fell back to the pack inside the exe.
+## Every usable room, grouped by the role it fills. A role can have
+## several rooms to choose between; the owner picks in Settings.
+var scenes_by_role: Dictionary = {}
+
+## The room showing in each role right now.
+var active_scenes: Dictionary = {}
+
+## True when we fell back to the art inside the exe.
 var using_builtin: bool = false
+var using_builtin_scenes: bool = false
 
 
 func _ready() -> void:
@@ -57,9 +68,115 @@ func reload() -> void:
 		", ".join(pet_ids()),
 	])
 
+	_scan_scenes()
+
 	library_reloaded.emit()
 	_activate(_find(wanted), false)
+	_activate_scenes()
 
+
+# --- Rooms ---------------------------------------------------------------
+
+func _scan_scenes() -> void:
+	scenes_by_role = _group_by_role(_scan_scene_dir(Paths.assets_subdir(SCENES_SUBDIR)))
+	using_builtin_scenes = scenes_by_role.is_empty()
+	if using_builtin_scenes:
+		Log.warn("No usable rooms in assets/scenes; falling back to the built-in rooms.")
+		scenes_by_role = _group_by_role(_scan_scene_dir(BUILTIN_SCENES_DIR))
+
+	for role in ScenePack.ROLES:
+		var rooms: Array = scenes_by_role.get(role, [])
+		if rooms.is_empty():
+			Log.warn("No room for the \"%s\" slot." % role)
+		else:
+			Log.info("Rooms for %s: %d (%s)" % [role, rooms.size(), ", ".join(_ids(rooms))])
+
+
+func _scan_scene_dir(folder: String) -> Array[ScenePack]:
+	var found: Array[ScenePack] = []
+	if not DirAccess.dir_exists_absolute(folder):
+		return found
+	for sub in DirAccess.get_directories_at(folder):
+		var room_dir: String = folder.path_join(sub)
+		if not FileAccess.file_exists(room_dir.path_join(ScenePack.SCENE_JSON)):
+			continue
+		var pack: ScenePack = ScenePack.load_from_dir(room_dir)
+		for problem in pack.problems:
+			Log.warn("Room \"%s\": %s" % [pack.id, problem])
+		if pack.is_usable():
+			found.append(pack)
+		else:
+			Log.warn("Skipping the room \"%s\"; it fills no known slot." % pack.id)
+	return found
+
+
+# Rooms declare which slot they fill, so the folder can be called anything
+# and two rooms can offer themselves for the same slot.
+func _group_by_role(rooms: Array[ScenePack]) -> Dictionary:
+	var grouped: Dictionary = {}
+	for pack in rooms:
+		if not grouped.has(pack.role):
+			grouped[pack.role] = [] as Array[ScenePack]
+		grouped[pack.role].append(pack)
+	return grouped
+
+
+## Every room offering itself for a slot.
+func scenes_for(role: String) -> Array[ScenePack]:
+	var rooms: Array = scenes_by_role.get(role, [])
+	var typed: Array[ScenePack] = []
+	for pack in rooms:
+		typed.append(pack)
+	return typed
+
+
+## The room showing in a slot, or null if there is none at all.
+func active_scene(role: String) -> ScenePack:
+	return active_scenes.get(role, null)
+
+
+## Switch a slot to another room and remember the choice.
+func set_active_scene(role: String, id: String) -> void:
+	for pack in scenes_for(role):
+		if pack.id != id:
+			continue
+		if active_scenes.get(role, null) == pack:
+			return
+		active_scenes[role] = pack
+		Settings.set_room(role, id)
+		Log.info("Room for %s is now %s" % [role, pack.display_name])
+		scene_changed.emit(role, pack)
+		return
+	Log.warn("No room called \"%s\" for the %s slot." % [id, role])
+
+
+# Pick up each slot's saved choice, falling back to the first room found.
+func _activate_scenes() -> void:
+	for role in ScenePack.ROLES:
+		var rooms: Array[ScenePack] = scenes_for(role)
+		if rooms.is_empty():
+			active_scenes.erase(role)
+			continue
+		var wanted: String = Settings.room_for(role)
+		var chosen: ScenePack = rooms[0]
+		for pack in rooms:
+			if pack.id == wanted:
+				chosen = pack
+				break
+		if not wanted.is_empty() and chosen.id != wanted:
+			Log.info("The saved room \"%s\" is gone; using %s instead." % [wanted, chosen.id])
+		active_scenes[role] = chosen
+		scene_changed.emit(role, chosen)
+
+
+static func _ids(rooms: Array) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for pack in rooms:
+		out.append(pack.id)
+	return out
+
+
+# --- Pets ----------------------------------------------------------------
 
 func pet_ids() -> PackedStringArray:
 	var ids: PackedStringArray = []
@@ -90,6 +207,11 @@ func credit_lines() -> PackedStringArray:
 		if pack == active_pet or pack.credit.is_empty():
 			continue
 		if not lines.has(pack.credit):
+			lines.append(pack.credit)
+	for role in ScenePack.ROLES:
+		for pack in scenes_for(role):
+			if pack.credit.is_empty() or lines.has(pack.credit):
+				continue
 			lines.append(pack.credit)
 	return lines
 

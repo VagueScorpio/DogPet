@@ -95,6 +95,9 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="PetArea" type="PanelContainer" parent="Layout/Column"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(0, 190)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -107,14 +110,6 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Biscuit is doing just fine."
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="ActionLabel" type="Label" parent="Layout/Column"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.45)
-theme_override_font_sizes/font_size = 12
-text = "Care actions - instant for now; the animations and rooms come in phase 3."
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -179,13 +174,27 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="DebugRow3" type="HBoxContainer" parent="Layout/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RolePicker" type="OptionButton" parent="Layout/Column/DebugRow3"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RoomPicker" type="OptionButton" parent="Layout/Column/DebugRow3"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="FooterLabel" type="Label" parent="Layout/Column"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.35)
 theme_override_font_sizes/font_size = 11
 text = "v0.0"
-autowrap_mode = 3
+clip_text = true
 
 [node name="AwayCard" parent="." instance=ExtResource("2_awaycard")]
 unique_name_in_owner = true

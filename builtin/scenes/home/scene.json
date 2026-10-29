@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "role": "home",
+  "name": "Living Room",
+  "background": {
+    "type": "tiled",
+    "wall": "wall.png",
+    "floor": "floor.png",
+    "floor_ratio": 0.38,
+    "tile_scale": 4
+  },
+  "props": [
+    {
+      "file": "framed_painting_of_a_dog.png",
+      "x": 0.25,
+      "y": 0.28,
+      "scale": 3
+    },
+    {
+      "file": "paw_print_wall_sign.png",
+      "x": 0.75,
+      "y": 0.3,
+      "scale": 3
+    },
+    {
+      "file": "wooden_dog_crate_with_a_soft_blanket.png",
+      "x": 0.18,
+      "y": 0.7,
+      "scale": 3
+    },
+    {
+      "file": "round_pet_cushion_with_paw_prints.png",
+      "x": 0.8,
+      "y": 0.8,
+      "scale": 3
+    }
+  ],
+  "transition": "fade"
+}

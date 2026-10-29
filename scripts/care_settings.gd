@@ -59,6 +59,9 @@ const DEFAULTS := {
 		LONG: 120.0,
 		DEMO: 1.0,
 	},
+	# Which room is showing in each of the four slots. Empty means "the
+	# first one found", which is what a fresh install gets.
+	"rooms": {"home": "", "eat": "", "play": "", "walk": ""},
 	"close_button": "tray",  # "tray" or "quit"
 	"start_minimized": false,
 	"notifications_enabled": true,
