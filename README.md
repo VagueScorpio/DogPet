@@ -36,7 +36,7 @@ Under construction, built in phases. See `CHANGELOG.txt` for what is done.
 |---|---|---|
 | 0 | Repo | ✅ |
 | 1 | Skeleton + needs | ✅ |
-| 2 | Pets | ⬜ |
+| 2 | Pets | ✅ |
 | 3 | Scenes + actions | ⬜ |
 | 4 | Tray + notifications | ⬜ |
 | 5 | Settings + asset tools | ⬜ |
@@ -75,12 +75,18 @@ Before your first export, in the Godot editor go to
 
 ## Run the tests
 
-The needs math is pure and headless-testable - 129 checks covering the drain
-rates, clamping, every threshold crossing, offline catch-up and the save file:
+The logic that is worth testing has no nodes in it, so it runs headless.
+222 checks across two suites:
 
 ```powershell
 godot --headless --path . --script res://tests/test_needs.gd
+godot --headless --path . --script res://tests/test_pets.gd
 ```
+
+`test_needs` covers the drain rates, clamping, every threshold crossing,
+offline catch-up and the save file. `test_pets` covers the three shipped
+packs, broken packs, fitting models to a common height, whole-number sprite
+scaling, the mood rules and every animation state.
 
 It prints PASS or FAIL per check and exits non-zero if anything failed. On a
 fresh clone, run this once first so Godot builds its caches:

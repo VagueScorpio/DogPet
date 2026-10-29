@@ -2,11 +2,72 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.5 - Phase 2: pets, loaded from assets at runtime
   v1.4 - Phase 1: skeleton, needs, saves and the debug screen
   v1.3 - Phase 0: public GitHub repo created
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.5 - Phase 2: pets, loaded from assets at runtime
+------------------------------------------------------------
+
+What
+  - Added the AssetLibrary autoload: scans assets/pets/ and offers every
+    folder holding a readable pet.json.
+  - Added PetPack, PetLoader, PetPose, PetMotion, PetAnimator and PetView,
+    plus scenes/PetView.tscn.
+  - The debug screen now shows the dog instead of a placeholder, and has a
+    pet picker and a state picker beside it.
+  - Added res://builtin/pets/pug_3d/, the fallback pack packed into the exe.
+  - Added tests/test_pets.gd: 93 checks. 222 across both suites.
+
+Why
+  - Phase 2 of the build plan. All three shipped packs load: pug_3d,
+    pawsome_3d and pug_pixel.
+  - Neither 3D pack has a rig or a single animation clip - they are static
+    meshes - so the life has to come from moving the whole dog about. That
+    makes the procedural animation the main path, not an edge case, and it
+    turns out to work just as well on a 2D sprite.
+
+How
+  - Art in assets/ is never imported by Godot, so a .glb there is parsed at
+    runtime with GLTFDocument and a PNG with Image.load_from_file. The
+    built-in copy inside res://builtin/ IS imported, so it loads with
+    load(). PetLoader picks by whether the folder starts with res://.
+  - Models are measured and scaled to one height, with their feet brought
+    to the floor and centred left to right. The pug and pawsome are about
+    3x apart as modelled and come out the same size.
+  - Pixel art is scaled by whole numbers only, one scale for the whole
+    pack, taken from its tallest frame. The pixel pug's idle frames are 43
+    tall and its walk frames are 32, so scaling each to fit on its own
+    would have made the dog change size the moment it started walking.
+  - A 3D pet is rendered in a SubViewport with a transparent background, so
+    it can stand in front of a flat 2D room in phase 3. Both kinds get a
+    soft blob shadow, which is what sells the dog as standing on a floor.
+  - The pose maths is pure functions of state and time, so a state can be
+    scrubbed to any moment and the tests can check it without a window.
+    State changes blend over a third of a second rather than snapping.
+
+Fixed
+  - PetView.tscn declared its script as an external resource but never
+    assigned it to the root node, so the instance was a bare Control. The
+    app came up with no dog and no error at all.
+  - The 2D walk sprite came out squashed. Walking turns the dog side on
+    with a yaw, and a sprite showed that as a horizontal squeeze - but a
+    walk strip is already drawn side on. The squeeze is now only used when
+    the pack has no art of its own for that state.
+  - The pet picker kept showing the old name when the pet was changed by
+    anything other than the picker itself.
+
+Known
+  - The care buttons still apply their effects instantly. The rooms, the
+    transitions and the action timings are phase 3.
+  - Sleep is implemented and can be picked from the state list, but nothing
+    enters it on its own yet.
+  - The need icons in assets/ui/ are still not drawn; that is phase 5.
 
 
 ------------------------------------------------------------
