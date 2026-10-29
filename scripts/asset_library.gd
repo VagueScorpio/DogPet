@@ -18,6 +18,8 @@ const PETS_SUBDIR := "pets"
 const SCENES_SUBDIR := "scenes"
 const BUILTIN_PETS_DIR := "res://builtin/pets"
 const BUILTIN_SCENES_DIR := "res://builtin/scenes"
+const UI_SUBDIR := "ui"
+const BUILTIN_UI_DIR := "res://builtin/ui"
 
 ## Every pack good enough to show, in folder order.
 var pets: Array[PetPack] = []
@@ -32,6 +34,9 @@ var scenes_by_role: Dictionary = {}
 
 ## The room showing in each role right now.
 var active_scenes: Dictionary = {}
+
+## The icons: tray, needs and buttons.
+var ui: UiPack = null
 
 ## True when we fell back to the art inside the exe.
 var using_builtin: bool = false
@@ -69,10 +74,24 @@ func reload() -> void:
 	])
 
 	_scan_scenes()
+	_load_ui()
 
 	library_reloaded.emit()
 	_activate(_find(wanted), false)
 	_activate_scenes()
+
+
+# --- Icons ---------------------------------------------------------------
+
+func _load_ui() -> void:
+	ui = UiPack.load_from_dir(Paths.assets_subdir(UI_SUBDIR))
+	if not ui.is_usable():
+		for problem in ui.problems:
+			Log.warn("Icons: %s" % problem)
+		Log.warn("No usable icons in assets/ui; falling back to the built-in ones.")
+		ui = UiPack.load_from_dir(BUILTIN_UI_DIR)
+	if not ui.is_usable():
+		Log.error("No icons at all, not even the built-in ones.")
 
 
 # --- Rooms ---------------------------------------------------------------

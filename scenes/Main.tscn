@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
 [ext_resource type="PackedScene" path="res://scenes/PetView.tscn" id="3_petview"]
+[ext_resource type="PackedScene" path="res://scenes/Banner.tscn" id="4_banner"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -188,6 +189,16 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="TestButton" type="Button" parent="Layout/Column/DebugRow3"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Test"
+
+[node name="TrayButton" type="Button" parent="Layout/Column/DebugRow3"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Tray"
+
 [node name="FooterLabel" type="Label" parent="Layout/Column"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -195,6 +206,11 @@ theme_override_colors/font_color = Color(1, 1, 1, 0.35)
 theme_override_font_sizes/font_size = 11
 text = "v0.0"
 clip_text = true
+
+[node name="Banner" parent="." instance=ExtResource("4_banner")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
 
 [node name="AwayCard" parent="." instance=ExtResource("2_awaycard")]
 unique_name_in_owner = true

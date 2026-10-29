@@ -29,6 +29,9 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _pet_area: PanelContainer = %PetArea
 @onready var _role_picker: OptionButton = %RolePicker
 @onready var _room_picker: OptionButton = %RoomPicker
+@onready var _test_button: Button = %TestButton
+@onready var _tray_button: Button = %TrayButton
+@onready var _banner: Control = %Banner
 
 var _stage: SceneStage = null
 var _runner: ActionRunner = null
@@ -57,9 +60,15 @@ func _ready() -> void:
 	AssetLibrary.library_reloaded.connect(_fill_pet_picker)
 	AssetLibrary.pet_changed.connect(_on_pet_changed)
 	AssetLibrary.scene_changed.connect(_on_scene_changed)
+	Notifier.banner_requested.connect(_banner.show_message)
 
 	# The autoloads all finish before this scene exists, so there was nobody
 	# listening when the catch-up happened. Needs held the summary for us.
+	var summary: Dictionary = Needs.take_away_summary()
+	if not summary.is_empty():
+		_away_card.show_summary(summary, Needs.pet_name)
+
+
 
 func _process(_delta: float) -> void:
 	var line: String = Needs.reaction_line()
@@ -121,6 +130,10 @@ func _connect_controls() -> void:
 	_room_picker.item_selected.connect(_on_room_selected)
 	_reset_button.tooltip_text = "Put all three needs back to fully cared for."
 	_notice_dismiss.pressed.connect(_notice_panel.hide)
+	_test_button.pressed.connect(Notifier.send_test)
+	_test_button.tooltip_text = "Send a test notification."
+	_tray_button.pressed.connect(_on_tray_pressed)
+	_load_button_icons()
 
 
 # --- Reacting to changes -------------------------------------------------
@@ -274,6 +287,35 @@ func _on_settings_changed(key: String) -> void:
 
 func _on_pet_name_changed(_new_name: String) -> void:
 	_refresh_window_title()
+
+
+# Hiding is only possible when there is a tray to hide into. Without
+# one, say so rather than leaving a button that does nothing.
+func _on_tray_pressed() -> void:
+	if Tray.supported:
+		Tray.hide_to_tray()
+		return
+	_banner.show_message(
+		"There is no system tray here.",
+		"Turn off Game Embed in the editor's Game tab, or run the exported app."
+	)
+
+
+# The three care buttons take their icons from assets/ui, like everything
+# else. A missing icon just means a button with only words on it.
+func _load_button_icons() -> void:
+	if AssetLibrary.ui == null:
+		return
+	var buttons: Dictionary = {
+		"feed": _feed_button, "play": _play_button, "walk": _walk_button,
+	}
+	for action in buttons.keys():
+		var path: String = AssetLibrary.ui.button_icon_path(action)
+		if path.is_empty():
+			continue
+		var texture: Texture2D = PetLoader.load_texture(path)
+		if texture != null:
+			buttons[action].icon = texture
 
 
 func _refresh_window_title() -> void:

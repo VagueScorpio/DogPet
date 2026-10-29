@@ -63,6 +63,11 @@ const DEFAULTS := {
 	# first one found", which is what a fresh install gets.
 	"rooms": {"home": "", "eat": "", "play": "", "walk": ""},
 	"close_button": "tray",  # "tray" or "quit"
+	# Said once, the first time the window hides itself into the tray.
+	"tray_notice_shown": false,
+	# How a Windows notification is launched. "powershell" is the normal
+	# route; switch to "wscript" if a console window ever flashes up.
+	"notification_launcher": "powershell",
 	"start_minimized": false,
 	"notifications_enabled": true,
 }

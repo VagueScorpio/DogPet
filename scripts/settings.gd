@@ -133,6 +133,17 @@ func set_room(role: String, id: String) -> void:
 	changed.emit("rooms")
 
 
+## Store a plain value and save at once. Used for the small remembered
+## facts that have no setting of their own, like whether the tray notice
+## has already been shown.
+func remember(key: String, value: Variant) -> void:
+	if not data.has(key) or data[key] == value:
+		return
+	data[key] = value
+	_save()
+	changed.emit(key)
+
+
 func action_effects() -> Dictionary:
 	return data.get("action_effects", {})
 

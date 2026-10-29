@@ -24,6 +24,8 @@ Log="*res://scripts/log.gd"
 Settings="*res://scripts/settings.gd"
 Needs="*res://scripts/needs.gd"
 AssetLibrary="*res://scripts/asset_library.gd"
+Notifier="*res://scripts/notifier.gd"
+Tray="*res://scripts/tray.gd"
 
 [display]
 
