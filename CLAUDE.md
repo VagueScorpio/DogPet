@@ -324,7 +324,9 @@ Run the tests after any change to needs logic.
 - Tooltip: `Hunger 62% · Happiness 40% · Energy 75%`, updated every 10 s.
 - Show `tray_icon_alert.png` while any need is at Warning or worse; otherwise show `tray_icon.png`.
 - Left-click restores the window.
-- **Close button behavior** (setting, default **Minimize to tray**): set `get_tree().auto_accept_quit = false`. On `NOTIFICATION_WM_CLOSE_REQUEST`, either hide to tray or save and quit, depending on the setting. Quit from the tray menu always saves first. The first time the window hides to the tray, show a one-time notification: "DogPet is still running in the tray."
+- **Close button behavior** (setting, default **Minimize to tray**): set `get_tree().auto_accept_quit = false`. On `NOTIFICATION_WM_CLOSE_REQUEST`, either minimize to tray or save and quit, depending on the setting.
+  - **Godot's `Window.hide()` does nothing to the root window on Windows** (checked in 4.7.2 with `IsWindowVisible`: the window stays fully up). Minimize with `DisplayServer.window_set_mode(WINDOW_MODE_MINIMIZED)` instead, and restore with `window_set_mode(WINDOW_MODE_WINDOWED)` **plus** `DisplayServer.window_move_to_foreground()` — the mode change alone leaves it minimized. The taskbar button stays visible; Godot has no flag to drop it. *(v1.7)*
+  - The root `Window`'s own `visible`, `mode` and `has_focus()` all report wrongly while it is minimized, so ask `DisplayServer` instead when deciding whether the owner can see the window. *(v1.7)* Quit from the tray menu always saves first. The first time the window hides to the tray, show a one-time notification: "DogPet is still running in the tray."
 - The tray icon does not work when the game is embedded in the editor. Check `DisplayServer.has_feature(DisplayServer.FEATURE_STATUS_INDICATOR) and not Engine.is_embedded_in_editor()`. When unsupported, the close button quits normally. Tell the owner how to turn off game embedding in the editor to test the tray.
 - Keep the needs ticking while hidden. Lower the frame rate while minimized or hidden: `Engine.max_fps = 5` and `OS.low_processor_usage_mode = true`. Restore both on show.
 

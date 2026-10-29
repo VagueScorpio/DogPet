@@ -38,7 +38,7 @@ Under construction, built in phases. See `CHANGELOG.txt` for what is done.
 | 1 | Skeleton + needs | ✅ |
 | 2 | Pets | ✅ |
 | 3 | Scenes + actions | ✅ |
-| 4 | Tray + notifications | ⬜ |
+| 4 | Tray + notifications | ✅ |
 | 5 | Settings + asset tools | ⬜ |
 | 6 | Ship | ⬜ |
 
@@ -76,12 +76,13 @@ Before your first export, in the Godot editor go to
 ## Run the tests
 
 The logic that is worth testing has no nodes in it, so it runs headless.
-222 checks across two suites:
+362 checks across four suites:
 
 ```powershell
 godot --headless --path . --script res://tests/test_needs.gd
 godot --headless --path . --script res://tests/test_pets.gd
 godot --headless --path . --script res://tests/test_scenes.gd
+godot --headless --path . --script res://tests/test_notify.gd
 ```
 
 `test_needs` covers the drain rates, clamping, every threshold crossing,
@@ -90,6 +91,8 @@ packs, broken packs, fitting models to a common height, whole-number sprite
 scaling, the mood rules and every animation state. `test_scenes` covers the
 four shipped rooms, broken rooms, missing pictures falling back rather than
 leaving a room blank, prop depth order and every action's room and prop.
+`test_notify` covers when to speak up and when to stay quiet, the wording,
+the tray tooltip and the icon pack.
 
 It prints PASS or FAIL per check and exits non-zero if anything failed. On a
 fresh clone, run this once first so Godot builds its caches:

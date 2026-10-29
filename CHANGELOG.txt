@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.7 - Phase 4: tray icon, notifications and banners
   v1.6 - Phase 3: rooms, transitions and the care actions
   v1.5 - Phase 2: pets, loaded from assets at runtime
   v1.4 - Phase 1: skeleton, needs, saves and the debug screen
@@ -9,6 +10,74 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.7 - Phase 4: tray icon, notifications and banners
+------------------------------------------------------------
+
+What
+  - Added the Notifier and Tray autoloads, UiPack, NotificationRules and
+    the Banner scene.
+  - The close button now tucks DogPet away instead of quitting it, with a
+    tray icon, a menu, a live tooltip and an alert icon.
+  - Windows toast notifications when a need crosses a threshold while the
+    owner is not looking, and in-app banners when they are.
+  - Added res://builtin/ui/, the fallback icons packed into the exe.
+  - The three care buttons now show their icons from assets/ui.
+  - Added tests/test_notify.gd: 62 checks. 362 across four suites.
+
+Why
+  - Phase 4 of the build plan. A pet you have to keep a window open for is
+    not much of a pet.
+
+How
+  - Godot cannot raise a Windows toast, so one is raised through
+    PowerShell, which ships with every Windows 10 and 11. The script goes
+    over base64-encoded, which sidesteps every quoting problem between
+    GDScript and PowerShell, and is launched without waiting for it so the
+    game never stutters.
+  - Notifications show as coming from "Windows PowerShell". Avoiding that
+    needs an application registered with Windows, which a portable app that
+    installs nothing cannot have. Expected and accepted for v1.
+  - If a console window ever flashes, set "notification_launcher" to
+    "wscript" in settings.json. Both routes are built; PowerShell launched
+    with no console window is the default and showed no flash in testing.
+  - While out of sight the frame rate drops to 5 and low processor usage
+    mode goes on, so leaving it running costs almost nothing.
+  - A need is announced once when it gets worse, never when it gets better,
+    and then once per reminder interval while it stays critical.
+
+Fixed
+  - Godot's Window.hide() does nothing at all to the root window on
+    Windows. Checked from outside the app with IsWindowVisible: the window
+    stayed fully up while the app believed it was hidden in the tray.
+    Close-to-tray now minimises through DisplayServer, which does work.
+    The taskbar button stays visible, which is the one difference from a
+    true hide; Godot exposes no flag to drop it. CLAUDE.md section 7.2 has
+    been updated so the rest of the build does not trip over this.
+  - Restoring the window needed window_move_to_foreground() as well as the
+    mode change. Setting the mode back on its own left it minimised while
+    Godot reported it restored.
+  - The root Window's visible, mode and has_focus() all reported wrongly
+    while it sat minimised - visible, windowed and focused. Every
+    notification would have gone out as an invisible banner rather than a
+    toast, which is the whole point of the feature. The check now asks
+    DisplayServer, and the tray's own flag, instead.
+  - A regression from v1.6: the screenshot scaffolding used to check this
+    work removed the "While you were away" card from Main._ready along with
+    itself, so it had not been shown since phase 3. The scaffolding is now
+    fenced with explicit markers, and _ready is checked after every removal.
+
+Known
+  - The taskbar button stays while minimised to the tray, as above.
+  - Notifications are paused for an hour from the tray menu, and that is
+    not remembered across restarts - reopening the app is a clear enough
+    sign of wanting to be told again.
+  - The need icons in assets/ui/ are loaded but not drawn on the bars yet;
+    that is phase 5, with the real Settings screen.
+  - The tray does not work while the game is embedded in the Godot editor.
+    The app says so in its log and the close button quits instead.
 
 
 ------------------------------------------------------------
