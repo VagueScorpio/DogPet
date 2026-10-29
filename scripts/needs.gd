@@ -45,6 +45,11 @@ var _autosave_left: float = AUTOSAVE_SECONDS
 # signal yet; Main asks for this in its own _ready instead.
 var _away_summary: Dictionary = {}
 
+# How long since the last care action, so the dog can look pleased with
+# itself for a few seconds afterwards. Negative means nothing has happened
+# yet this run.
+var _since_action: float = -1.0
+
 
 func _ready() -> void:
 	# Under --script there is no game, only a script: the headless tests.
@@ -97,6 +102,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	model.drain(delta, Settings.live_intervals())
 	_announce_changes()
+	if _since_action >= 0.0:
+		_since_action += delta
 	_autosave_left -= delta
 	if _autosave_left <= 0.0:
 		_autosave_left = AUTOSAVE_SECONDS
@@ -135,6 +142,16 @@ func reaction_line() -> String:
 	return model.reaction_line(pet_name)
 
 
+## Which animation state suits the dog right now, when it is not busy doing
+## something the owner asked for.
+func mood_state() -> StringName:
+	return model.mood_state(_since_action)
+
+
+func seconds_since_action() -> float:
+	return _since_action
+
+
 ## Hand Main the catch-up summary, once. Empty when there is nothing to show.
 func take_away_summary() -> Dictionary:
 	var summary: Dictionary = _away_summary
@@ -150,8 +167,18 @@ func take_away_summary() -> Dictionary:
 ## the button locking are Main's job, and arrive in a later phase.
 func apply_action(action: StringName) -> void:
 	model.apply_action(action, Settings.action_effects())
+	_since_action = 0.0
 	Log.info("%s: %s" % [String(action).capitalize(), model.describe()])
 	_announce_changes()
+	save_now()
+
+
+## Remember which pet pack the dog is wearing. AssetLibrary calls this;
+## the needs themselves are untouched, because it is the same dog.
+func set_pet_pack_id(id: String) -> void:
+	if id.is_empty() or id == pet_pack_id:
+		return
+	pet_pack_id = id
 	save_now()
 
 

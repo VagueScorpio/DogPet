@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
+[ext_resource type="PackedScene" path="res://scenes/PetView.tscn" id="3_petview"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -97,13 +98,9 @@ theme_override_constants/separation = 12
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="PetPlaceholder" type="Label" parent="Layout/Column/PetArea"]
+[node name="PetView" parent="Layout/Column/PetArea" instance=ExtResource("3_petview")]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.35)
-text = "the dog arrives in phase 2"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="ReactionLabel" type="Label" parent="Layout/Column"]
 unique_name_in_owner = true
@@ -167,6 +164,20 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "Reset"
+
+[node name="DebugRow2" type="HBoxContainer" parent="Layout/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PetPicker" type="OptionButton" parent="Layout/Column/DebugRow2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatePicker" type="OptionButton" parent="Layout/Column/DebugRow2"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="FooterLabel" type="Label" parent="Layout/Column"]
 unique_name_in_owner = true

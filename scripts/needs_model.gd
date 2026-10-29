@@ -31,6 +31,14 @@ const KEYS: Array[StringName] = [HUNGER, HAPPINESS, ENERGY]
 ## How far towards critical a need gets before we start warning: 70%.
 const WARNING_BADNESS := 70.0
 
+## When the dog is too wound up to settle.
+const RESTLESS_ENERGY := 85.0
+## When it has had enough and goes mopey.
+const SAD_HAPPINESS := 25.0
+const SAD_HUNGER := 85.0
+## How long the glow lasts after being fed, played with or walked.
+const HAPPY_AFTER_ACTION_SECONDS := 4.0
+
 ## Floating point slack, used at both thresholds.
 ##
 ## Draining for exactly 70% of an interval lands on 69.99999, not 70, and a
@@ -128,6 +136,24 @@ static func level_label(level: int) -> String:
 		int(Level.CRITICAL):
 			return "Needs care now"
 	return "Fine"
+
+
+## Which animation state the dog should be in when no action is running.
+##
+## Read in order, worst first: a dog with energy to burn cannot settle even
+## if it is also hungry, and a miserable one does not bounce. The happy
+## glow only wins when nothing is actually wrong.
+##
+## Pass a negative seconds_since_action to mean "no action has happened".
+## The names returned match the states in PetMotion.
+func mood_state(seconds_since_action: float) -> StringName:
+	if get_value(ENERGY) >= RESTLESS_ENERGY:
+		return &"restless"
+	if get_value(HAPPINESS) <= SAD_HAPPINESS or get_value(HUNGER) >= SAD_HUNGER:
+		return &"sad"
+	if seconds_since_action >= 0.0 and seconds_since_action < HAPPY_AFTER_ACTION_SECONDS:
+		return &"happy"
+	return &"idle"
 
 
 ## The need in the worst shape right now, for one-line summaries.

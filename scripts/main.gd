@@ -23,6 +23,9 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _demo_toggle: CheckButton = %DemoToggle
 @onready var _interval_picker: OptionButton = %IntervalPicker
 @onready var _reset_button: Button = %ResetButton
+@onready var _pet_picker: OptionButton = %PetPicker
+@onready var _state_picker: OptionButton = %StatePicker
+@onready var _pet_view: Control = %PetView
 @onready var _footer_label: Label = %FooterLabel
 @onready var _away_card: Control = %AwayCard
 
@@ -32,6 +35,8 @@ func _ready() -> void:
 
 	_build_bars()
 	_fill_interval_picker()
+	_fill_pet_picker()
+	_fill_state_picker()
 	_connect_controls()
 	_refresh_window_title()
 	_refresh_demo_badge()
@@ -40,6 +45,8 @@ func _ready() -> void:
 
 	Settings.changed.connect(_on_settings_changed)
 	Needs.pet_name_changed.connect(_on_pet_name_changed)
+	AssetLibrary.library_reloaded.connect(_fill_pet_picker)
+	AssetLibrary.pet_changed.connect(_on_pet_changed)
 
 	# The autoloads all finish before this scene exists, so there was nobody
 	# listening when the catch-up happened. Needs held the summary for us.
@@ -102,6 +109,8 @@ func _connect_controls() -> void:
 	_demo_toggle.toggled.connect(Settings.set_demo_speed)
 	_interval_picker.item_selected.connect(_on_interval_selected)
 	_reset_button.pressed.connect(Needs.reset_to_cared)
+	_pet_picker.item_selected.connect(_on_pet_selected)
+	_state_picker.item_selected.connect(_on_state_selected)
 	_reset_button.tooltip_text = "Put all three needs back to fully cared for."
 	_notice_dismiss.pressed.connect(_notice_panel.hide)
 
@@ -110,6 +119,53 @@ func _connect_controls() -> void:
 
 func _on_action_pressed(action: StringName) -> void:
 	Needs.apply_action(action)
+
+
+# Every valid pet pack the loader found, so switching bodies can be tried
+# without leaving the app. The needs do not change - it is the same dog.
+func _fill_pet_picker() -> void:
+	_pet_picker.clear()
+	var packs: Array[PetPack] = AssetLibrary.pets
+	for index in packs.size():
+		var pack: PetPack = packs[index]
+		_pet_picker.add_item("%s  (%s)" % [pack.display_name, pack.kind])
+		if AssetLibrary.active_pet != null and pack.id == AssetLibrary.active_pet.id:
+			_pet_picker.select(index)
+	_pet_picker.disabled = packs.size() < 2
+
+
+# "Mood (automatic)" plus every state, so each one can be watched on demand
+# rather than waiting for the needs to produce it.
+func _fill_state_picker() -> void:
+	_state_picker.clear()
+	_state_picker.add_item("Mood (automatic)")
+	for state in PetMotion.STATES:
+		_state_picker.add_item(String(state).capitalize())
+	_state_picker.select(0)
+
+
+# Keep the picker showing whichever pet is actually on screen, even when
+# something other than the picker changed it.
+func _on_pet_changed(pack: PetPack) -> void:
+	var packs: Array[PetPack] = AssetLibrary.pets
+	for index in packs.size():
+		if packs[index].id == pack.id:
+			_pet_picker.select(index)
+			return
+
+
+func _on_pet_selected(index: int) -> void:
+	var packs: Array[PetPack] = AssetLibrary.pets
+	if index < 0 or index >= packs.size():
+		return
+	AssetLibrary.set_active_pet(packs[index].id)
+
+
+func _on_state_selected(index: int) -> void:
+	if index <= 0:
+		_pet_view.resume_mood()
+		return
+	_pet_view.play_state(PetMotion.STATES[index - 1])
 
 
 func _on_interval_selected(index: int) -> void:
