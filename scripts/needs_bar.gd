@@ -17,6 +17,7 @@ const CRITICAL_COLOR := Color(0.85, 0.32, 0.29)
 @onready var _bar: ProgressBar = %Bar
 @onready var _countdown_label: Label = %CountdownLabel
 @onready var _hint_label: Label = %HintLabel
+@onready var _icon: TextureRect = %Icon
 
 var _key: StringName = &""
 
@@ -31,6 +32,7 @@ func setup(key: StringName) -> void:
 	_key = key
 	_name_label.text = NeedsModel.display_name(key)
 	_hint_label.text = NeedsModel.full_bar_means(key)
+	_load_icon(key)
 
 	_background_style.bg_color = Color(1, 1, 1, 0.10)
 	_background_style.set_corner_radius_all(3)
@@ -45,6 +47,21 @@ func setup(key: StringName) -> void:
 	# so they are refreshed in _process below.
 	Needs.threshold_crossed.connect(_on_threshold_crossed)
 	_apply_level(Needs.level_of(key))
+
+
+# The need's icon from assets/ui, drawn at its own size so the pixel art
+# stays crisp. No icon simply means no icon.
+func _load_icon(key: StringName) -> void:
+	if AssetLibrary.ui == null:
+		return
+	var path: String = AssetLibrary.ui.need_icon_path(String(key))
+	if path.is_empty():
+		return
+	var texture: Texture2D = PetLoader.load_texture(path)
+	if texture == null:
+		return
+	_icon.texture = texture
+	_icon.show()
 
 
 func _process(_delta: float) -> void:

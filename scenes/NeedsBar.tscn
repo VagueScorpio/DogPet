@@ -9,6 +9,14 @@ script = ExtResource("1_needsbar")
 [node name="TopRow" type="HBoxContainer" parent="."]
 layout_mode = 2
 
+[node name="Icon" type="TextureRect" parent="TopRow"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_vertical = 4
+stretch_mode = 3
+
 [node name="NameLabel" type="Label" parent="TopRow"]
 unique_name_in_owner = true
 layout_mode = 2

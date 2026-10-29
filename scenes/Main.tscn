@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
 [ext_resource type="PackedScene" path="res://scenes/PetView.tscn" id="3_petview"]
 [ext_resource type="PackedScene" path="res://scenes/Banner.tscn" id="4_banner"]
+[ext_resource type="PackedScene" path="res://scenes/SettingsPanel.tscn" id="5_settings"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -98,7 +99,7 @@ theme_override_constants/separation = 12
 [node name="PetArea" type="PanelContainer" parent="Layout/Column"]
 unique_name_in_owner = true
 clip_contents = true
-custom_minimum_size = Vector2(0, 190)
+custom_minimum_size = Vector2(0, 240)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -139,75 +140,19 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Walk"
 
-[node name="DebugRow" type="HBoxContainer" parent="Layout/Column"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="DemoToggle" type="CheckButton" parent="Layout/Column/DebugRow"]
+[node name="SettingsButton" type="Button" parent="Layout/Column/ActionRow"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 40)
 layout_mode = 2
-text = "Demo Speed"
-
-[node name="DebugSpacer" type="Control" parent="Layout/Column/DebugRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="IntervalPicker" type="OptionButton" parent="Layout/Column/DebugRow"]
-unique_name_in_owner = true
-layout_mode = 2
-
-[node name="ResetButton" type="Button" parent="Layout/Column/DebugRow"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Reset"
-
-[node name="DebugRow2" type="HBoxContainer" parent="Layout/Column"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="PetPicker" type="OptionButton" parent="Layout/Column/DebugRow2"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="StatePicker" type="OptionButton" parent="Layout/Column/DebugRow2"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="DebugRow3" type="HBoxContainer" parent="Layout/Column"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="RolePicker" type="OptionButton" parent="Layout/Column/DebugRow3"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="RoomPicker" type="OptionButton" parent="Layout/Column/DebugRow3"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="TestButton" type="Button" parent="Layout/Column/DebugRow3"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Test"
-
-[node name="TrayButton" type="Button" parent="Layout/Column/DebugRow3"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Tray"
-
-[node name="FooterLabel" type="Label" parent="Layout/Column"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.35)
-theme_override_font_sizes/font_size = 11
-text = "v0.0"
-clip_text = true
+theme_override_font_sizes/font_size = 18
+text = "⚙"
 
 [node name="Banner" parent="." instance=ExtResource("4_banner")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="SettingsPanel" parent="." instance=ExtResource("5_settings")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
