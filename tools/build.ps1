@@ -167,9 +167,12 @@ Write-Step "Writing README.txt"
 $creditsPath = Join-Path $AssetsDir "CREDITS.txt"
 $credits = if (Test-Path $creditsPath) { Get-Content $creditsPath -Raw } else { "(no credits file found)" }
 
+$titleLine = "DOGPET v$AppVersion"
+$titleRule = "=" * $titleLine.Length
+
 $readme = @"
-DOGPET v$AppVersion
-===============
+$titleLine
+$titleRule
 
 A little dog that lives in its own window. It gets hungry, bored and
 restless whether or not the app is open, so it will have been waiting for
@@ -272,7 +275,15 @@ The licence files are in assets/licenses/. Please keep them.
 DogPet's own code is MIT licensed. Source: https://github.com/VagueScorpio/DogPet
 "@
 
-Set-Content -Path (Join-Path $StageDir "README.txt") -Value $readme -Encoding UTF8
+# Windows PowerShell's -Encoding UTF8 writes a byte order mark, which shows
+# up as a stray character on the first line in plenty of editors. Write it
+# without one. CRLF so it reads properly in Notepad.
+$readmeText = ($readme -replace "`r?`n", "`r`n")
+[System.IO.File]::WriteAllText(
+    (Join-Path $StageDir "README.txt"),
+    $readmeText,
+    (New-Object System.Text.UTF8Encoding($false))
+)
 
 # --- Zip -----------------------------------------------------------------
 

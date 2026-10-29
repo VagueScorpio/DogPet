@@ -14,7 +14,7 @@ in your own dogs and rooms without rebuilding the app.
 ## Screenshot
 
 <!-- TODO: add a screenshot once the app has a face. -->
-_Coming once Phase 2 is done._
+_Coming soon._
 
 ## Features
 
@@ -28,9 +28,15 @@ _Coming once Phase 2 is done._
 - Import and export pet and scene packs as `.zip` files
 - Fully portable: unzip and run, nothing is installed
 
+## Download
+
+Grab the latest zip from [Releases](https://github.com/VagueScorpio/DogPet/releases),
+unzip it anywhere, and run `DogPet.exe`. Nothing is installed; delete the
+folder to remove it.
+
 ## Status
 
-Under construction, built in phases. See `CHANGELOG.txt` for what is done.
+All six phases are done. See `CHANGELOG.txt` for what changed when.
 
 | Phase | What | Done |
 |---|---|---|
@@ -40,7 +46,7 @@ Under construction, built in phases. See `CHANGELOG.txt` for what is done.
 | 3 | Scenes + actions | ✅ |
 | 4 | Tray + notifications | ✅ |
 | 5 | Settings + asset tools | ✅ |
-| 6 | Ship | ⬜ |
+| 6 | Ship | ✅ |
 
 ## Open it in Godot
 

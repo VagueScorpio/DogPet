@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.9 - Phase 6: shipped - export preset, build script, first release
   v1.8 - Phase 5: the settings screen and pack sharing
   v1.7 - Phase 4: tray icon, notifications and banners
   v1.6 - Phase 3: rooms, transitions and the care actions
@@ -11,6 +12,68 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.9 - Phase 6: shipped - export preset, build script, first release
+------------------------------------------------------------
+
+What
+  - Added export_presets.cfg: Windows Desktop, x86_64, PCK embedded so the
+    exe is a single file, the icon from icons/app_icon.ico, tests left out.
+  - Added tools/build.ps1, which runs the tests, exports, copies assets/ in
+    beside the exe, writes the player's README.txt and zips the lot.
+  - Ran the edge-case pass.
+  - First GitHub release.
+
+Why
+  - Phase 6 of the build plan, and the end of it. DogPet is a zip you unzip
+    and run.
+
+How
+  - The exe is about 113 MB because an exported Godot game is the whole
+    engine with the project stitched onto it. The zip comes to about 47 MB.
+  - assets/ is copied in loose rather than packed into the exe, which is the
+    whole point: the art can be changed without rebuilding. The .gdignore
+    markers are stripped on the way - they exist only to keep the Godot
+    editor out of those folders during development - and _backup is left
+    behind.
+  - Verified by unzipping into a folder whose path contains a space and
+    running it there: it reads the loose assets rather than the built-in
+    copies, writes saves next to the exe, and brings up its tray icon.
+
+Fixed
+  - The build aborted on its first run. Capturing a native program's stderr
+    in Windows PowerShell wraps every line as an error, and with
+    ErrorActionPreference Stop that is fatal - so the engine error that
+    test_needs provokes deliberately, by feeding a corrupt file to the JSON
+    parser, killed the build. The exit code decides now.
+  - The export templates check never fired, because Godot creates that
+    folder whether or not anything is in it. It looks for a template now.
+  - The generated README.txt began with a byte order mark, which shows as a
+    stray character in plenty of editors. Windows PowerShell's -Encoding
+    UTF8 always writes one, so it is written without one directly.
+
+Checked, with no code changes needed
+  - assets/ missing entirely: falls back to the pug, all four rooms and the
+    icons from inside the exe, and says so.
+  - A read-only app folder: saves relocate to the user data folder with a
+    notice saying where they went. Tested by denying write with icacls.
+  - pet.json corrupt with a good backup: restored from pet.json.bak.
+  - pet.json and backup both corrupt: starts a fresh, cared-for dog.
+  - settings.json corrupt: falls back to the defaults.
+  - A pet.json that is not JSON, and a pet whose model is missing: skipped
+    with a reason, other packs unaffected.
+  - A room filling no known slot: skipped with a reason.
+  - A room whose tiles and props are missing: still offered, with a drawn
+    background and the missing prop left out.
+
+Known
+  - The taskbar button stays while minimised to the tray; Godot has no flag
+    to drop it.
+  - Notifications arrive from "Windows PowerShell", since a portable app
+    that installs nothing has no registered name of its own.
+  - The exe is unsigned, so Windows SmartScreen will warn the first time.
 
 
 ------------------------------------------------------------
