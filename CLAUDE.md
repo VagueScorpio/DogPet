@@ -158,9 +158,19 @@ States blend. Use short tweens (0.2–0.4 s) to move from one state's resting po
 
 **Mood state** when no action is running: `restless` if Energy ≥ 85%, else `sad` if Happiness ≤ 25% or Hunger ≥ 85%, else `happy` for a few seconds right after an action, else `idle`.
 
-### 5.4 Scene packs: `assets/scenes/<role>/scene.json`
+### 5.4 Scene packs: `assets/scenes/<any_name>/scene.json`
 
-There are four fixed roles: `home` (default view), `eat`, `play`, and `walk`.
+There are four fixed **roles**: `home` (default view), `eat`, `play`, and `walk`.
+
+A room says which role it fills with its own `"role"` field, so the folder may
+be named anything, and **several rooms can offer themselves for the same role**
+for the owner to pick between in Settings. A folder with no `"role"` falls back
+to its folder name, so `assets/scenes/home/` is still the living room with no
+change. The chosen room per role is saved in `settings.json` under `rooms`.
+
+*(Changed in v1.6, at the owner's request. Originally this was one fixed folder
+per role. It needed no change to the file format, because `scene.json` already
+carried a `"role"` field.)*
 
 ```json
 {
@@ -212,7 +222,7 @@ If `assets/` is missing, damaged, or a pack fails to load, the app falls back to
 - **Pet picker:** list every valid pet pack with its name, kind, and credit. Show a small live preview if practical. Switching pets keeps the needs; it is the same dog in a new body.
 - **Open assets folder:** `OS.shell_open(assets_dir)`.
 - **Reload assets:** rescan without restarting.
-- **Import pack (.zip):** open a native file dialog (`DisplayServer.file_dialog_show`). Read the zip with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<role>/`. Ask before overwriting. A replaced scene pack is backed up to `assets/_backup/<role>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
+- **Import pack (.zip):** open a native file dialog (`DisplayServer.file_dialog_show`). Read the zip with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<id>/`, where a room's `<id>` is its folder name rather than its role, so importing a second kitchen adds one rather than replacing the first. Ask before overwriting a folder that already exists. A replaced pack is backed up to `assets/_backup/<id>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
 - **Export pack (.zip):** pick a pet pack or scene role, then write a zip with `ZIPPacker` to a location chosen in a save dialog. Include the pack's credit line in a `CREDITS.txt` inside the zip.
 
 ## 6. The needs system (autoload `Needs.gd`)
@@ -341,6 +351,7 @@ Sections:
 
 1. **Care:** Frequent / Moderate / Long (radio). Show the interval table so the choice is clear. ⚡ Demo Speed toggle.
 2. **Pet:** name field (default "Biscuit"), pet pack picker (5.7).
+2b. **Rooms:** one picker per role (Home, Eat, Play, Walk), listing every room offering itself for that role. Saved to `settings.json` under `rooms`.
 3. **Assets:** Open folder, Reload, Import pack, Export pack.
 4. **Window:** close-button behavior (Minimize to tray / Quit), Start minimized (off by default).
 5. **Notifications:** on/off, Test.

@@ -37,7 +37,7 @@ Under construction, built in phases. See `CHANGELOG.txt` for what is done.
 | 0 | Repo | ✅ |
 | 1 | Skeleton + needs | ✅ |
 | 2 | Pets | ✅ |
-| 3 | Scenes + actions | ⬜ |
+| 3 | Scenes + actions | ✅ |
 | 4 | Tray + notifications | ⬜ |
 | 5 | Settings + asset tools | ⬜ |
 | 6 | Ship | ⬜ |
@@ -81,12 +81,15 @@ The logic that is worth testing has no nodes in it, so it runs headless.
 ```powershell
 godot --headless --path . --script res://tests/test_needs.gd
 godot --headless --path . --script res://tests/test_pets.gd
+godot --headless --path . --script res://tests/test_scenes.gd
 ```
 
 `test_needs` covers the drain rates, clamping, every threshold crossing,
 offline catch-up and the save file. `test_pets` covers the three shipped
 packs, broken packs, fitting models to a common height, whole-number sprite
-scaling, the mood rules and every animation state.
+scaling, the mood rules and every animation state. `test_scenes` covers the
+four shipped rooms, broken rooms, missing pictures falling back rather than
+leaving a room blank, prop depth order and every action's room and prop.
 
 It prints PASS or FAIL per check and exits non-zero if anything failed. On a
 fresh clone, run this once first so Godot builds its caches:
@@ -94,6 +97,14 @@ fresh clone, run this once first so Godot builds its caches:
 ```powershell
 godot --headless --path . --import
 ```
+
+## Add your own room
+
+Drop a folder into `assets/scenes/` with a `scene.json` in it, and set
+`"role"` to the slot it fills: `"home"`, `"eat"`, `"play"` or `"walk"`. Both
+your room and the original then appear in that slot's picker, so adding a
+second kitchen does not cost you the first. Backgrounds can be one picture,
+repeating wall and floor tiles, or drawn in code from colours you choose.
 
 ## Add your own dog
 

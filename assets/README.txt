@@ -50,6 +50,15 @@ CHANGE A ROOM
 
 Edit scenes/<role>/scene.json.
 
+Or add a whole new room: make a new folder in scenes/, for example
+scenes/kitchen_at_night/, and set "role" inside its scene.json to the slot
+it fills ("home", "eat", "play" or "walk"). Both rooms then appear in that
+slot's picker in Settings, and your original is left alone. A folder with
+no "role" uses its folder name, which is why scenes/home/ works as it is.
+
+The walk room is the only one that moves. A replacement for that slot wants
+"scroll": true and a "path" colour in its background, or it will sit still.
+
 background "type" can be:
   "image"      one picture:  "file": "my_kitchen.png"
   "tiled"      repeating wall and floor tiles

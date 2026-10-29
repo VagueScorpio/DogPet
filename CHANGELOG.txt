@@ -2,12 +2,74 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.6 - Phase 3: rooms, transitions and the care actions
   v1.5 - Phase 2: pets, loaded from assets at runtime
   v1.4 - Phase 1: skeleton, needs, saves and the debug screen
   v1.3 - Phase 0: public GitHub repo created
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.6 - Phase 3: rooms, transitions and the care actions
+------------------------------------------------------------
+
+What
+  - Added ScenePack, SceneView, SceneStage, ActionPlan and ActionRunner.
+  - AssetLibrary now scans rooms as well as pets, grouped by the role each
+    room declares.
+  - The debug screen shows the room behind the dog, with a slot picker and
+    a room picker, and the care buttons now run the real sequences.
+  - Added res://builtin/scenes/, the fallback rooms packed into the exe.
+  - Added tests/test_scenes.gd: 78 checks. 300 across three suites.
+  - Settings gained a "rooms" entry remembering the choice per role.
+
+Why
+  - Phase 3 of the build plan.
+  - Rooms are picked like pets, at the owner's request. This departs from
+    section 5.4 of the blueprint, which had one fixed folder per role.
+    CLAUDE.md has been updated to match, so the spec and the code do not
+    drift apart. It needed no change to the file format, because scene.json
+    already carried a "role" field.
+
+How
+  - A room declares its role, so a folder can be called anything and two
+    rooms can offer themselves for the same slot. A folder with no role
+    uses its folder name, which is why the four original folders still work
+    untouched.
+  - Backgrounds are drawn in _draw rather than built from nodes, which puts
+    all three types in one place and makes the scrolling park a matter of
+    one offset. The park has three layers at different speeds - clouds
+    slowest, trees between, path stones at full speed - which is what gives
+    it depth.
+  - Props are drawn back to front by their y, so nearer things overlap
+    farther ones. x is the middle of a prop and y is its bottom, so props
+    sit on the floor rather than floating.
+  - Each action locks the buttons, transitions to its room, animates for
+    its length, applies its effect, then transitions home and unlocks.
+    Both legs use the same transition, so coming back matches going out.
+  - The effects land after the animation, not when the button is pressed,
+    so the bars move when the dog has actually been fed.
+
+Fixed
+  - A 3D dog turning to face left showed the camera its backside. Rotation
+    is the only way a model can turn, so the turn now lives in yaw, and
+    pose.facing is left to mean "mirror yourself" - which only a sprite can
+    actually do.
+  - The dog stood on top of the bowl it was eating from. It now stands
+    beside a prop, nudged back towards the middle of the room, which also
+    keeps it from hanging off the edge when a prop is near one.
+  - The window had grown taller than itself: the title was clipped off the
+    top and the footer off the bottom. The stale "actions are instant for
+    now" label is gone and the footer no longer wraps.
+
+Known
+  - The tray icon, notifications and close-to-tray are phase 4.
+  - The real Settings screen, the pet and room pickers proper, and importing
+    and exporting packs are phase 5. The pickers on the debug screen are
+    stand-ins.
+  - The need icons in assets/ui/ are still not drawn.
 
 
 ------------------------------------------------------------
