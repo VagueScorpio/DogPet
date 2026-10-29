@@ -15,12 +15,16 @@ extends Control
 ## few enough to cost nothing.
 const SKY_BANDS := 48
 
-const CLOUD_SPACING := 190.0
+## Scenery is sized as a fraction of the view height rather than in fixed
+## pixels, so it keeps its proportions against the dog - who is also sized
+## from the view - however big the window is. With fixed pixel sizes the
+## dog ended up towering over the trees.
+const CLOUD_SPACING := 0.52
 const CLOUD_PARALLAX := 0.25
-const TREE_SPACING := 150.0
+const TREE_SPACING := 0.46
 const TREE_PARALLAX := 0.6
-const BUSH_SPACING := 120.0
-const STONE_SPACING := 70.0
+const BUSH_SPACING := 0.34
+const STONE_SPACING := 0.17
 
 var pack: ScenePack = null
 
@@ -213,23 +217,29 @@ func _draw_generated_background() -> void:
 
 func _draw_clouds(ground_y: float) -> void:
 	var white := Color(1, 1, 1, 0.75)
-	for index in _layer_range(CLOUD_SPACING, CLOUD_PARALLAX):
-		var x: float = index * CLOUD_SPACING - _scroll * CLOUD_PARALLAX
+	var spacing: float = size.y * CLOUD_SPACING
+	for index in _layer_range(spacing, CLOUD_PARALLAX):
+		var x: float = index * spacing - _scroll * CLOUD_PARALLAX
 		var y: float = ground_y * (0.12 + 0.3 * _jitter(index, 1.0))
-		var width: float = 26.0 + 16.0 * _jitter(index, 2.0)
+		var width: float = size.y * (0.07 + 0.045 * _jitter(index, 2.0))
 		draw_circle(Vector2(x, y), width * 0.7, white)
 		draw_circle(Vector2(x + width * 0.6, y + 3.0), width * 0.55, white)
 		draw_circle(Vector2(x - width * 0.6, y + 4.0), width * 0.45, white)
 
 
 func _draw_trees(ground_y: float) -> void:
-	for index in _layer_range(TREE_SPACING, TREE_PARALLAX):
-		var x: float = index * TREE_SPACING - _scroll * TREE_PARALLAX
-		var height: float = 60.0 + 34.0 * _jitter(index, 3.0)
+	var spacing: float = size.y * TREE_SPACING
+	for index in _layer_range(spacing, TREE_PARALLAX):
+		var x: float = index * spacing - _scroll * TREE_PARALLAX
+		var height: float = size.y * (0.34 + 0.18 * _jitter(index, 3.0))
 		var base: float = ground_y + 4.0
 		var trunk := Color(0.42, 0.29, 0.18)
 		var leaves := Color(0.24, 0.49, 0.25).lightened(0.12 * _jitter(index, 4.0))
-		draw_rect(Rect2(x - 4.0, base - height * 0.45, 8.0, height * 0.45), trunk)
+		var trunk_width: float = maxf(4.0, height * 0.09)
+		draw_rect(
+			Rect2(x - trunk_width * 0.5, base - height * 0.45, trunk_width, height * 0.45),
+			trunk
+		)
 		var crown := Vector2(x, base - height * 0.6)
 		draw_circle(crown, height * 0.3, leaves)
 		draw_circle(crown + Vector2(-height * 0.2, height * 0.1), height * 0.24, leaves)
@@ -243,17 +253,19 @@ func _draw_path(ground_y: float, colour: Color) -> void:
 	# Stones scudding past at full speed, which is what makes the ground
 	# read as moving rather than the whole picture sliding.
 	var stone := colour.darkened(0.12)
-	for index in _layer_range(STONE_SPACING, 1.0):
-		var x: float = index * STONE_SPACING - _scroll
+	var spacing: float = size.y * STONE_SPACING
+	for index in _layer_range(spacing, 1.0):
+		var x: float = index * spacing - _scroll
 		var y: float = top + (size.y - top) * (0.25 + 0.6 * _jitter(index, 5.0))
-		draw_circle(Vector2(x, y), 2.0 + 2.5 * _jitter(index, 6.0), stone)
+		draw_circle(Vector2(x, y), size.y * (0.006 + 0.008 * _jitter(index, 6.0)), stone)
 
 
 func _draw_bushes(ground_y: float, ground: Color) -> void:
 	var bush: Color = ground.darkened(0.22)
-	for index in _layer_range(BUSH_SPACING, 1.0):
-		var x: float = index * BUSH_SPACING - _scroll
-		var radius: float = 11.0 + 7.0 * _jitter(index, 7.0)
+	var spacing: float = size.y * BUSH_SPACING
+	for index in _layer_range(spacing, 1.0):
+		var x: float = index * spacing - _scroll
+		var radius: float = size.y * (0.035 + 0.028 * _jitter(index, 7.0))
 		var y: float = ground_y + 2.0 + radius * 0.3
 		draw_circle(Vector2(x, y), radius, bush)
 		draw_circle(Vector2(x + radius * 0.8, y + 2.0), radius * 0.7, bush)

@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.10 - Screenshots, and scenery that scales with the window
   v1.9 - Phase 6: shipped - export preset, build script, first release
   v1.8 - Phase 5: the settings screen and pack sharing
   v1.7 - Phase 4: tray icon, notifications and banners
@@ -12,6 +13,31 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.10 - Screenshots, and scenery that scales with the window
+------------------------------------------------------------
+
+What
+  - Added docs/screenshot-home.png, screenshot-walk.png and
+    screenshot-settings.png, and put them at the top of README.md in place
+    of the placeholder.
+  - Drawn scenery - trees, bushes, clouds and path stones - is now sized as
+    a fraction of the view height instead of in fixed pixels.
+
+Why
+  - Taking the screenshots made an old problem obvious: in the park the dog
+    towered over the trees like a giant. The dog has always been sized from
+    the view height, while the scenery was drawn at fixed pixel sizes, so
+    the two only ever agreed by accident at one particular window size.
+    They now scale together, at any size.
+
+How
+  - Tree height, bush radius, cloud width, stone size and the spacing of
+    each layer are all fractions of the view height. A tree is 34-52% of
+    it, which puts it comfortably above the dog rather than below.
+  - Tree trunks scale with their own tree rather than staying 8px wide.
 
 
 ------------------------------------------------------------

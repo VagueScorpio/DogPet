@@ -11,10 +11,15 @@ sends you a Windows notification when the dog needs something.
 All the art lives in a loose `assets/` folder next to the .exe, so you can swap
 in your own dogs and rooms without rebuilding the app.
 
-## Screenshot
+## Screenshots
 
-<!-- TODO: add a screenshot once the app has a face. -->
-_Coming soon._
+<p align="center">
+  <img src="docs/screenshot-home.png" width="250" alt="Biscuit the pug standing in the living room, with the three need bars above">
+  <img src="docs/screenshot-walk.png" width="250" alt="The pug trotting along a park path while the scenery scrolls past">
+  <img src="docs/screenshot-settings.png" width="250" alt="The settings screen, showing the care intervals and the pet picker">
+</p>
+
+<p align="center"><em>Home, a walk in the park, and the settings screen.</em></p>
 
 ## Features
 
