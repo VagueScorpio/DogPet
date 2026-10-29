@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.8 - Phase 5: the settings screen and pack sharing
   v1.7 - Phase 4: tray icon, notifications and banners
   v1.6 - Phase 3: rooms, transitions and the care actions
   v1.5 - Phase 2: pets, loaded from assets at runtime
@@ -10,6 +11,59 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.8 - Phase 5: the settings screen and pack sharing
+------------------------------------------------------------
+
+What
+  - Added SettingsPanel with all seven sections: Care, Pet, Rooms, Assets,
+    Window, Notifications and About.
+  - Added PackArchive, PackTransfer and CreditsList.
+  - Packs can be exported and imported as .zip files.
+  - The main window lost its debug rows and gained a settings button; the
+    need bars now show their icons from assets/ui.
+  - Added tests/test_packs.gd: 56 checks. 418 across five suites.
+
+Why
+  - Phase 5 of the build plan. Everything adjustable now lives in one place
+    instead of being scattered across temporary debug controls.
+  - Credits are a licence requirement, not decoration. The default pug is
+    CC-BY 3.0, so its credit has to stay visible.
+
+How
+  - The sections are built in code rather than laid out by hand, because
+    almost all of them are lists of whatever happens to be installed: the
+    pets found in assets/, the rooms offering themselves for each slot,
+    every pack's credit line. None of that is known in advance.
+  - Importing checks the zip before unpacking anything, asks before
+    replacing, and copies what it is about to overwrite into
+    assets/_backup/<id>-<timestamp>/ first.
+  - A room is imported under its own folder name rather than its role, so
+    importing a second kitchen adds one rather than destroying the first.
+  - Exporting writes a CREDITS.txt into the zip, so the credit travels with
+    the art rather than being left behind.
+  - About shows every installed pack's credit exactly as written, with
+    licence and source as clickable links, the pet currently on screen
+    first, and the whole of assets/CREDITS.txt underneath.
+  - The system file picker is used where Windows offers one, with Godot's
+    own dialog as the fallback.
+
+Fixed
+  - The settings panel was see-through. Godot's default panel stylebox is
+    translucent - the same trap the away card fell into in phase 1.
+  - The care interval table collapsed into a wall of vertical letters. The
+    helper that makes dimmed labels was turning on word wrap for every one
+    of them, and a wrapping label in a narrow table column will happily
+    wrap to one character per line. Wrapping is now asked for, not assumed.
+
+Known
+  - A zip that names an entry outside its own folder is refused outright,
+    whole archive and all, rather than being unpacked with that one entry
+    skipped. Refusing it is the safer reading of an archive that should
+    never have contained such a path.
+  - Pausing notifications is still not remembered across restarts.
 
 
 ------------------------------------------------------------

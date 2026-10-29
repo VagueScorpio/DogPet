@@ -39,7 +39,7 @@ Under construction, built in phases. See `CHANGELOG.txt` for what is done.
 | 2 | Pets | ✅ |
 | 3 | Scenes + actions | ✅ |
 | 4 | Tray + notifications | ✅ |
-| 5 | Settings + asset tools | ⬜ |
+| 5 | Settings + asset tools | ✅ |
 | 6 | Ship | ⬜ |
 
 ## Open it in Godot
@@ -76,13 +76,14 @@ Before your first export, in the Godot editor go to
 ## Run the tests
 
 The logic that is worth testing has no nodes in it, so it runs headless.
-362 checks across four suites:
+418 checks across five suites:
 
 ```powershell
 godot --headless --path . --script res://tests/test_needs.gd
 godot --headless --path . --script res://tests/test_pets.gd
 godot --headless --path . --script res://tests/test_scenes.gd
 godot --headless --path . --script res://tests/test_notify.gd
+godot --headless --path . --script res://tests/test_packs.gd
 ```
 
 `test_needs` covers the drain rates, clamping, every threshold crossing,
@@ -92,7 +93,9 @@ scaling, the mood rules and every animation state. `test_scenes` covers the
 four shipped rooms, broken rooms, missing pictures falling back rather than
 leaving a room blank, prop depth order and every action's room and prop.
 `test_notify` covers when to speak up and when to stay quiet, the wording,
-the tray tooltip and the icon pack.
+the tray tooltip and the icon pack. `test_packs` builds real zips and reads
+them back, including archives that try to write outside the folder they are
+unpacked into.
 
 It prints PASS or FAIL per check and exits non-zero if anything failed. On a
 fresh clone, run this once first so Godot builds its caches:
@@ -100,6 +103,14 @@ fresh clone, run this once first so Godot builds its caches:
 ```powershell
 godot --headless --path . --import
 ```
+
+## Share a pack
+
+**Settings → Assets → Export** writes a pet or a room out as a `.zip`, with
+its credit line tucked inside as `CREDITS.txt`. **Import pack** reads one
+back. A pack is checked before anything is unpacked, you are asked before
+anything is replaced, and whatever gets replaced is copied into
+`assets/_backup/` first.
 
 ## Add your own room
 
