@@ -177,7 +177,9 @@ func _build_assets() -> void:
 	)
 
 	var row: HBoxContainer = _row(box)
-	row.add_child(_button("Open folder", func() -> void: OS.shell_open(Paths.assets_dir)))
+	row.add_child(_button(
+		"Open folder", func() -> void: Paths.open_in_file_manager(Paths.assets_dir)
+	))
 	row.add_child(_button("Reload", func() -> void:
 		AssetLibrary.reload()
 		_note("Assets reloaded.")
@@ -281,7 +283,7 @@ func _build_about() -> void:
 		open.tooltip_text = "Open this folder"
 		open.add_theme_font_size_override("font_size", 11)
 		var folder: String = row[1]
-		open.pressed.connect(func() -> void: OS.shell_open(folder))
+		open.pressed.connect(func() -> void: Paths.open_in_file_manager(folder))
 		line.add_child(open)
 
 	_about.add_child(_heading("Credits", 15))

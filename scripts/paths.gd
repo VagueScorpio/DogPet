@@ -76,6 +76,25 @@ func log_path() -> String:
 	return saves_dir.path_join(LOG_FILE)
 
 
+## Show a folder in whatever file manager Windows is set to use.
+##
+## Handing it to the system rather than naming Explorer means a replacement
+## file manager gets it instead if one is installed. Godot holds paths with
+## forward slashes, which Explorer is unreliable about, so they are turned
+## back into backslashes on the way out.
+##
+## The folder is made if it is missing, because assets/ genuinely can be -
+## the app falls back to its built-in art and carries on - and opening
+## nothing would be a puzzling way to find that out.
+func open_in_file_manager(folder: String) -> void:
+	if not DirAccess.dir_exists_absolute(folder):
+		DirAccess.make_dir_recursive_absolute(folder)
+		Log.warn("The folder was missing, so an empty one was made at " + folder)
+	var native: String = folder.replace("/", "\\")
+	Log.info("Opening " + native)
+	OS.shell_open(native)
+
+
 ## A folder inside assets/, for example pets_dir("pug_3d").
 func assets_subdir(sub: String) -> String:
 	return assets_dir.path_join(sub)

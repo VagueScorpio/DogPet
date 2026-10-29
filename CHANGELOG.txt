@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.12 - Phase 7: a menu bar, and instructions inside the app
   v1.11 - A build that stops growing every time it runs
   v1.10 - Screenshots, and scenery that scales with the window
   v1.9 - Phase 6: shipped - export preset, build script, first release
@@ -14,6 +15,53 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.12 - Phase 7: a menu bar, and instructions inside the app
+------------------------------------------------------------
+
+What
+  - Added a menu bar across the top of the window, with four menus:
+      Pet      Change Name..., Settings...
+      Care     Frequent / Moderate / Long, and Demo Speed
+      Assets   Open Assets Folder, Reload Assets, How to Change Pets or
+               Scenes...
+      Window   Minimise to Tray, Quit DogPet
+  - Added a rename dialog, reached from Pet > Change Name.
+  - Added HelpPanel: step-by-step instructions for changing the art, with
+    buttons to open the assets folder and reload at the bottom.
+  - Added Paths.open_in_file_manager.
+
+Why
+  - The first of three sets of changes the owner asked for. Everything in
+    the menus was already reachable in Settings or on the tray icon, but a
+    menu bar is where people look first, and it puts the things done most
+    often one click away instead of two.
+  - The instructions exist because assets/README.txt sits next to the exe,
+    which is exactly where somebody who needs the help will not think to
+    look.
+
+How
+  - The menus are built in code, because most of them describe the state of
+    something - which care speed is chosen, whether Demo is on, whether
+    there is a tray to minimise into. They are refreshed each time a menu
+    opens rather than kept in step by hand.
+  - The care menu shows each setting's timings beside its name, so the
+    choice can be made without going to look them up.
+  - Main gained a vertical shell so the menu bar can sit flush against the
+    top of the window while everything else keeps its margins.
+  - Opening a folder hands it to the system rather than naming Explorer, so
+    a replacement file manager gets it if one is installed. Godot holds
+    paths with forward slashes, which Explorer is unreliable about, so they
+    are turned back into backslashes on the way out. The folder is made if
+    it is missing, since assets/ genuinely can be - the app falls back to
+    its built-in art and carries on - and opening nothing would be a
+    puzzling way to find that out.
+
+Still to come
+  - Casual and Real Pet modes, ageing, sickness and the vet.
+  - The scoreboard of past pets.
 
 
 ------------------------------------------------------------

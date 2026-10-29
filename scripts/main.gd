@@ -24,6 +24,8 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _away_card: Control = %AwayCard
 @onready var _banner: Control = %Banner
 @onready var _settings_panel: Control = %SettingsPanel
+@onready var _help_panel: Control = %HelpPanel
+@onready var _menu_host: PanelContainer = %MenuHost
 
 var _stage: SceneStage = null
 var _runner: ActionRunner = null
@@ -32,6 +34,7 @@ var _runner: ActionRunner = null
 func _ready() -> void:
 	get_window().min_size = MIN_WINDOW_SIZE
 
+	_build_menu()
 	_build_stage()
 	_build_bars()
 	_connect_controls()
@@ -54,6 +57,45 @@ func _process(_delta: float) -> void:
 	var line: String = Needs.reaction_line()
 	if _reaction_label.text != line:
 		_reaction_label.text = line
+
+
+# The menu bar is built in code because most of what it shows is the state
+# of something - which care speed is on, whether there is a tray to hide
+# into - and that is easier to keep honest from one place.
+func _build_menu() -> void:
+	var menu := AppMenu.new()
+	menu.name = "AppMenu"
+	_menu_host.add_child(menu)
+	menu.rename_requested.connect(_ask_for_name)
+	menu.instructions_requested.connect(_help_panel.open)
+	menu.settings_requested.connect(_settings_panel.open)
+
+
+# A small dialog rather than a trip into Settings, since renaming the dog is
+# the sort of thing done on a whim.
+func _ask_for_name() -> void:
+	var dialog := AcceptDialog.new()
+	dialog.title = "Change the dog's name"
+	dialog.ok_button_text = "Rename"
+	dialog.add_cancel_button("Cancel")
+
+	var field := LineEdit.new()
+	field.text = Needs.pet_name
+	field.placeholder_text = "Biscuit"
+	field.custom_minimum_size = Vector2(220, 0)
+	dialog.add_child(field)
+	# So Enter does the obvious thing instead of nothing.
+	dialog.register_text_enter(field)
+
+	dialog.confirmed.connect(func() -> void:
+		Needs.set_pet_name(field.text)
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered()
+	field.grab_focus()
+	field.select_all()
 
 
 # --- Building the window --------------------------------------------------
