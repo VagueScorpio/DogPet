@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.11 - A build that stops growing every time it runs
   v1.10 - Screenshots, and scenery that scales with the window
   v1.9 - Phase 6: shipped - export preset, build script, first release
   v1.8 - Phase 5: the settings screen and pack sharing
@@ -13,6 +14,38 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.11 - A build that stops growing every time it runs
+------------------------------------------------------------
+
+What
+  - build/ and docs/ now carry a .gdignore, so Godot leaves them alone.
+  - tools/build.ps1 prepares Godot's caches before running the tests, not
+    after.
+
+Why
+  - Every build came out several megabytes bigger than the one before it:
+    112.8 MB, then 118.4, then 127.1, for changes that touched a single
+    script. build/ sits inside the project, and the assets staged into it
+    have their .gdignore stripped on purpose - the player has no use for
+    it - which left Godot free to import every staged copy and pack it into
+    the next build. Each build was swallowing the one before it. The exe is
+    back to 113 MB and stays there across repeated builds.
+  - The v1.9 release was already carrying about 5 MB of the v1.8 staging
+    copy, which is why this got its own version rather than being quietly
+    folded in.
+  - The screenshots in docs/ were being imported and packed into the exe
+    too. They are documentation, not art the game uses.
+
+How
+  - A .gdignore at the top of build/ is written by the build script itself,
+    since build/ is not in version control.
+  - The cache step moved ahead of the tests because the tests are scripts
+    too: without the class cache Godot cannot resolve the class names they
+    use, so a build from a fresh clone failed in test_pets. Found by
+    deleting .godot and building, which is what a fresh clone looks like.
 
 
 ------------------------------------------------------------

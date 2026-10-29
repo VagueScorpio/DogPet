@@ -95,6 +95,13 @@ $ZipPath   = Join-Path $BuildRoot "$StageName.zip"
 
 # --- Tests ---------------------------------------------------------------
 
+# A fresh clone has no .godot folder, and without it Godot cannot resolve
+# the class names the scripts use. This has to happen before the tests, not
+# just before the export: the tests are scripts too.
+Write-Step "Preparing Godot's caches"
+& $GodotExe --headless --path $ProjectRoot --import | Out-Null
+Write-Host "    done"
+
 if (-not $SkipTests) {
     Write-Step "Running the tests"
     $suites = @("test_needs", "test_pets", "test_scenes", "test_notify", "test_packs")
@@ -133,8 +140,13 @@ Write-Step "Exporting"
 if (Test-Path $StageDir) { Remove-Item -Recurse -Force $StageDir }
 New-Item -ItemType Directory -Force -Path $StageDir | Out-Null
 
-# Make sure Godot's caches exist before exporting; a fresh clone has none.
-& $GodotExe --headless --path $ProjectRoot --import | Out-Null
+# build/ lives inside the project, and the assets staged into it have had
+# their .gdignore stripped on purpose - the player has no use for it. That
+# leaves Godot free to import every staged copy and pack it into the NEXT
+# build, so each build swallowed the one before it and the exe grew by
+# several megabytes every time. One marker at the top of build/ keeps the
+# whole folder out of Godot's sight.
+Set-Content -Path (Join-Path $BuildRoot ".gdignore") -Value "" -NoNewline
 
 $ExePath = Join-Path $StageDir "DogPet.exe"
 & $GodotExe --headless --path $ProjectRoot --export-release "Windows Desktop" $ExePath
