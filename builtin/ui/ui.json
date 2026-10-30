@@ -5,7 +5,8 @@
   "icons": {
     "hunger": "icon_hunger.png",
     "happiness": "icon_happiness.png",
-    "energy": "icon_energy.png"
+    "energy": "icon_energy.png",
+    "sickness": "icon_sickness.png"
   },
   "buttons": {
     "feed": "button_feed.png",

@@ -79,6 +79,7 @@ func setup_sickness() -> void:
 	_key = &"sickness"
 	_name_label.text = "Sickness"
 	_hint_label.text = "full bar = fatal"
+	_load_icon(&"sickness")
 	_style_bar()
 	_apply_level(Needs.life.sickness_level())
 

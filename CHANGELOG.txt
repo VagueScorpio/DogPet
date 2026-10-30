@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.14 - An icon for the sickness bar
   v1.13 - Phase 8: Casual and Real Pet, ageing, illness and death
   v1.12 - Phase 7: a menu bar, and instructions inside the app
   v1.11 - A build that stops growing every time it runs
@@ -16,6 +17,35 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.14 - An icon for the sickness bar
+------------------------------------------------------------
+
+What
+  - Added assets/ui/icon_sickness.png and listed it in ui.json, so the
+    Sickness bar has an icon like the other three.
+
+Why
+  - It was the one gap listed as known in v1.13. The owner confirmed the
+    Mini Clinic Pixel pack is free to use and distribute for personal or
+    commercial projects, with credit optional, which unblocked it.
+
+How
+  - The pack's three sheets were looked through. Sheet 1 is interface
+    chrome and sheet 3 is a large nurse character, neither of any use
+    here; sheet 2 is small medical items, which is where the icon came
+    from.
+  - The items are drawn at ten times their native size, so the icon was
+    taken down by a fifth to 32x26 - crisp, no interpolation, and the same
+    visual weight as the hunger, happiness and energy icons.
+  - Credited in assets/CREDITS.txt even though the licence does not ask
+    for it, which is how every other pack here is treated.
+
+Not used
+  - The pack's nurse character and interface sheets. The vet clinic stays
+    as it was: ThirdAngle props on a room drawn in code.
 
 
 ------------------------------------------------------------

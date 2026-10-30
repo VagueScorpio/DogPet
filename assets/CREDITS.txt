@@ -13,6 +13,12 @@ Pixel Pug, rooms, props and icons (pets/pug_pixel/, scenes/, ui/)
   Nasha's Cozy Pets Pack
   License: licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt
 
+Sickness icon (ui/icon_sickness.png)
+  Mini Clinic Pixel pack
+  Free to use and distribute for personal or commercial projects.
+  Credit optional; given here anyway. Scaled down from the pack's
+  sprite sheet, which draws each item at ten times its native size.
+
 Vet clinic props (scenes/vet/)
   Isometric Veterinary Clinic Starter by ThirdAngle (Playworks North)
   https://thirdangle.itch.io/vet-clinic-pack
