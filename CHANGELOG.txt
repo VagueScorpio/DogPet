@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.16 - Phase 9: the scoreboard of past pets
   v1.15 - A nurse in the vet clinic
   v1.14 - An icon for the sickness bar
   v1.13 - Phase 8: Casual and Real Pet, ageing, illness and death
@@ -18,6 +19,46 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.16 - Phase 9: the scoreboard of past pets
+------------------------------------------------------------
+
+What
+  - Added PetHistory, which keeps saves/history.json, and the Scoreboard
+    panel, reached from Mode > Scoreboard.
+  - Every dog that dies is written into the record with its name, birth
+    date, death date, age and what took it.
+  - Added tests/test_history.gd: 37 checks. 542 across seven suites.
+
+Why
+  - The last of the three sets of changes the owner asked for.
+
+How
+  - The record is kept apart from pet.json because it outlives every pet in
+    it: starting a new dog wipes the save, and must not wipe the record of
+    the one before.
+  - A dog is written in at the moment it dies rather than when the owner
+    gets round to starting another, and only there, so reloading a save of
+    an already-dead dog cannot record it twice - LifeModel.advance returns
+    early once alive is false.
+  - The scoreboard lists the dog you have now first, marked as living,
+    because a board that only lists the dead is a strange thing to open
+    when your dog is fine.
+  - Each past dog shows both its age in dog-days and how long it really
+    lived. The two differ a great deal: a dog on Demo speed ages a year in
+    an afternoon.
+  - It is reachable in Casual as well, where it still shows the dog you
+    have and any from an earlier spell of Real play.
+  - The record is capped at 200 dogs, oldest off the end first, so the file
+    cannot grow forever.
+
+Fixed
+  - The summary line read "3 dogs remembered.  the oldest was ..." - full
+    stops between fragments rather than one sentence.
+
+That is all three sets of changes done.
 
 
 ------------------------------------------------------------

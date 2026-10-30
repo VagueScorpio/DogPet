@@ -27,6 +27,7 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _settings_panel: Control = %SettingsPanel
 @onready var _help_panel: Control = %HelpPanel
 @onready var _death_card: Control = %DeathCard
+@onready var _scoreboard: Control = %Scoreboard
 @onready var _menu_host: PanelContainer = %MenuHost
 
 var _stage: SceneStage = null
@@ -77,9 +78,7 @@ func _build_menu() -> void:
 	menu.rename_requested.connect(_ask_for_name)
 	menu.instructions_requested.connect(_help_panel.open)
 	menu.settings_requested.connect(_settings_panel.open)
-	menu.scoreboard_requested.connect(func() -> void:
-		_banner.show_message("The scoreboard is the next piece of work.", "")
-	)
+	menu.scoreboard_requested.connect(_scoreboard.open)
 
 
 # A small dialog rather than a trip into Settings, since renaming the dog is

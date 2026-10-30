@@ -204,11 +204,24 @@ func _advance_life(seconds: float, hunger_interval: float, catching_up: bool = f
 		Log.info("%s died of %s at %s." % [
 			pet_name, LifeModel.cause_name(life.cause), LifeModel.format_age(life.age_days),
 		])
+		_remember_this_dog()
 		save_now()
 		pet_died.emit(life.cause, pet_name, life.age_days)
 		return
 	if catching_up:
 		save_now()
+
+
+# Write the dog into the record the moment it dies, rather than when the
+# owner gets round to starting another. Done here and nowhere else, so a
+# reload of an already-dead save cannot record the same dog twice:
+# LifeModel.advance returns early once alive is false.
+func _remember_this_dog() -> void:
+	var record: Dictionary = PetHistory.make_record(
+		pet_name, life.born_unix, life.died_unix, life.age_days, life.cause
+	)
+	if not PetHistory.remember(Paths.history_path(), record):
+		Log.error("Could not write %s into the record." % pet_name)
 
 
 ## Take the dog to the vet. Returns true if that was enough to cure it.

@@ -89,9 +89,8 @@ func _refresh_mode_menu() -> void:
 			_mode_menu.get_item_index(index),
 			CareSettings.PLAY_MODES[index] == Settings.play_mode()
 		)
-	_mode_menu.set_item_disabled(
-		_mode_menu.get_item_index(MODE_SCOREBOARD), not Settings.is_real_play()
-	)
+	# Reachable in Casual as well: it still shows the dog you have now, and
+	# any from an earlier spell of Real play.
 
 
 func _on_mode_pressed(id: int) -> void:

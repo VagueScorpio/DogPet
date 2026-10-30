@@ -69,6 +69,7 @@ Create an autoload `Paths.gd`:
   - Exported build: `OS.get_executable_path().get_base_dir()`
   - Running from the editor (`OS.has_feature("editor")`): `ProjectSettings.globalize_path("res://")`
 - `assets_dir = base/assets`, `saves_dir = base/saves`
+- `saves/history.json` holds the scoreboard of past pets *(v1.16)*. It is kept apart from `pet.json` because it outlives every pet in it: starting a new dog wipes the save and must not wipe the record of the one before.
 - On startup, create `saves/` if it is missing, then test-write a temp file there. If the write fails (for example, the app was unzipped into `C:\Program Files`), fall back to `OS.get_user_data_dir() + "/saves"`. Show a one-time notice that says where saves now live.
 - If `assets/` is missing or unreadable, use the built-in fallback set (5.6) and show a notice. **Never crash** on missing or broken assets.
 
@@ -265,6 +266,7 @@ The needs are staggered slightly on purpose, so all three don't hit critical at 
   - **Illness.** At random — on average every 8 hunger intervals — the dog falls ill. A fourth **Sickness** bar climbs from 0 to 100 over 1.5 hunger intervals; at 100 the dog dies. **Take To Vet** takes 60 off the bar, so a badly ill dog needs more than one visit. The bar and the button appear only in Real play.
   - **Ageing.** The dog ages at two hunger intervals to the dog-day, through Puppy / Young / Adult / Senior. Ageing happens in both modes. **Old age is never fatal** — the owner chose that too.
   - All of these numbers live in `settings.json` under `real_play`, counted in hunger intervals so they scale with the care setting.
+  - **Scoreboard** *(v1.16)*: every dog that has died is written to `saves/history.json` the moment it dies, with its name, birth date, death date, age and cause. Reached from **Mode → Scoreboard…**, which also lists the dog you have now. The pure logic is `PetHistory.gd`, tested by `tests/test_history.gd`.
   - The pure logic is `LifeModel.gd`, with no nodes and time passed in, tested by `tests/test_life.gd`.
 
 ### 6.4 Actions

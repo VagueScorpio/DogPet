@@ -16,6 +16,7 @@ const SAVES_FOLDER := "saves"
 const PET_SAVE_FILE := "pet.json"
 const SETTINGS_FILE := "settings.json"
 const LOG_FILE := "dogpet.log"
+const HISTORY_FILE := "history.json"
 const WRITE_PROBE_FILE := ".write_test"
 
 var base_dir: String = ""
@@ -69,6 +70,14 @@ func pet_save_path() -> String:
 ## Full path of the settings file.
 func settings_path() -> String:
 	return saves_dir.path_join(SETTINGS_FILE)
+
+
+## Full path of the record of past pets.
+##
+## Kept apart from pet.json because it outlives every pet in it: starting a
+## new dog wipes the save, and must not wipe the record of the one before.
+func history_path() -> String:
+	return saves_dir.path_join(HISTORY_FILE)
 
 
 ## Full path of the log file.

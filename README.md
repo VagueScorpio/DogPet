@@ -31,6 +31,11 @@ in your own dogs and rooms without rebuilding the app.
 - System tray icon with Windows toast notifications
 - Care interval you pick: Frequent, Moderate or Long, plus a ⚡ Demo Speed toggle
 - Import and export pet and scene packs as `.zip` files
+- Two ways to play: **Casual**, where the dog cannot die, and **Real Pet**, where
+  it ages, falls ill, needs taking to the vet, and can be lost to starvation or
+  untreated illness
+- A scoreboard remembering every dog, with its name, birth date, death date and
+  age
 - Fully portable: unzip and run, nothing is installed
 
 ## Download
