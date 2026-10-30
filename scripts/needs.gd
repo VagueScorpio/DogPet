@@ -258,6 +258,10 @@ func _remember_this_dog() -> void:
 
 ## Take the dog to the vet. Returns true if that was enough to cure it.
 func take_to_vet() -> bool:
+	# The button is hidden and the action runner refuses, but this is the
+	# door all of them go through, so the guard belongs here as well.
+	if not life.alive:
+		return false
 	var cured: bool = life.treat(float(Settings.real_play().get("vet_visit_heals", 60.0)))
 	save_now()
 	if cured:
@@ -312,6 +316,10 @@ func take_away_summary() -> Dictionary:
 ## This is only the effect on the needs. The animation, the scene change and
 ## the button locking are Main's job, and arrive in a later phase.
 func apply_action(action: StringName) -> void:
+	# Same reasoning as take_to_vet: a dead dog's needs are not topped up,
+	# whichever caller asks for it.
+	if not life.alive:
+		return
 	model.apply_action(action, Settings.action_effects())
 	_since_action = 0.0
 	Log.info("%s: %s" % [String(action).capitalize(), model.describe()])

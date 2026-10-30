@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.19 - Tests that start the whole app
   v1.18 - The three findings v1.17 guessed at
   v1.17 - Real play fixes: the death nobody was told about
   v1.16 - Phase 9: the scoreboard of past pets
@@ -22,6 +23,57 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.19 - Tests that start the whole app
+------------------------------------------------------------
+
+What
+  - Added tests/test_integration.gd: 35 checks that run the real autoloads
+    and the real Main scene, rather than a pure class on its own. It is the
+    eighth suite and the build script picks it up like the rest. 606 checks
+    in all.
+  - The five scenarios are the five the audit asked for: a dead save shows
+    its death card and lets the owner name a new dog; no action, vet visit
+    or effect touches a dead dog; a need already critical at launch gets
+    its reminder scheduled; a new dog inherits none of the notifier's
+    memory of the last one; and a bad reminder gap in settings.json is
+    clamped at the live layer, not only in the pure helper.
+  - Needs.take_to_vet and Needs.apply_action now refuse a dead dog
+    themselves, rather than relying on the buttons and the action runner
+    being the only callers.
+
+Why
+  - Every one of the eight findings in that audit lived in the wiring
+    between components, and all 542 checks at the time tested pure classes
+    in isolation. A green run said nothing about any of it. These are the
+    tests that would have caught F1 to F5 before the owner did.
+  - Checked by putting the bugs back: with the pre-fix scripts/ from commit
+    8f3b6bf in the working tree, 16 of the 35 checks fail, spread across
+    all five scenarios. With the fixes in place all 35 pass. A test that
+    has never failed has not been shown to test anything.
+
+How
+  - Each scenario is a cold launch in a Godot process of its own, because a
+    cold launch is the thing being tested: the autoloads load a save once,
+    and "what happens when the app starts" cannot happen twice in one
+    start. Run with no arguments the suite is the parent, and starts one
+    child per scenario with "--scenario <name>" after a bare --.
+  - Two things about --script runs that cost an afternoon between them, and
+    are written down in the suite so the next person does not pay again.
+    The autoloads are not yet singletons when the script is compiled, so
+    naming Needs or Settings in it will not compile; they are fetched from
+    the tree instead. And their _ready has not run when _initialize starts
+    - it happens on the first frames - so the suite waits for Paths to
+    have run before pointing it anywhere.
+  - That second one bit for real: an earlier version waited a single frame,
+    Paths._ready then put the folders back, and a passing test run wrote a
+    new dog over the owner's own saves/pet.json. It was restored from a
+    copy. Every scenario now ends by checking that the saves folder is
+    still the sandbox, because that mistake does not fail a test.
+  - Notifications are off in every scenario on purpose: the notifier would
+    otherwise try to raise a real Windows toast, which means starting a
+    PowerShell process from a test run.
 
 ------------------------------------------------------------
 v1.18 - The three findings v1.17 guessed at
