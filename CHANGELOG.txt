@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.21 - The zip unpacks into a folder of its own
   v1.20 - An image size limit, overlapping rooms, and four scripts split
   v1.19 - Tests that start the whole app
   v1.18 - The three findings v1.17 guessed at
@@ -24,6 +25,31 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.21 - The zip unpacks into a folder of its own
+------------------------------------------------------------
+
+What
+  - DogPet-v<ver>.zip now contains one DogPet-v<ver> folder, as the plan in
+    CLAUDE.md always said it should. It used to hold the exe, assets/ and
+    README.txt loose at the top.
+
+Why
+  - Found by building v1.20 and unzipping it into an empty folder, which is
+    the only way this sort of thing shows up. Unzipping it into Downloads
+    would have scattered a 113 MB exe, a README and an assets folder in
+    among everything else already there - and "unzip it anywhere and run
+    it" is the whole shape of this app.
+
+How
+  - Compress-Archive was being given the staging folder's contents rather
+    than the folder. One word.
+  - Verified by rebuilding and unzipping: one DogPet-v1.21 folder, with no
+    .gdignore and no _backup inside it. The build before this one was run
+    from a clean folder too: it wrote its own saves/ beside the exe, found
+    all three pet packs and all five rooms in the loose assets/, put up the
+    tray icon, and logged no warnings at all.
 
 ------------------------------------------------------------
 v1.20 - An image size limit, overlapping rooms, and four scripts split

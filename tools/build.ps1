@@ -311,7 +311,11 @@ $readmeText = ($readme -replace "`r?`n", "`r`n")
 Write-Step "Zipping"
 
 if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
-Compress-Archive -Path (Join-Path $StageDir "*") -DestinationPath $ZipPath -CompressionLevel Optimal
+# The staging folder itself, not its contents: the zip holds one
+# DogPet-v<ver> folder, so unzipping it into Downloads puts everything in a
+# folder of its own rather than scattering an exe, a README and an assets
+# folder in among whatever else is there.
+Compress-Archive -Path $StageDir -DestinationPath $ZipPath -CompressionLevel Optimal
 
 $zipSize = [math]::Round((Get-Item $ZipPath).Length / 1MB, 1)
 
