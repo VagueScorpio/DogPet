@@ -35,8 +35,8 @@ var _background_style := StyleBoxFlat.new()
 ## instancing the scene.
 func setup(key: StringName) -> void:
 	_key = key
-	_name_label.text = NeedsModel.display_name(key)
-	_hint_label.text = NeedsModel.full_bar_means(key)
+	_name_label.text = NeedsText.display_name(key)
+	_hint_label.text = NeedsText.full_bar_means(key)
 	_load_icon(key)
 
 	_style_bar()
@@ -116,11 +116,11 @@ func _refresh_sickness() -> void:
 		var left: float = Needs.life.seconds_to_fatal(
 			Settings.live_interval_for(NeedsModel.HUNGER), Settings.real_play()
 		)
-		line = "needs a vet now" if left <= 0.0 else "needs a vet in " + NeedsModel.format_countdown(left)
+		line = "needs a vet now" if left <= 0.0 else "needs a vet in " + NeedsText.format_countdown(left)
 	if _countdown_label.text != line:
 		_countdown_label.text = line
 	var level: int = Needs.life.sickness_level()
-	if NeedsModel.level_label(level) != _status_label.text:
+	if NeedsText.level_label(level) != _status_label.text:
 		_apply_level(level)
 
 
@@ -131,7 +131,7 @@ func _on_threshold_crossed(key: StringName, level: int) -> void:
 
 
 func _apply_level(level: int) -> void:
-	_status_label.text = NeedsModel.level_label(level)
+	_status_label.text = NeedsText.level_label(level)
 	var color: Color = FINE_COLOR
 	match level:
 		int(NeedsModel.Level.WARNING):

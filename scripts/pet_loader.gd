@@ -136,6 +136,9 @@ static func build_sprite_frames(pack: PetPack) -> SpriteFrames:
 
 ## Read a PNG off the disk into a texture. Image.load_from_file works on a
 ## real path; load() would not, because assets/ is never imported.
+##
+## The file's header is read before any of it is decoded, so a picture far
+## too big to show is refused rather than allocated. See ImageLimits.
 static func load_texture(path: String) -> ImageTexture:
 	if path.begins_with("res://"):
 		var imported: Variant = load(path)
@@ -143,8 +146,20 @@ static func load_texture(path: String) -> ImageTexture:
 			# Already a texture; wrap its image so callers get one type back.
 			return ImageTexture.create_from_image((imported as Texture2D).get_image())
 		return null
+
+	var header_size: Vector2i = ImageLimits.png_size_from_header(path)
+	if ImageLimits.is_too_large(header_size):
+		Log.warn(ImageLimits.describe(path, header_size))
+		return null
+
 	var image: Image = Image.load_from_file(path)
 	if image == null or image.is_empty():
+		return null
+	# A file whose header could not be read gets measured here instead -
+	# after decoding, which is the best that can be done for a format this
+	# does not know, but it still keeps the enormous one off the screen.
+	if ImageLimits.is_too_large(image.get_size()):
+		Log.warn(ImageLimits.describe(path, image.get_size()))
 		return null
 	return ImageTexture.create_from_image(image)
 

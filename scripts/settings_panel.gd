@@ -81,12 +81,12 @@ func _build_care() -> void:
 	table.add_theme_constant_override("h_separation", 16)
 	box.add_child(table)
 	for heading in ["", "Hunger", "Happiness", "Energy"]:
-		table.add_child(_dim(heading, 12, 0.0, false))
+		table.add_child(UiBits.dim(heading, 12, 0.0, false))
 	for name in [CareSettings.FREQUENT, CareSettings.MODERATE, CareSettings.LONG, CareSettings.DEMO]:
-		table.add_child(_dim(name.capitalize(), 12, 0.0, false))
+		table.add_child(UiBits.dim(name.capitalize(), 12, 0.0, false))
 		var row: Dictionary = CareSettings.intervals_from(Settings.data, name)
 		for key in NeedsModel.KEYS:
-			table.add_child(_dim(_duration(float(row[key])), 12, 0.0, false))
+			table.add_child(UiBits.dim(UiBits.duration(float(row[key])), 12, 0.0, false))
 
 	var demo := CheckButton.new()
 	demo.text = "Demo Speed"
@@ -94,7 +94,7 @@ func _build_care() -> void:
 	demo.button_pressed = Settings.demo_speed()
 	demo.toggled.connect(Settings.set_demo_speed)
 	box.add_child(demo)
-	box.add_child(_dim(
+	box.add_child(UiBits.dim(
 		"Time away is always caught up at the real setting above, never at Demo speed.", 11
 	))
 
@@ -104,8 +104,8 @@ func _build_care() -> void:
 func _build_pet() -> void:
 	var box: VBoxContainer = _section("Pet", "")
 
-	var name_row: HBoxContainer = _row(box)
-	name_row.add_child(_dim("Name", 13, 60, false))
+	var name_row: HBoxContainer = UiBits.row(box)
+	name_row.add_child(UiBits.dim("Name", 13, 60, false))
 	var field := LineEdit.new()
 	field.text = Needs.pet_name
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -113,7 +113,7 @@ func _build_pet() -> void:
 	field.focus_exited.connect(func() -> void: Needs.set_pet_name(field.text))
 	name_row.add_child(field)
 
-	box.add_child(_dim("Switching body keeps the same dog, and the same needs.", 11))
+	box.add_child(UiBits.dim("Switching body keeps the same dog, and the same needs.", 11))
 	_pet_list = VBoxContainer.new()
 	_pet_list.add_theme_constant_override("separation", 4)
 	box.add_child(_pet_list)
@@ -136,7 +136,7 @@ func _fill_pet_list() -> void:
 		radio.pressed.connect(AssetLibrary.set_active_pet.bind(pack.id))
 		line.add_child(radio)
 		if not pack.credit.is_empty():
-			var credit: Label = _dim(pack.credit, 10)
+			var credit: Label = UiBits.dim(pack.credit, 10)
 			credit.custom_minimum_size = Vector2(0, 0)
 			line.add_child(credit)
 		_pet_list.add_child(line)
@@ -149,11 +149,11 @@ func _build_rooms() -> void:
 		"Rooms", "One per slot. Add a folder to assets/scenes to get a choice here."
 	)
 	for role in ScenePack.ROLES:
-		var row: HBoxContainer = _row(box)
-		row.add_child(_dim(role.capitalize(), 13, 90, false))
+		var row: HBoxContainer = UiBits.row(box)
+		row.add_child(UiBits.dim(role.capitalize(), 13, 90, false))
 		var rooms: Array[ScenePack] = AssetLibrary.scenes_for(role)
 		if rooms.is_empty():
-			row.add_child(_dim("(none found)", 12))
+			row.add_child(UiBits.dim("(none found)", 12))
 			continue
 		var picker := OptionButton.new()
 		picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -176,31 +176,31 @@ func _build_assets() -> void:
 		"Assets", "All the art lives in a folder beside the app. Change it freely."
 	)
 
-	var row: HBoxContainer = _row(box)
-	row.add_child(_button(
+	var row: HBoxContainer = UiBits.row(box)
+	row.add_child(UiBits.button(
 		"Open folder", func() -> void: Paths.open_in_file_manager(Paths.assets_dir)
 	))
-	row.add_child(_button("Reload", func() -> void:
+	row.add_child(UiBits.button("Reload", func() -> void:
 		AssetLibrary.reload()
 		_note("Assets reloaded.")
 	))
 
-	var transfer_row: HBoxContainer = _row(box)
-	transfer_row.add_child(_button("Import pack...", func() -> void: _transfer.import_pack()))
-	transfer_row.add_child(_button("Export pet...", func() -> void:
+	var transfer_row: HBoxContainer = UiBits.row(box)
+	transfer_row.add_child(UiBits.button("Import pack...", func() -> void: _transfer.import_pack()))
+	transfer_row.add_child(UiBits.button("Export pet...", func() -> void:
 		if AssetLibrary.active_pet != null:
 			_transfer.export_pet(AssetLibrary.active_pet)
 	))
 
-	var export_row: HBoxContainer = _row(box)
-	export_row.add_child(_dim("Room", 13, 60, false))
+	var export_row: HBoxContainer = UiBits.row(box)
+	export_row.add_child(UiBits.dim("Room", 13, 60, false))
 	var picker := OptionButton.new()
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for role in ScenePack.ROLES:
 		var room: ScenePack = AssetLibrary.active_scene(role)
 		picker.add_item("%s - %s" % [role.capitalize(), room.display_name if room else "none"])
 	export_row.add_child(picker)
-	export_row.add_child(_button("Export", func() -> void:
+	export_row.add_child(UiBits.button("Export", func() -> void:
 		var role: String = ScenePack.ROLES[maxi(0, picker.selected)]
 		var room: ScenePack = AssetLibrary.active_scene(role)
 		if room != null:
@@ -227,7 +227,7 @@ func _build_window() -> void:
 	quits.button_pressed = Settings.close_button_quits()
 	quits.toggled.connect(Settings.set_close_button_quits)
 	box.add_child(quits)
-	box.add_child(_dim(
+	box.add_child(UiBits.dim(
 		"Left off, closing the window tucks DogPet into the tray and the dog carries on."
 		+ ("" if Tray.supported else "  (No tray available here, so the close button quits.)"),
 		11
@@ -252,16 +252,16 @@ func _build_notifications() -> void:
 	on.toggled.connect(Settings.set_notifications_enabled)
 	box.add_child(on)
 
-	var row: HBoxContainer = _row(box)
-	row.add_child(_button("Test notification", Notifier.send_test))
+	var row: HBoxContainer = UiBits.row(box)
+	row.add_child(UiBits.button("Test notification", Notifier.send_test))
 	if Notifier.is_paused():
-		row.add_child(_button("Resume now", func() -> void:
+		row.add_child(UiBits.button("Resume now", func() -> void:
 			Notifier.resume()
 			rebuild()
 		))
-		row.add_child(_dim("Paused for %d more minutes" % Notifier.pause_minutes_left(), 11))
+		row.add_child(UiBits.dim("Paused for %d more minutes" % Notifier.pause_minutes_left(), 11))
 
-	box.add_child(_dim(
+	box.add_child(UiBits.dim(
 		"Notifications arrive from \"Windows PowerShell\". That is expected: DogPet installs"
 		+ " nothing, so it has no name of its own to announce itself with.", 11
 	))
@@ -271,13 +271,13 @@ func _build_notifications() -> void:
 
 func _build_about() -> void:
 	_about = _section("About", "")
-	_about.add_child(_dim("DogPet v%s     Godot %s" % [
+	_about.add_child(UiBits.dim("DogPet v%s     Godot %s" % [
 		Log.app_version(), Engine.get_version_info().get("string", "?"),
 	], 12))
 
 	for row in [["Saves", Paths.saves_dir], ["Assets", Paths.assets_dir]]:
-		var line: HBoxContainer = _row(_about)
-		line.add_child(_dim(row[0], 12, 60, false))
+		var line: HBoxContainer = UiBits.row(_about)
+		line.add_child(UiBits.dim(row[0], 12, 60, false))
 		var open := LinkButton.new()
 		open.text = row[1]
 		open.tooltip_text = "Open this folder"
@@ -286,68 +286,23 @@ func _build_about() -> void:
 		open.pressed.connect(func() -> void: Paths.open_in_file_manager(folder))
 		line.add_child(open)
 
-	_about.add_child(_heading("Credits", 15))
-	_about.add_child(_dim(
+	_about.add_child(UiBits.heading("Credits", 15))
+	_about.add_child(UiBits.dim(
 		"The art DogPet ships with is not all under the same licence. Some of it"
 		+ " requires that its credit stays visible, so here it is.", 11
 	))
 	CreditsList.build_into(_about, self)
 
 
-# --- Small builders -------------------------------------------------------
+# --- The one builder that needs the panel itself ------------------------
 
 func _section(title: String, blurb: String) -> VBoxContainer:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
-	box.add_child(_heading(title, 18))
+	box.add_child(UiBits.heading(title, 18))
 	if not blurb.is_empty():
-		box.add_child(_dim(blurb, 11))
+		box.add_child(UiBits.dim(blurb, 11))
 	_sections.add_child(box)
 	return box
 
 
-func _heading(text: String, size: int) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", size)
-	return label
-
-
-# Wrapping is right for a paragraph and wrong for a table cell or a short
-# row label, which will shrink to one character per line given the chance.
-func _dim(text: String, size: int, min_width: float = 0.0, wrap: bool = true) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
-	if wrap:
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if min_width > 0.0:
-		label.custom_minimum_size = Vector2(min_width, 0)
-	return label
-
-
-func _row(parent: Control) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	parent.add_child(row)
-	return row
-
-
-func _button(text: String, action: Callable) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(action)
-	return button
-
-
-# "40 min", "3 h", "45 s" - whichever reads most plainly.
-func _duration(seconds: float) -> String:
-	if seconds < 60.0:
-		return "%d s" % roundi(seconds)
-	if seconds < 3600.0:
-		return "%d min" % roundi(seconds / 60.0)
-	var hours: float = seconds / 3600.0
-	if is_equal_approx(hours, roundf(hours)):
-		return "%d h" % roundi(hours)
-	return "%.1f h" % hours

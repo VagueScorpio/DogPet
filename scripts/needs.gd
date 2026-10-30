@@ -103,7 +103,7 @@ func _ready() -> void:
 		# only counts the part of it the bowl was actually empty.
 		_catch_up_life(elapsed, float(before.get(String(NeedsModel.HUNGER), 0.0)))
 		Log.info("Loaded a save from %s ago. Needs now: %s%s" % [
-			NeedsModel.format_duration(elapsed),
+			NeedsText.format_duration(elapsed),
 			model.describe(),
 			"" if life.alive else "  (died of %s while away)" % LifeModel.cause_name(life.cause),
 		])
@@ -170,7 +170,7 @@ func seconds_to_critical(key: StringName) -> float:
 
 ## "~1h 20m", or "now".
 func countdown_text(key: StringName) -> String:
-	return NeedsModel.format_countdown(seconds_to_critical(key))
+	return NeedsText.format_countdown(seconds_to_critical(key))
 
 
 ## What the dog looks like it is feeling, in one line.
@@ -182,7 +182,8 @@ func reaction_line() -> String:
 		return LifeModel.death_line(pet_name, life.cause)
 	if life.ill:
 		return "%s is unwell." % pet_name
-	return model.reaction_line(pet_name)
+	var worst: StringName = model.worst_key()
+	return NeedsText.reaction_line(worst, int(model.level_of(worst)), pet_name)
 
 
 # --- Ageing, illness and death -------------------------------------------

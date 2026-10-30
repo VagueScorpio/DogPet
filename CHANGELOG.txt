@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.20 - An image size limit, overlapping rooms, and four scripts split
   v1.19 - Tests that start the whole app
   v1.18 - The three findings v1.17 guessed at
   v1.17 - Real play fixes: the death nobody was told about
@@ -23,6 +24,77 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.20 - An image size limit, overlapping rooms, and four scripts split
+------------------------------------------------------------
+
+What
+  - F9. Images from assets/ are now measured before they are decoded, and
+    one too big to show is skipped with a line in the log. The limit is
+    8192 x 4096 - about 128 MB in memory, far more than any room or sprite
+    sheet needs. A PNG's size is read out of its 24-byte header, because a
+    200-megapixel sheet can zip down to two megabytes and then ask for most
+    of a gigabyte the moment it is decoded.
+  - F11. Two room transitions at once no longer tread on each other. The
+    newest one wins; the one it overtook steps aside quietly instead of
+    freeing the new room, clearing the busy flag early and announcing a
+    room that had already been left. Picking a room in Settings during an
+    action now works, where it used to be dropped.
+  - F10. Four new scripts, out of the four longest:
+      scene_painter.gd  the yard, park and plain room, drawn from colours
+      needs_text.gd     the words: names, labels, countdowns, reactions
+      image_limits.gd   how big an image may be, and reading a PNG header
+      ui_bits.gd        the headings, rows and buttons panels are built of
+    scene_view.gd 352 -> 200, needs_model.gd 351 -> 261, settings_panel.gd
+    353 -> 308, pet_loader.gd 227 -> 211.
+  - Needs.take_to_vet and Needs.apply_action already refused a dead dog as
+    of v1.19; nothing new there, but the integration suite now proves it.
+  - Added 12 checks to tests/test_pets.gd, 2 to tests/test_needs.gd and 2
+    scenarios to tests/test_integration.gd: 637 across eight suites.
+
+Why
+  - The last three findings of the audit, all of them filed as
+    informational rather than bugs, and the two real ones were worth having
+    anyway. F9 is about a folder the app openly invites the owner to drop
+    PNGs into: getting a file wrong there should be skipped with a warning,
+    not met with most of a gigabyte of allocation. F11 was never actually
+    observed going wrong, which is why it was informational; it is a
+    handful of lines to make certain of.
+  - On F10, the guideline is "about 300 lines, each script focused", and
+    the point of it is that the owner is learning Godot from this code. So
+    the splits were made where there was a real seam - drawing scenery is
+    not the same job as loading a room's pictures, and the words a need is
+    described in are not the same thing as its arithmetic - rather than
+    cutting files at the 300th line.
+
+How
+  - ImageLimits is pure and knows nothing of nodes or logging, which is
+    what lets the tests call it directly: a script that names an autoload
+    cannot be compiled by a --script test run at all, and PetLoader names
+    Log. PetLoader does the skipping and the warning; ImageLimits only
+    answers the question.
+  - SceneStage counts the transitions it starts, and one that finds the
+    count has moved on returns without touching the stage. The wait is on a
+    timer rather than on the tween, because the newer transition frees the
+    room the older one was animating, which kills its tween without ever
+    emitting finished - and the older one would then have waited for ever,
+    holding the busy flag behind it.
+  - NeedsText depends on NeedsModel and not the other way about: two
+    scripts that preload each other will not compile. NeedsModel.
+    reaction_line is gone, and its callers now ask the model which need is
+    worst and NeedsText for the sentence, which is what Needs.reaction_line
+    did in two steps anyway.
+  - Still over the guideline, and left alone on purpose: needs.gd at 383,
+    pet_view.gd at 326, pet_pack.gd at 307. The last two are within "about
+    300". needs.gd is the one real exception: every seam in it would move
+    signal wiring somewhere else rather than logic - the arithmetic is
+    already in NeedsModel, the Real-play rules in LifeModel - and the file
+    would get harder to follow, not easier. Say the word and it can be
+    split anyway.
+  - The Scoreboard and the credits list still build their own labels by
+    hand rather than through UiBits. Worth tidying when either is next
+    touched.
 
 ------------------------------------------------------------
 v1.19 - Tests that start the whole app

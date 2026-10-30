@@ -38,7 +38,7 @@ func show_summary(summary: Dictionary, pet_name: String) -> void:
 	var before: Dictionary = summary.get("before", {})
 	var after: Dictionary = summary.get("after", {})
 
-	_title_label.text = "While you were away (%s)..." % NeedsModel.format_duration(elapsed)
+	_title_label.text = "While you were away (%s)..." % NeedsText.format_duration(elapsed)
 
 	for child in _rows_box.get_children():
 		child.queue_free()
@@ -59,7 +59,7 @@ func _build_row(key: StringName, was: float, now: float) -> Control:
 	var row := HBoxContainer.new()
 
 	var name_label := Label.new()
-	name_label.text = NeedsModel.display_name(key)
+	name_label.text = NeedsText.display_name(key)
 	name_label.custom_minimum_size = Vector2(90, 0)
 	row.add_child(name_label)
 

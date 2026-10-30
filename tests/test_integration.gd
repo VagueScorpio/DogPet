@@ -30,6 +30,8 @@ const SCENARIOS: PackedStringArray = [
 	"critical_at_launch_schedules_reminders",
 	"new_pet_clears_notifier_memory",
 	"reminder_gap_is_clamped",
+	"overlapping_room_changes",
+	"panels_build",
 ]
 
 const SANDBOX_FOLDER := "integration_sandbox"
@@ -145,6 +147,10 @@ func _run_scenario(name: String) -> void:
 			await _new_pet_clears_notifier_memory()
 		"reminder_gap_is_clamped":
 			await _reminder_gap_is_clamped()
+		"overlapping_room_changes":
+			await _overlapping_room_changes()
+		"panels_build":
+			await _panels_build()
 		_:
 			_ok("a scenario called %s exists" % name, false)
 
@@ -275,6 +281,65 @@ func _reminder_gap_is_clamped() -> void:
 		print("          first %.4f, later %.4f, notifier processing: %s" % [
 			first, later, notifier.is_processing(),
 		])
+
+
+# F11. Two transitions at once, which is what happens if a room is picked in
+# Settings while an action's own transition is still running. The first one
+# used to free the second one's room, clear the busy flag early and announce
+# a room that had already been left.
+func _overlapping_room_changes() -> void:
+	var main: Node = await _boot(_starving_save(), _casual_demo(), true)
+	var stage: Node = main._stage
+	var arrivals: Array = []
+	stage.transition_finished.connect(func(role: String) -> void: arrivals.append(role))
+
+	# Deliberately not awaited: the second call has to land while the first
+	# is still running, which is the whole point of the scenario.
+	stage.show_role("eat", "fade")
+	await process_frame
+	stage.show_role("play", "fade")
+
+	# Waited out in real seconds, not frames: the transitions are driven by
+	# a timer, and a headless run gets through frames far faster than that.
+	# Read off the stage's own script rather than preloaded: scene_stage.gd
+	# names AssetLibrary, and a script that names an autoload cannot even be
+	# compiled from here, let alone preloaded.
+	var seconds: float = float(
+		stage.get_script().get_script_constant_map().get("TRANSITION_SECONDS", 0.5)
+	)
+	await create_timer(seconds * 3.0).timeout
+
+	_ok("the room on screen is the one asked for last", stage.current_role == "play")
+	_ok("the stage is not left busy", not stage.is_busy())
+	_ok("only one room is left on the stage", stage.get_child_count() == 1)
+	_ok(
+		"only the room arrived in was announced",
+		arrivals.size() == 1 and String(arrivals[0]) == "play"
+	)
+
+
+# Not one of the audit's five. The settings screen puts seven sections of UI
+# together from code, and it does that for real only with the autoloads and
+# the scene tree - so a mistake in any of it used to show up when the owner
+# opened Settings and not before.
+func _panels_build() -> void:
+	var main: Node = await _boot(_starving_save(), _casual_demo(), true)
+	var panel: Node = main._settings_panel
+	_ok("the settings screen built its seven sections", panel._sections.get_child_count() == 7)
+
+	panel.open()
+	await _settle()
+	_ok("it builds them again when opened", panel._sections.get_child_count() == 7)
+	_ok("and the screen is showing", panel.visible)
+	panel.close()
+	_ok("and hides again when done", not panel.visible)
+
+	main._help_panel.open()
+	await _settle()
+	_ok("the instructions open", main._help_panel.visible)
+	main._scoreboard.open()
+	await _settle()
+	_ok("so does the scoreboard", main._scoreboard.visible)
 
 
 # --- Booting the real thing -----------------------------------------------

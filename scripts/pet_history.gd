@@ -100,7 +100,7 @@ static func format_date(unix: float) -> String:
 static func format_lifespan(born_unix: float, died_unix: float) -> String:
 	if born_unix <= 0.0 or died_unix <= born_unix:
 		return "unknown"
-	return NeedsModel.format_duration(died_unix - born_unix)
+	return NeedsText.format_duration(died_unix - born_unix)
 
 
 ## A one-line summary of the whole record.

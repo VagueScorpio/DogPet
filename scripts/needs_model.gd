@@ -71,30 +71,6 @@ static func critical_value(key: StringName) -> float:
 	return 0.0 if key == HAPPINESS else 100.0
 
 
-## A friendly name for the UI.
-static func display_name(key: StringName) -> String:
-	match key:
-		HUNGER:
-			return "Hunger"
-		HAPPINESS:
-			return "Happiness"
-		ENERGY:
-			return "Energy"
-	return String(key)
-
-
-## Said plainly, so nobody has to guess what a full bar means.
-static func full_bar_means(key: StringName) -> String:
-	match key:
-		HUNGER:
-			return "full bar = starving"
-		HAPPINESS:
-			return "full bar = happy"
-		ENERGY:
-			return "full bar = restless"
-	return ""
-
-
 # --- Reading the state ----------------------------------------------------
 
 func get_value(key: StringName) -> float:
@@ -127,15 +103,6 @@ func levels() -> Dictionary[StringName, int]:
 	for key in KEYS:
 		out[key] = int(level_of(key))
 	return out
-
-
-static func level_label(level: int) -> String:
-	match level:
-		int(Level.WARNING):
-			return "Getting low"
-		int(Level.CRITICAL):
-			return "Needs care now"
-	return "Fine"
 
 
 ## Which animation state the dog should be in when no action is running.
@@ -234,40 +201,6 @@ func seconds_to_critical(key: StringName, intervals: Dictionary) -> float:
 	return remaining / (100.0 / interval)
 
 
-## Reads as "~1h 20m", or "now" once the need is already critical.
-static func format_countdown(seconds: float) -> String:
-	if seconds <= 0.0:
-		return "now"
-	if seconds < 60.0:
-		return "~%ds" % int(ceil(seconds))
-	var total_minutes: int = int(ceil(seconds / 60.0))
-	if total_minutes < 60:
-		return "~%dm" % total_minutes
-	var hours: int = total_minutes / 60
-	var minutes: int = total_minutes % 60
-	if minutes == 0:
-		return "~%dh" % hours
-	return "~%dh %dm" % [hours, minutes]
-
-
-## Reads as "3h 12m", for the heading on the "While you were away" card.
-static func format_duration(seconds: float) -> String:
-	var total_minutes: int = int(floor(maxf(seconds, 0.0) / 60.0))
-	if total_minutes < 1:
-		return "less than a minute"
-	var days: int = total_minutes / 1440
-	var hours: int = (total_minutes % 1440) / 60
-	var minutes: int = total_minutes % 60
-	var parts: PackedStringArray = []
-	if days > 0:
-		parts.append("%dd" % days)
-	if hours > 0:
-		parts.append("%dh" % hours)
-	if minutes > 0 and days == 0:
-		parts.append("%dm" % minutes)
-	return " ".join(parts)
-
-
 # --- Actions --------------------------------------------------------------
 
 ## Run one of the care actions: "feed", "play" or "walk".
@@ -326,26 +259,3 @@ func describe() -> String:
 	return ", ".join(parts)
 
 
-## The dog's reaction to how things stand, such as "Biscuit is starving!".
-## It lives here so the away card, the in-app banners and the tray
-## notifications all say the same thing.
-func reaction_line(pet_name: String) -> String:
-	var key: StringName = worst_key()
-	match level_of(key):
-		Level.CRITICAL:
-			match key:
-				HUNGER:
-					return "%s is starving!" % pet_name
-				HAPPINESS:
-					return "%s is miserable." % pet_name
-				ENERGY:
-					return "%s is bouncing off the walls!" % pet_name
-		Level.WARNING:
-			match key:
-				HUNGER:
-					return "%s is getting hungry." % pet_name
-				HAPPINESS:
-					return "%s could use some attention." % pet_name
-				ENERGY:
-					return "%s has energy to burn." % pet_name
-	return "%s is doing just fine." % pet_name

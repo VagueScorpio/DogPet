@@ -16,6 +16,7 @@ const Pack := preload("res://scripts/pet_pack.gd")
 const Motion := preload("res://scripts/pet_motion.gd")
 const Pose := preload("res://scripts/pet_pose.gd")
 const Model := preload("res://scripts/needs_model.gd")
+const Limits := preload("res://scripts/image_limits.gd")
 
 const ASSETS_PETS := "assets/pets"
 
@@ -34,6 +35,7 @@ func _initialize() -> void:
 	_test_sprite_scaling()
 	_test_mood()
 	_test_motion()
+	_test_image_limits()
 
 	print("")
 	print("================")
@@ -321,6 +323,54 @@ func _is_neutral(pose: PetPose) -> bool:
 		and absf(pose.pitch_degrees) < 0.0001
 		and absf(pose.yaw_degrees) < 0.0001
 	)
+
+
+func _test_image_limits() -> void:
+	_begin("Image sizes are read before anything is decoded")
+	var assets: String = ProjectSettings.globalize_path("res://").trim_suffix("/").path_join(ASSETS_PETS)
+
+	# Checked against the decoded image rather than against numbers written
+	# down here, so the check cannot drift if the art is ever replaced.
+	var png: String = assets.path_join("pug_pixel/idle.png")
+	var decoded: Image = Image.load_from_file(png)
+	_ok("a real PNG's header gives its true size", Limits.png_size_from_header(png) == decoded.get_size())
+
+	_ok(
+		"a file that is not a PNG reads as unknown",
+		Limits.png_size_from_header(assets.path_join("pug_3d/model.glb")) == Vector2i.ZERO
+	)
+	_ok(
+		"a missing file reads as unknown",
+		Limits.png_size_from_header(assets.path_join("nothing/here.png")) == Vector2i.ZERO
+	)
+
+	_ok("a sprite is not too large", not Limits.is_too_large(decoded.get_size()))
+	_ok("8192 x 4096 is allowed", not Limits.is_too_large(Vector2i(8192, 4096)))
+	_ok("one row more is not", Limits.is_too_large(Vector2i(8192, 4097)))
+	_ok("the 206-megapixel sheet from the audit is not", Limits.is_too_large(Vector2i(14336, 14336)))
+	_ok("an unknown size is never too large", not Limits.is_too_large(Vector2i.ZERO))
+	_ok("nor is a nonsense one", not Limits.is_too_large(Vector2i(-10, 4)))
+
+	# The whole point is that it is refused on the strength of the header,
+	# without the picture ever being decoded: this file is 24 bytes long and
+	# claims to be 20000 x 20000, which would be 1.6 GB of RGBA8.
+	var fake: String = "user://claims_to_be_enormous.png"
+	var header: PackedByteArray = PackedByteArray([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+	header.append_array(PackedByteArray([0, 0, 0, 13]))
+	header.append_array("IHDR".to_ascii_buffer())
+	header.append_array(PackedByteArray([0, 0, 0x4E, 0x20, 0, 0, 0x4E, 0x20]))
+	var file: FileAccess = FileAccess.open(fake, FileAccess.WRITE)
+	if file == null:
+		_ok("could write the oversized header fixture", false)
+		return
+	file.store_buffer(header)
+	file.close()
+
+	var claimed: Vector2i = Limits.png_size_from_header(fake)
+	_ok("the header of an enormous file is read as 20000 x 20000", claimed == Vector2i(20000, 20000))
+	_ok("and that size is refused", Limits.is_too_large(claimed))
+	_ok("with a reason worth reading", Limits.describe(fake, claimed).contains("20000 x 20000"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(fake))
 
 
 func _begin(section: String) -> void:

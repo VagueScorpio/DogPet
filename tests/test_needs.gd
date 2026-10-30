@@ -21,6 +21,7 @@ extends SceneTree
 ## class names, so nothing is shadowed.
 
 const Model := preload("res://scripts/needs_model.gd")
+const Text := preload("res://scripts/needs_text.gd")
 const Save := preload("res://scripts/save_file.gd")
 const Config := preload("res://scripts/care_settings.gd")
 
@@ -246,9 +247,9 @@ func _test_thresholds() -> void:
 	_ok("69% of the way through, it does not", not_yet.level_of(Model.HUNGER) == Model.Level.FINE)
 
 	_begin("Level wording")
-	_ok("Fine", Model.level_label(Model.Level.FINE) == "Fine")
-	_ok("Getting low", Model.level_label(Model.Level.WARNING) == "Getting low")
-	_ok("Needs care now", Model.level_label(Model.Level.CRITICAL) == "Needs care now")
+	_ok("Fine", Text.level_label(Model.Level.FINE) == "Fine")
+	_ok("Getting low", Text.level_label(Model.Level.WARNING) == "Getting low")
+	_ok("Needs care now", Text.level_label(Model.Level.CRITICAL) == "Needs care now")
 
 
 func _test_catch_up() -> void:
@@ -422,22 +423,28 @@ func _test_formatting() -> void:
 	model.set_value(Model.HUNGER, 100.0)
 	_close("a critical need has no time left", model.seconds_to_critical(Model.HUNGER, row), 0.0)
 
-	_ok("0 seconds reads 'now'", Model.format_countdown(0.0) == "now")
-	_ok("40 seconds reads '~40s'", Model.format_countdown(40.0) == "~40s")
-	_ok("20 minutes reads '~20m'", Model.format_countdown(20.0 * MINUTE) == "~20m")
-	_ok("80 minutes reads '~1h 20m'", Model.format_countdown(80.0 * MINUTE) == "~1h 20m")
-	_ok("2 hours reads '~2h'", Model.format_countdown(2.0 * HOUR) == "~2h")
+	_ok("0 seconds reads 'now'", Text.format_countdown(0.0) == "now")
+	_ok("40 seconds reads '~40s'", Text.format_countdown(40.0) == "~40s")
+	_ok("20 minutes reads '~20m'", Text.format_countdown(20.0 * MINUTE) == "~20m")
+	_ok("80 minutes reads '~1h 20m'", Text.format_countdown(80.0 * MINUTE) == "~1h 20m")
+	_ok("2 hours reads '~2h'", Text.format_countdown(2.0 * HOUR) == "~2h")
 
 	_begin("Away-card duration wording")
-	_ok("30 seconds", Model.format_duration(30.0) == "less than a minute")
-	_ok("3h 12m", Model.format_duration(3.0 * HOUR + 12.0 * MINUTE) == "3h 12m")
-	_ok("2d 4h", Model.format_duration(2.0 * DAY + 4.0 * HOUR) == "2d 4h")
+	_ok("30 seconds", Text.format_duration(30.0) == "less than a minute")
+	_ok("3h 12m", Text.format_duration(3.0 * HOUR + 12.0 * MINUTE) == "3h 12m")
+	_ok("2d 4h", Text.format_duration(2.0 * DAY + 4.0 * HOUR) == "2d 4h")
 
 	_begin("The dog says something sensible")
+	# The model picks the need in the worst shape; NeedsText puts it into
+	# words. Both halves are checked here, the way Needs.reaction_line does.
 	var starving := _model_at(100.0, 100.0, 0.0)
-	_ok("starving", starving.reaction_line("Biscuit") == "Biscuit is starving!")
+	_ok("starving", _reaction(starving, "Biscuit") == "Biscuit is starving!")
 	var fine := _model_at(10.0, 90.0, 10.0)
-	_ok("doing fine", fine.reaction_line("Biscuit") == "Biscuit is doing just fine.")
+	_ok("doing fine", _reaction(fine, "Biscuit") == "Biscuit is doing just fine.")
+	var restless := _model_at(10.0, 90.0, 100.0)
+	_ok("bouncing off the walls", _reaction(restless, "Biscuit").contains("bouncing"))
+	var bored := _model_at(10.0, 20.0, 10.0)
+	_ok("needing attention", _reaction(bored, "Biscuit").contains("attention"))
 
 
 func _test_corrupt_save_falls_back() -> void:
@@ -500,6 +507,13 @@ func _tuned(care: String, demo: bool) -> Dictionary:
 	copy["care_interval"] = care
 	copy["demo_speed"] = demo
 	return copy
+
+
+# The same two steps Needs.reaction_line takes for a dog that is neither
+# ill nor dead: ask the model which need is worst, then ask for the words.
+func _reaction(model: Object, pet_name: String) -> String:
+	var worst: StringName = model.worst_key()
+	return Text.reaction_line(worst, int(model.level_of(worst)), pet_name)
 
 
 func _model_at(hunger: float, happiness: float, energy: float) -> Object:

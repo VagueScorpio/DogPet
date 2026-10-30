@@ -52,7 +52,7 @@ static func body_for(key: StringName, level: int) -> String:
 static func tooltip_for(values: Dictionary, pet_name: String) -> String:
 	var parts: PackedStringArray = []
 	for key in NeedsModel.KEYS:
-		parts.append("%s %d%%" % [NeedsModel.display_name(key), roundi(float(values.get(key, 0.0)))])
+		parts.append("%s %d%%" % [NeedsText.display_name(key), roundi(float(values.get(key, 0.0)))])
 	return "%s\n%s" % [pet_name, "  -  ".join(parts)]
 
 
