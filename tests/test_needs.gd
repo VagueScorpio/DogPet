@@ -44,6 +44,7 @@ func _initialize() -> void:
 	_test_thresholds()
 	_test_catch_up()
 	_test_catch_up_ignores_demo()
+	_test_seconds_at_critical()
 	_test_actions()
 	_test_formatting()
 	_test_corrupt_save_falls_back()
@@ -241,6 +242,58 @@ func _test_catch_up_ignores_demo() -> void:
 		"with Demo off the live drain uses the real setting too",
 		Config.live_interval_name(config) == Config.MODERATE
 	)
+
+
+# How much of an absence a need spent at its bad end. Real play's starving
+# clock is built on this: an absence is not the same thing as a starvation,
+# and the difference is a dog's life.
+func _test_seconds_at_critical() -> void:
+	var hunger_interval: float = 3.0 * HOUR
+
+	_begin("Time spent critical during an absence")
+	_close(
+		"a dog fed just before closing, away a minute over the interval",
+		Model.seconds_at_critical(Model.HUNGER, 0.0, hunger_interval + MINUTE, hunger_interval),
+		MINUTE
+	)
+	_close(
+		"away for exactly the interval, and so starving for no time at all",
+		Model.seconds_at_critical(Model.HUNGER, 0.0, hunger_interval, hunger_interval),
+		0.0
+	)
+	_close(
+		"away for less than the interval",
+		Model.seconds_at_critical(Model.HUNGER, 0.0, HOUR, hunger_interval),
+		0.0
+	)
+	_close(
+		"half starved already when the app closed",
+		Model.seconds_at_critical(Model.HUNGER, 50.0, 2.0 * HOUR, hunger_interval),
+		0.5 * HOUR
+	)
+	_close(
+		"already starving, so the whole absence counts",
+		Model.seconds_at_critical(Model.HUNGER, 100.0, 5.0 * HOUR, hunger_interval),
+		5.0 * HOUR
+	)
+
+	_begin("Time spent critical reads the need's own direction")
+	# Happiness runs the other way: 100 is cared for, 0 is the bad end.
+	_close(
+		"a happy dog takes the full interval to get there",
+		Model.seconds_at_critical(Model.HAPPINESS, 100.0, hunger_interval + MINUTE, hunger_interval),
+		MINUTE
+	)
+	_close(
+		"a miserable one is already there",
+		Model.seconds_at_critical(Model.HAPPINESS, 0.0, HOUR, hunger_interval),
+		HOUR
+	)
+
+	_begin("Time spent critical with nothing to measure")
+	_close("no time away", Model.seconds_at_critical(Model.HUNGER, 100.0, 0.0, hunger_interval), 0.0)
+	_close("a clock that went backwards", Model.seconds_at_critical(Model.HUNGER, 100.0, -HOUR, hunger_interval), 0.0)
+	_close("an interval of zero means do not drain", Model.seconds_at_critical(Model.HUNGER, 100.0, HOUR, 0.0), 0.0)
 
 
 func _test_actions() -> void:

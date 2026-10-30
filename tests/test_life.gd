@@ -14,6 +14,8 @@ extends SceneTree
 
 const Life := preload("res://scripts/life_model.gd")
 const Config := preload("res://scripts/care_settings.gd")
+# Named so it shadows neither the Needs autoload nor the NeedsModel class.
+const NeedMath := preload("res://scripts/needs_model.gd")
 
 const HOUR := 3600.0
 # Moderate hunger, which is what the defaults use.
@@ -33,6 +35,7 @@ func _initialize() -> void:
 	_test_casual_never_kills()
 	_test_ageing()
 	_test_starving()
+	_test_catching_up_on_starvation()
 	_test_illness()
 	_test_vet()
 	_test_saving()
@@ -158,6 +161,54 @@ func _test_starving() -> void:
 	_run(gone, INTERVAL * 50.0, true, true, 0.0)
 	_close("it does not keep ageing", gone.age_days, age_at_death)
 	_ok("and does not fall ill in the grave", not gone.ill)
+
+
+# --- Coming back to a dog that was left alone ------------------------------
+
+# An absence is not the same thing as a starvation. The dog only starts
+# starving once hunger has actually reached the bad end, which happens
+# partway through the time away, so Needs splits the absence in two and only
+# the second half feeds the starving clock. These checks do the same split
+# the live code does.
+func _test_catching_up_on_starvation() -> void:
+	_begin("A minute over the interval is a minute of starving")
+	var elapsed: float = INTERVAL + 60.0
+	var starving_for: float = NeedMath.seconds_at_critical(
+		NeedMath.HUNGER, 0.0, elapsed, INTERVAL
+	)
+	var life: LifeModel = _fresh()
+	_run(life, elapsed - starving_for, false, true)
+	_run(life, starving_for, true, true)
+	_ok("the dog is alive", life.alive)
+	_close("and has been starving for one minute", life.starving_seconds, 60.0)
+
+	# The same dog, credited with the whole absence as though it had been
+	# starving from the moment the app closed: dead before you see the window.
+	var naive: LifeModel = _fresh()
+	_run(naive, elapsed, true, true)
+	_ok("counting the whole absence would have killed it", not naive.alive)
+
+	_begin("The grace does still run out while away")
+	var doomed: LifeModel = _fresh()
+	# One interval to get hungry, then a minute more than the whole grace.
+	var away: float = 2.0 * INTERVAL + 60.0
+	var without_food: float = NeedMath.seconds_at_critical(
+		NeedMath.HUNGER, 0.0, away, INTERVAL
+	)
+	_run(doomed, away - without_food, false, true)
+	_run(doomed, without_food, true, true)
+	_ok("starving right through the grace period is fatal", not doomed.alive)
+	_ok("of starvation", doomed.cause == Life.Cause.STARVATION)
+
+	_begin("A dog already starving when the app closed")
+	var hungry: LifeModel = _fresh()
+	var whole: float = NeedMath.seconds_at_critical(
+		NeedMath.HUNGER, 100.0, 0.5 * INTERVAL, INTERVAL
+	)
+	_close("every second away counts", whole, 0.5 * INTERVAL)
+	_run(hungry, whole, true, true)
+	_ok("and it is still just alive", hungry.alive)
+	_close("halfway through its grace", hungry.starving_seconds, 0.5 * INTERVAL)
 
 
 # --- Illness ---------------------------------------------------------------

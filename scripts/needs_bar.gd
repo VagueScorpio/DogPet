@@ -91,17 +91,28 @@ func _process(_delta: float) -> void:
 		_refresh_sickness()
 		return
 	_bar.value = Needs.value_of(_key)
-	var countdown: String = Needs.countdown_text(_key)
-	var line: String = "needs care now" if countdown == "now" else "needs care in " + countdown
+	var line: String = _countdown_line()
 	if _countdown_label.text != line:
 		_countdown_label.text = line
+
+
+# Nothing drains any more once the dog has died, so a countdown promising
+# care in two hours would simply be untrue. The bars freeze where they are
+# and say so.
+func _countdown_line() -> String:
+	if not Needs.life.alive:
+		return "no longer counting"
+	var countdown: String = Needs.countdown_text(_key)
+	return "needs care now" if countdown == "now" else "needs care in " + countdown
 
 
 # The sickness bar has no signal to ride on, so it watches its own level.
 func _refresh_sickness() -> void:
 	_bar.value = Needs.life.sickness
 	var line: String = "well"
-	if Needs.life.ill:
+	if not Needs.life.alive:
+		line = "no longer counting"
+	elif Needs.life.ill:
 		var left: float = Needs.life.seconds_to_fatal(
 			Settings.live_interval_for(NeedsModel.HUNGER), Settings.real_play()
 		)

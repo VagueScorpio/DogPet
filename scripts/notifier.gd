@@ -38,6 +38,24 @@ func _ready() -> void:
 		set_process(false)
 		return
 	Needs.threshold_crossed.connect(_on_threshold_crossed)
+	_adopt_current_levels()
+
+
+# Needs has already done its offline catch-up by the time this runs, and it
+# did it before anything was listening - so a need can be sitting at Critical
+# with no crossing to hear about, ever. Without this, a dog that was left
+# starving overnight and reopened straight into the tray was never once
+# mentioned again. The levels are taken as read rather than announced: at
+# launch the owner is usually looking at the window, where the away card has
+# just said the same thing.
+func _adopt_current_levels() -> void:
+	for key in NeedsModel.KEYS:
+		var level: int = Needs.level_of(key)
+		if level <= int(NeedsModel.Level.FINE):
+			continue
+		_announced[key] = level
+		if level >= int(NeedsModel.Level.CRITICAL):
+			_reminder_left[key] = Settings.critical_reminder_seconds()
 
 
 func _process(delta: float) -> void:

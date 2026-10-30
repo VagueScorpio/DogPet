@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.17 - Real play fixes: the death nobody was told about
   v1.16 - Phase 9: the scoreboard of past pets
   v1.15 - A nurse in the vet clinic
   v1.14 - An icon for the sickness bar
@@ -20,6 +21,60 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.17 - Real play fixes: the death nobody was told about
+------------------------------------------------------------
+
+What
+  - A dog that died while DogPet was closed now gets its death card when
+    the window opens. Before, the app came up with everything frozen, no
+    card and no way to start another dog: the save was unplayable for good,
+    because nothing ever told the owner what had happened.
+  - The offline catch-up no longer credits a dog with starving for the
+    whole time the app was shut. Only the part of the absence after hunger
+    actually reached the bad end counts towards the grace period.
+  - Feed, Play, Walk and Take To Vet do nothing at all once the dog has
+    died, and an action that was still running when it died no longer
+    unlocks the buttons as it finishes or tops up the needs afterwards.
+  - Starting a new dog announces the reset, so its bars no longer open
+    reading "Needs care now" in red, inherited from the dog before it.
+  - A need that was already at Warning or Critical when the app opened is
+    now known about: critical ones get their reminders scheduled, where
+    before they were never mentioned again.
+  - The bars say "no longer counting" rather than promising care in two
+    hours' time for a dog that has died.
+  - The "While you were away" card now says the dog died, where it used to
+    report it as merely starving.
+  - The Real Pet confirmation dialog's text had a real line break sitting
+    inside an ordinary quoted string. Godot 4.7 accepts that, but most
+    GDScript will not, so the break is now written as \n\n. The dialog
+    reads exactly as before.
+  - Added 10 checks to tests/test_needs.gd and 8 to tests/test_life.gd:
+    560 across seven suites.
+
+Why
+  - All of it came out of a review of Real play, and the first item is the
+    one that mattered: Needs does its offline catch-up in its own _ready,
+    which runs before the first scene exists. Anything it announced by
+    signal at that moment was announced to an empty room. The away card was
+    already written around that, and the death was not.
+  - The starvation arithmetic was the other one worth having. A dog fed
+    right before the app closed and reopened three hours and one minute
+    later on Moderate was credited with three hours and a minute of
+    starvation against a three-hour grace, and died on the spot, when the
+    truth was that it had been starving for a minute.
+
+How
+  - Needs no longer emits pet_died or fell_ill while catching up, where
+    there is nobody to hear it. Main asks life.alive in its own _ready
+    instead, which also covers reopening a save that was already dead.
+  - NeedsModel.seconds_at_critical says how much of a stretch of draining a
+    need spent at its bad end. Needs splits the absence on that figure and
+    advances the life model twice: once well fed, once starving. The split
+    is pure arithmetic, so both tests drive it directly.
+  - Main's _set_actions_enabled now goes through life.alive, so every path
+    that re-enables the buttons is covered by one check rather than three.
 
 ------------------------------------------------------------
 v1.16 - Phase 9: the scoreboard of past pets

@@ -99,7 +99,9 @@ func _ready() -> void:
 			# when it was last saved rather than at the epoch.
 			life.born_unix = float(save.get("last_saved_unix", Time.get_unix_time_from_system()))
 		model.catch_up(elapsed, Settings.catch_up_intervals())
-		_catch_up_life(elapsed)
+		# The hunger the dog started the absence with, so the starving clock
+		# only counts the part of it the bowl was actually empty.
+		_catch_up_life(elapsed, float(before.get(String(NeedsModel.HUNGER), 0.0)))
 		Log.info("Loaded a save from %s ago. Needs now: %s%s" % [
 			NeedsModel.format_duration(elapsed),
 			model.describe(),
@@ -115,7 +117,9 @@ func _ready() -> void:
 			"elapsed": elapsed,
 			"before": before,
 			"after": model.to_dictionary(),
-			"reaction": model.reaction_line(pet_name),
+			# The death-aware line: a dog that starved while the app was shut
+			# should not be described as merely "very hungry".
+			"reaction": reaction_line(),
 		}
 
 	save_now()
@@ -127,7 +131,11 @@ func _process(delta: float) -> void:
 	if not life.alive:
 		return
 	model.drain(delta, Settings.live_intervals())
-	_advance_life(delta, Settings.live_interval_for(NeedsModel.HUNGER))
+	_advance_life(
+		delta,
+		Settings.live_interval_for(NeedsModel.HUNGER),
+		model.level_of(NeedsModel.HUNGER) >= int(NeedsModel.Level.CRITICAL)
+	)
 	_announce_changes()
 	if _since_action >= 0.0:
 		_since_action += delta
@@ -181,16 +189,35 @@ func reaction_line() -> String:
 
 # The catch-up runs at the real care setting, never Demo, exactly as the
 # needs do - otherwise a demo session would kill the dog overnight.
-func _catch_up_life(elapsed: float) -> void:
+#
+# The absence is split in two: the stretch before hunger reached the bad end,
+# and the stretch after it. Only the second one feeds the starving clock. Done
+# in one piece instead, a dog fed right before the app closed and away for
+# three hours and a minute on Moderate would be credited with three hours and
+# a minute of starvation and die on the spot, when in truth it had been
+# starving for one minute.
+func _catch_up_life(elapsed: float, hunger_before: float) -> void:
 	var interval: float = float(Settings.catch_up_intervals().get(NeedsModel.HUNGER, 0.0))
-	_advance_life(elapsed, interval, true)
+	var starving_for: float = NeedsModel.seconds_at_critical(
+		NeedsModel.HUNGER, hunger_before, elapsed, interval
+	)
+	var well_fed_for: float = elapsed - starving_for
+	if well_fed_for > 0.0:
+		_advance_life(well_fed_for, interval, false, true)
+	if starving_for > 0.0 and life.alive:
+		_advance_life(starving_for, interval, true, true)
 
 
-func _advance_life(seconds: float, hunger_interval: float, catching_up: bool = false) -> void:
+func _advance_life(
+	seconds: float,
+	hunger_interval: float,
+	hunger_is_critical: bool,
+	catching_up: bool = false
+) -> void:
 	var was_ill: bool = life.ill
 	var news: Dictionary = life.advance(
 		seconds,
-		model.level_of(NeedsModel.HUNGER) >= int(NeedsModel.Level.CRITICAL),
+		hunger_is_critical,
 		Settings.is_real_play(),
 		hunger_interval,
 		Settings.real_play(),
@@ -199,14 +226,19 @@ func _advance_life(seconds: float, hunger_interval: float, catching_up: bool = f
 	)
 	if bool(news.get("fell_ill", false)) and not was_ill:
 		Log.info("%s has fallen ill." % pet_name)
-		fell_ill.emit()
+		if not catching_up:
+			fell_ill.emit()
 	if bool(news.get("died", false)):
 		Log.info("%s died of %s at %s." % [
 			pet_name, LifeModel.cause_name(life.cause), LifeModel.format_age(life.age_days),
 		])
 		_remember_this_dog()
 		save_now()
-		pet_died.emit(life.cause, pet_name, life.age_days)
+		# While catching up there is no scene yet, so nothing is listening and
+		# the signal would simply be lost. Main looks at life.alive in its own
+		# _ready instead, which also covers reopening an already-dead save.
+		if not catching_up:
+			pet_died.emit(life.cause, pet_name, life.age_days)
 		return
 	if catching_up:
 		save_now()
@@ -241,9 +273,11 @@ func start_new_pet(new_name: String) -> void:
 		pet_name = cleaned
 	model.reset_to_cared()
 	life.reset(Time.get_unix_time_from_system())
-	_levels = model.levels()
-	for key in NeedsModel.KEYS:
-		_shown[key] = roundi(model.get_value(key))
+	# Announced rather than quietly written over the old levels: the bars and
+	# the notifier both learn what a need is doing from threshold_crossed, so
+	# resetting silently left a brand-new dog's bars still reading "Needs care
+	# now" in red, and left the notifier thinking it had already warned.
+	_announce_changes()
 	_since_action = -1.0
 	save_now()
 	Log.info("A new dog: %s." % pet_name)

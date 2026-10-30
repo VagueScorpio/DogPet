@@ -35,6 +35,12 @@ func setup(stage: SceneStage, pet: Control) -> void:
 func run(action: StringName) -> void:
 	if running or not ActionPlan.is_action(action):
 		return
+	# Nothing can be fed, played with or taken to the vet once it has died.
+	# The buttons are locked by then, but a keyboard shortcut or a press that
+	# landed in the same frame as the death would otherwise still get through,
+	# and the action would heal the needs of a dog that is gone.
+	if not Needs.life.alive:
+		return
 	if _stage == null or _pet == null:
 		Log.error("The action runner was never given a stage to work on.")
 		return
@@ -62,11 +68,16 @@ func run(action: StringName) -> void:
 
 	await get_tree().create_timer(seconds).timeout
 
-	Needs.apply_action(action)
-	# The vet visit is the one action that does something beyond the three
-	# needs: it is what brings the sickness bar down.
-	if action == ActionPlan.VET:
-		Needs.take_to_vet()
+	# The dog can die partway through: a starving dog's grace can run out while
+	# the walk animation is still playing. The effects are then dropped - they
+	# would otherwise top up the needs of a dog that is already gone - but the
+	# trip home still happens, so the view is not left standing in the park.
+	if Needs.life.alive:
+		Needs.apply_action(action)
+		# The vet visit is the one action that does something beyond the three
+		# needs: it is what brings the sickness bar down.
+		if action == ActionPlan.VET:
+			Needs.take_to_vet()
 
 	await _stage.show_role(ScenePack.HOME, style)
 	_return_pet()

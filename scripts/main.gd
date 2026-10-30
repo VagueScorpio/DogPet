@@ -61,6 +61,14 @@ func _ready() -> void:
 	if not summary.is_empty():
 		_away_card.show_summary(summary, Needs.pet_name)
 
+	# Same reason, and this one matters more: a dog that died while the app was
+	# shut - or while it was open, if the app was then closed without starting
+	# another - emitted pet_died with nobody there to hear it. Without this the
+	# window came up with everything frozen, no death card, and no way to begin
+	# again. The card is shown last so it sits on top of the away card.
+	if not Needs.life.alive:
+		_on_pet_died(Needs.life.cause, Needs.pet_name, Needs.life.age_days)
+
 
 func _process(_delta: float) -> void:
 	var line: String = Needs.reaction_line()
@@ -182,10 +190,14 @@ func _on_action_finished(_action: StringName) -> void:
 
 
 func _set_actions_enabled(enabled: bool) -> void:
+	# Nothing can be done for a dead dog, so the buttons stay locked whatever
+	# else asks for them. This is also what stops an action that was already
+	# running when the dog died from unlocking them again as it finishes.
+	var allowed: bool = enabled and Needs.life.alive
 	for button in [_feed_button, _play_button, _walk_button]:
-		button.disabled = not enabled
+		button.disabled = not allowed
 	# The vet is only ever available when there is something to treat.
-	_vet_button.disabled = not enabled or not Needs.life.ill
+	_vet_button.disabled = not allowed or not Needs.life.ill
 
 
 # --- Real play ------------------------------------------------------------
@@ -195,7 +207,7 @@ func _set_actions_enabled(enabled: bool) -> void:
 func _refresh_real_play() -> void:
 	var real: bool = Settings.is_real_play()
 	_vet_button.visible = real
-	_vet_button.disabled = not Needs.life.ill or _runner.running
+	_vet_button.disabled = not Needs.life.alive or not Needs.life.ill or _runner.running
 
 	if real and _sickness_bar == null:
 		_sickness_bar = NEEDS_BAR_SCENE.instantiate()
@@ -207,7 +219,7 @@ func _refresh_real_play() -> void:
 
 
 func _on_fell_ill() -> void:
-	_vet_button.disabled = _runner.running
+	_vet_button.disabled = _runner.running or not Needs.life.alive
 	Notifier.deliver(
 		"%s is unwell." % Needs.pet_name,
 		"A trip to the vet would put it right."

@@ -203,6 +203,26 @@ static func elapsed_between(then_unix: float, now_unix: float) -> float:
 	return maxf(now_unix - then_unix, 0.0)
 
 
+## Of a stretch of draining, how much of it this need spent sitting at its
+## bad end, in seconds.
+##
+## Starting from `start_value` and draining for `elapsed` seconds, the need
+## reaches critical partway through (or not at all). Everything after that
+## moment is time spent critical. Zero when it never got there.
+##
+## This is what keeps the offline catch-up honest about starvation: the dog
+## was not starving for the whole absence, only for the tail end of it.
+static func seconds_at_critical(
+	key: StringName, start_value: float, elapsed: float, interval: float
+) -> float:
+	if elapsed <= 0.0 or interval <= 0.0:
+		return 0.0
+	var start_badness: float = 100.0 - start_value if key == HAPPINESS else start_value
+	var remaining: float = 100.0 - clampf(start_badness, 0.0, 100.0)
+	var until_critical: float = remaining / (100.0 / interval)
+	return clampf(elapsed - until_critical, 0.0, elapsed)
+
+
 ## How long until this need hits critical, in seconds.
 func seconds_to_critical(key: StringName, intervals: Dictionary) -> float:
 	var interval: float = float(intervals.get(key, 0.0))

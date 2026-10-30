@@ -117,9 +117,7 @@ func _confirm_real_play() -> void:
 		"%s can get ill and can die, of starvation or of an illness left"
 		% Needs.pet_name
 		+ " untreated. That happens while DogPet is closed as well as while it"
-		+ " is open.
-
-You would then start again with a new dog."
+		+ " is open.\n\nYou would then start again with a new dog."
 	)
 	dialog.ok_button_text = "Switch"
 	dialog.confirmed.connect(func() -> void:
