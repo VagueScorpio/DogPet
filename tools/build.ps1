@@ -104,7 +104,16 @@ Write-Host "    done"
 
 if (-not $SkipTests) {
     Write-Step "Running the tests"
-    $suites = @("test_needs", "test_pets", "test_scenes", "test_notify", "test_packs")
+    # Found rather than listed. A hand-written list silently stopped
+    # covering test_life and test_history when they were added, so a
+    # failure in either would not have stopped a release.
+    $suites = @(
+        Get-ChildItem -Path (Join-Path $ProjectRoot "tests") -Filter "test_*.gd" |
+            Sort-Object Name |
+            ForEach-Object { $_.BaseName }
+    )
+    if ($suites.Count -eq 0) { Fail "No test suites found in tests/." }
+    Write-Host "    $($suites.Count) suites"
 
     # Capturing a native program's stderr in Windows PowerShell wraps every
     # line as an error, and with ErrorActionPreference Stop that aborts the

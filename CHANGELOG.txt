@@ -58,6 +58,13 @@ Fixed
   - The summary line read "3 dogs remembered.  the oldest was ..." - full
     stops between fragments rather than one sentence.
 
+Fixed in the build script
+  - It ran five of the seven test suites. The list was written out by hand
+    and quietly stopped covering test_life and test_history when they were
+    added, so a failure in either would not have stopped a release - and
+    those are the two suites about the dog dying. It finds the suites in
+    tests/ for itself now.
+
 That is all three sets of changes done.
 
 
