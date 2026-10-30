@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.18 - The three findings v1.17 guessed at
   v1.17 - Real play fixes: the death nobody was told about
   v1.16 - Phase 9: the scoreboard of past pets
   v1.15 - A nurse in the vet clinic
@@ -21,6 +22,58 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.18 - The three findings v1.17 guessed at
+------------------------------------------------------------
+
+What
+  - The notifier now forgets the dog before it. When a new pet starts, the
+    record of what has already been said about each need is cleared, and so
+    is any reminder still waiting to go off.
+  - A zero or negative reminder gap in settings.json is held at ten
+    seconds. Before, it meant a reminder every frame, and every reminder
+    raised while the window is hidden starts a PowerShell process to show
+    the toast: roughly sixty new processes a second.
+  - A zero or negative action length in settings.json is held at half a
+    second. Before, a negative value made Godot's timer fire on the very
+    next frame, so the animation never played and the dog was home before
+    it had left.
+  - Both of those lookups moved out of Settings and into CareSettings as
+    pure functions, where the tests can reach them.
+  - Added 16 checks to tests/test_needs.gd: 576 across seven suites.
+
+Why
+  - v1.17 was written from a five-line summary of a review rather than the
+    review itself, which had been lost to a context limit. The full text
+    has since been recovered from the session that produced it, and three
+    of the eight findings turned out not to be what v1.17 fixed. These are
+    those three.
+  - The one about the notifier is the one with teeth. A dog that died
+    hungry leaves "critical" sitting in the notifier's memory of what it
+    has already mentioned. The next dog's first warning is a lower level
+    than that, so it reads as an improvement and is swallowed in silence -
+    the new dog gets no warnings at all until it reaches critical too.
+  - The two floors are about a file the project openly invites editing.
+    Getting a number wrong there should misbehave, not start processes in a
+    loop or skip the part of the app the number belongs to.
+
+How
+  - Notifier connects Needs.pet_started to _forget_previous_dog, which
+    clears both dictionaries. v1.17's announce-the-reset change already
+    cleared them in practice, by emitting a crossing down to Fine; this
+    clears them at the source, so it no longer depends on the old dog's
+    levels having been anything in particular.
+  - CareSettings gained reminder_seconds_from and action_seconds_from, with
+    MIN_REMINDER_SECONDS and MIN_ACTION_SECONDS as the floors. Settings now
+    forwards to them and holds no arithmetic of its own.
+  - Left undone, from the same review: no size limit on images loaded from
+    assets/ (a 200-megapixel PNG would allocate hundreds of megabytes), six
+    scripts over the project's own ~300-line guideline, and SceneStage's
+    _busy flag under overlapping transitions, which was never observed to
+    leak. The review also asks for tests that instantiate the autoloads and
+    the scene tree: every suite still tests pure classes in isolation,
+    which is why all eight findings lived in the wiring between them.
 
 ------------------------------------------------------------
 v1.17 - Real play fixes: the death nobody was told about

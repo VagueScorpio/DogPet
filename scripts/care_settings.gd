@@ -33,6 +33,20 @@ const PLAY_MODES: PackedStringArray = [CASUAL, REAL]
 ## The three the owner picks from. Demo is a toggle, not a fourth choice.
 const CARE_INTERVALS: PackedStringArray = [FREQUENT, MODERATE, LONG]
 
+## Floors under the two numbers where a zero or a negative does more than
+## misbehave. settings.json is meant to be edited by hand, so it has to
+## survive being edited badly.
+##
+## A reminder gap of zero means a reminder every frame, and every reminder
+## that comes due while the window is hidden starts a PowerShell process to
+## raise the toast - around sixty new processes a second. Ten seconds is
+## still far shorter than any care setting asks for, so the floor costs the
+## owner nothing.
+const MIN_REMINDER_SECONDS := 10.0
+## A negative action length makes a Godot timer fire on the very next frame,
+## which collapses the walk into a flicker the dog never leaves the room for.
+const MIN_ACTION_SECONDS := 0.5
+
 const DEFAULTS := {
 	"format_version": FORMAT_VERSION,
 	"care_interval": MODERATE,
@@ -129,6 +143,21 @@ static func intervals_from(from: Dictionary, name: String) -> Dictionary:
 		NeedKeys.HAPPINESS: float(row.get("happiness", 12600.0)),
 		NeedKeys.ENERGY: float(row.get("energy", 14400.0)),
 	}
+
+
+## How long to wait before nagging again about a need that is already
+## critical, in seconds and never below the floor.
+static func reminder_seconds_from(from: Dictionary) -> float:
+	var table: Dictionary = from.get("critical_reminder_minutes", {})
+	var minutes: float = float(table.get(live_interval_name(from), 60.0))
+	return maxf(MIN_REMINDER_SECONDS, minutes * 60.0)
+
+
+## How long one action's animation runs, in seconds and never below the
+## floor. The same length in Demo mode as in any other.
+static func action_seconds_from(from: Dictionary, action: String) -> float:
+	var table: Dictionary = from.get("action_seconds", {})
+	return maxf(MIN_ACTION_SECONDS, float(table.get(action, 5.0)))
 
 
 ## Copy loaded values over the defaults, but only where the key is one we

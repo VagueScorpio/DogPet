@@ -180,15 +180,12 @@ func action_effects() -> Dictionary:
 
 
 func action_seconds(action: String) -> float:
-	var table: Dictionary = data.get("action_seconds", {})
-	return float(table.get(action, 5.0))
+	return CareSettings.action_seconds_from(data, action)
 
 
 ## How long to wait before nagging again about an already-critical need.
 func critical_reminder_seconds() -> float:
-	var table: Dictionary = data.get("critical_reminder_minutes", {})
-	var name: String = CareSettings.live_interval_name(data)
-	return float(table.get(name, 60.0)) * 60.0
+	return CareSettings.reminder_seconds_from(data)
 
 
 # --- The file itself ------------------------------------------------------

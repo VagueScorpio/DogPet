@@ -38,7 +38,18 @@ func _ready() -> void:
 		set_process(false)
 		return
 	Needs.threshold_crossed.connect(_on_threshold_crossed)
+	Needs.pet_started.connect(_forget_previous_dog)
 	_adopt_current_levels()
+
+
+# A new dog inherits nothing from the last one, and least of all this.
+# _announced holds the worst level already mentioned for each need, and a dog
+# that died hungry leaves CRITICAL sitting in it; the new dog's first warning
+# then reads as an improvement on that and is swallowed silently. A nag left
+# in _reminder_left would go off for a dog that is no longer here.
+func _forget_previous_dog() -> void:
+	_announced.clear()
+	_reminder_left.clear()
 
 
 # Needs has already done its offline catch-up by the time this runs, and it

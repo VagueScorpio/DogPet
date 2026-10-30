@@ -39,6 +39,7 @@ func _initialize() -> void:
 	print("==================")
 
 	_test_interval_table()
+	_test_setting_floors()
 	_test_drain_rates()
 	_test_clamping()
 	_test_thresholds()
@@ -75,6 +76,81 @@ func _test_interval_table() -> void:
 		_close("%s hunger interval" % name, row[Model.HUNGER], expected[0])
 		_close("%s happiness interval" % name, row[Model.HAPPINESS], expected[1])
 		_close("%s energy interval" % name, row[Model.ENERGY], expected[2])
+
+
+func _test_setting_floors() -> void:
+	_begin("Reminder gaps and action lengths, and the floors under them")
+
+	# The shipped numbers first, so a floor cannot be quietly standing in for
+	# a real value.
+	_close(
+		"frequent nags every 30 min",
+		Config.reminder_seconds_from(_tuned(Config.FREQUENT, false)), 30.0 * MINUTE
+	)
+	_close(
+		"moderate nags every hour",
+		Config.reminder_seconds_from(_tuned(Config.MODERATE, false)), 1.0 * HOUR
+	)
+	_close(
+		"long nags every two hours",
+		Config.reminder_seconds_from(_tuned(Config.LONG, false)), 2.0 * HOUR
+	)
+	_close(
+		"demo nags every minute",
+		Config.reminder_seconds_from(_tuned(Config.MODERATE, true)), 1.0 * MINUTE
+	)
+
+	# A hand-edited zero would mean one reminder per frame, and every reminder
+	# raised while the window is hidden starts a PowerShell process to show
+	# the toast - sixty of them a second.
+	var edited_badly: Dictionary = _tuned(Config.MODERATE, true)
+	edited_badly["critical_reminder_minutes"][Config.DEMO] = 0.0
+	_close(
+		"a zero gap is held at the floor",
+		Config.reminder_seconds_from(edited_badly), Config.MIN_REMINDER_SECONDS
+	)
+	edited_badly["critical_reminder_minutes"][Config.DEMO] = -5.0
+	_close(
+		"a negative gap is held at the floor",
+		Config.reminder_seconds_from(edited_badly), Config.MIN_REMINDER_SECONDS
+	)
+	_ok("the floor is a few seconds at least", Config.MIN_REMINDER_SECONDS >= 5.0)
+
+	var table_missing: Dictionary = _tuned(Config.MODERATE, false)
+	table_missing.erase("critical_reminder_minutes")
+	_close(
+		"a missing table falls back to an hour",
+		Config.reminder_seconds_from(table_missing), 1.0 * HOUR
+	)
+
+	# Action lengths: the spec's 5 / 8 / 10, and the same in Demo mode.
+	var shipped: Dictionary = _tuned(Config.MODERATE, false)
+	_close("feed runs 5 s", Config.action_seconds_from(shipped, "feed"), 5.0)
+	_close("play runs 8 s", Config.action_seconds_from(shipped, "play"), 8.0)
+	_close("walk runs 10 s", Config.action_seconds_from(shipped, "walk"), 10.0)
+	_close(
+		"demo does not shorten the walk",
+		Config.action_seconds_from(_tuned(Config.MODERATE, true), "walk"), 10.0
+	)
+	_close(
+		"an unknown action gets the five-second default",
+		Config.action_seconds_from(shipped, "sing"), 5.0
+	)
+
+	# A negative length makes Godot's timer fire on the very next frame, so
+	# the animation never plays and the dog is home before it has left.
+	var broken: Dictionary = _tuned(Config.MODERATE, false)
+	broken["action_seconds"]["walk"] = -30.0
+	_close(
+		"a negative length is held at the floor",
+		Config.action_seconds_from(broken, "walk"), Config.MIN_ACTION_SECONDS
+	)
+	broken["action_seconds"]["walk"] = 0.0
+	_close(
+		"a zero length is held at the floor",
+		Config.action_seconds_from(broken, "walk"), Config.MIN_ACTION_SECONDS
+	)
+	_ok("the floor leaves the transition time to run", Config.MIN_ACTION_SECONDS > 0.0)
 
 
 func _test_drain_rates() -> void:
@@ -414,6 +490,16 @@ func _test_corrupt_save_falls_back() -> void:
 
 func _intervals(name: String) -> Dictionary:
 	return Config.intervals_from(Config.DEFAULTS, name)
+
+
+# A copy of the shipped settings with the care row and the Demo toggle set,
+# which a check can then edit as badly as a hand-edited settings.json might
+# be. The copy matters: DEFAULTS is a const, and shared.
+func _tuned(care: String, demo: bool) -> Dictionary:
+	var copy: Dictionary = Config.DEFAULTS.duplicate(true)
+	copy["care_interval"] = care
+	copy["demo_speed"] = demo
+	return copy
 
 
 func _model_at(hunger: float, happiness: float, energy: float) -> Object:
