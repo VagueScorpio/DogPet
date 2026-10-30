@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.15 - A nurse in the vet clinic
   v1.14 - An icon for the sickness bar
   v1.13 - Phase 8: Casual and Real Pet, ageing, illness and death
   v1.12 - Phase 7: a menu bar, and instructions inside the app
@@ -17,6 +18,37 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.15 - A nurse in the vet clinic
+------------------------------------------------------------
+
+What
+  - Added scenes/vet/vet_nurse.png and stood her behind the exam table.
+
+Why
+  - The owner asked whether the nurse from the Mini Clinic Pixel pack
+    could be shrunk down and put in the vet scene. She could.
+
+How
+  - The pack draws her at ten times her native size: one figure is 1820 by
+    5580 in the file, which is 182 by 558 of real pixels.
+  - She is taken down to 20 by 60 and shown at the props' scale of 3, so
+    she lands at 60 by 180 on screen with the same three-pixel blocks as
+    the rest of the room's furniture. A finer scale was tried and looked
+    wrong beside it: her pixels were smaller than the exam table's.
+  - 80px tall was tried first and reached the ceiling. Real play adds a
+    fourth bar, which leaves the room about 240px tall rather than 310, so
+    anything sized against a Casual room is too big for a Real one.
+  - Her y puts her just behind the exam table. Props are drawn back to
+    front by y, so a smaller number than the table's leaves her attending
+    it rather than standing in front of it.
+
+Known
+  - The clinic is now three art styles at once: an anime-ish nurse,
+    isometric furniture and a 3D dog. It reads well enough, but it is a
+    mixture, and worth a look before deciding it stays.
 
 
 ------------------------------------------------------------

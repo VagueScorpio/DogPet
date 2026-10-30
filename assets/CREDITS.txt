@@ -13,7 +13,8 @@ Pixel Pug, rooms, props and icons (pets/pug_pixel/, scenes/, ui/)
   Nasha's Cozy Pets Pack
   License: licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt
 
-Sickness icon (ui/icon_sickness.png)
+Sickness icon (ui/icon_sickness.png) and the vet nurse
+(scenes/vet/vet_nurse.png)
   Mini Clinic Pixel pack
   Free to use and distribute for personal or commercial projects.
   Credit optional; given here anyway. Scaled down from the pack's
