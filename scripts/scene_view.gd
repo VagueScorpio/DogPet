@@ -57,9 +57,11 @@ func setup(room: ScenePack) -> void:
 	if pack == null:
 		return
 
-	for key in ["file", "wall", "floor"]:
-		if pack.background.has(key):
-			_load(str(pack.background[key]))
+	var type: String = str(pack.background.get("type", ScenePack.BG_GENERATED))
+	if type == ScenePack.BG_IMAGE or type == ScenePack.BG_TILED:
+		for key in ["file", "wall", "floor"]:
+			if pack.background.has(key):
+				_load(str(pack.background[key]))
 	for prop in pack.props:
 		_load(str(prop["file"]))
 
@@ -189,6 +191,9 @@ func _draw_tiled_background() -> void:
 # scrolls past at different speeds to give a sense of depth.
 func _draw_generated_background() -> void:
 	var style: String = str(pack.background.get("style", "yard"))
+	if style == "room":
+		_draw_room_background()
+		return
 	var ground_y: float = size.y * (1.0 - float(pack.background.get("ground_ratio", 0.4)))
 	var sky_top: Color = pack.background.get("sky_top", Color.SKY_BLUE)
 	var sky_bottom: Color = pack.background.get("sky_bottom", Color.WHITE)
@@ -213,6 +218,39 @@ func _draw_generated_background() -> void:
 		if pack.background.has("path"):
 			_draw_path(ground_y, pack.background["path"])
 	_draw_bushes(ground_y, ground)
+
+
+# A plain indoor room: a painted wall, a band of skirting along the
+# bottom of it, and a floor. No pictures at all, so a room like this costs
+# nothing to ship and takes its colours from its scene.json.
+func _draw_room_background() -> void:
+	var floor_y: float = size.y * (1.0 - float(pack.background.get("floor_ratio", 0.42)))
+	var wall: Color = pack.background.get("wall_color", Color(0.91, 0.89, 0.81))
+	var wainscot: Color = pack.background.get("wainscot_color", Color(0.33, 0.52, 0.62))
+	var floor_colour: Color = pack.background.get("floor_color", Color(0.80, 0.86, 0.85))
+
+	draw_rect(Rect2(0.0, 0.0, size.x, floor_y), wall)
+
+	# The band of skirting, a fifth of the wall, with a lighter rail on top.
+	var band: float = floor_y * 0.2
+	draw_rect(Rect2(0.0, floor_y - band, size.x, band), wainscot)
+	draw_rect(Rect2(0.0, floor_y - band, size.x, maxf(2.0, band * 0.08)), wainscot.lightened(0.3))
+
+	draw_rect(Rect2(0.0, floor_y, size.x, size.y - floor_y), floor_colour)
+	draw_rect(Rect2(0.0, floor_y, size.x, 2.0), wainscot.darkened(0.25))
+
+	# Faint seams across the floor, so it reads as a surface rather than a
+	# block of colour. Spaced by height, like everything else drawn here.
+	var seam: Color = floor_colour.darkened(0.07)
+	var spacing: float = size.y * 0.09
+	var y: float = floor_y + spacing
+	while y < size.y:
+		draw_rect(Rect2(0.0, y, size.x, 1.0), seam)
+		y += spacing
+	var x: float = 0.0
+	while x < size.x:
+		draw_rect(Rect2(x, floor_y, 1.0, size.y - floor_y), seam)
+		x += spacing * 1.6
 
 
 func _draw_clouds(ground_y: float) -> void:

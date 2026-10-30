@@ -24,12 +24,19 @@ const MODERATE := "moderate"
 const LONG := "long"
 const DEMO := "demo"
 
+## How the game is played. Casual is the original DogPet: the dog cannot
+## die, whatever happens. Real adds illness and death.
+const CASUAL := "casual"
+const REAL := "real"
+const PLAY_MODES: PackedStringArray = [CASUAL, REAL]
+
 ## The three the owner picks from. Demo is a toggle, not a fourth choice.
 const CARE_INTERVALS: PackedStringArray = [FREQUENT, MODERATE, LONG]
 
 const DEFAULTS := {
 	"format_version": FORMAT_VERSION,
 	"care_interval": MODERATE,
+	"play_mode": CASUAL,
 	"demo_speed": false,
 	# Seconds from fully cared for to critical. Staggered on purpose, so all
 	# three needs do not hit critical at the same moment.
@@ -49,9 +56,27 @@ const DEFAULTS := {
 		"feed": {"hunger_set": 0.0, "happiness_delta": 5.0},
 		"play": {"happiness_set": 100.0, "energy_delta": -15.0, "hunger_delta": 5.0},
 		"walk": {"energy_set": 0.0, "happiness_delta": 10.0, "hunger_delta": 10.0},
+		# Nobody enjoys the vet. The curing is not done here - that is the
+		# sickness bar, in LifeModel.
+		"vet": {"happiness_delta": -8.0},
 	},
 	# How long each action's animation runs. Unchanged in Demo mode.
-	"action_seconds": {"feed": 5.0, "play": 8.0, "walk": 10.0},
+	"action_seconds": {"feed": 5.0, "play": 8.0, "walk": 10.0, "vet": 7.0},
+	# Real play only. Everything is counted in hunger intervals, so it all
+	# scales with the care setting: on Demo an illness runs its course in a
+	# minute, on Long it takes most of a day.
+	"real_play": {
+		# How long a dog-day lasts. Two hunger intervals.
+		"age_day_intervals": 2.0,
+		# How long a starving dog has left. One more interval, as chosen.
+		"starve_grace_intervals": 1.0,
+		# How long an untreated illness takes to become fatal.
+		"sickness_rise_intervals": 1.5,
+		# Average wait between illnesses.
+		"illness_mean_intervals": 8.0,
+		# How much one trip to the vet takes off the sickness bar.
+		"vet_visit_heals": 60.0,
+	},
 	# How often to speak up again while a need is already critical.
 	"critical_reminder_minutes": {
 		FREQUENT: 30.0,
@@ -61,7 +86,7 @@ const DEFAULTS := {
 	},
 	# Which room is showing in each of the four slots. Empty means "the
 	# first one found", which is what a fresh install gets.
-	"rooms": {"home": "", "eat": "", "play": "", "walk": ""},
+	"rooms": {"home": "", "eat": "", "play": "", "walk": "", "vet": ""},
 	"close_button": "tray",  # "tray" or "quit"
 	# Said once, the first time the window hides itself into the tray.
 	"tray_notice_shown": false,

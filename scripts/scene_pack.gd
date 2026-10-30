@@ -18,7 +18,8 @@ const HOME := "home"
 const EAT := "eat"
 const PLAY := "play"
 const WALK := "walk"
-const ROLES: PackedStringArray = [HOME, EAT, PLAY, WALK]
+const VET := "vet"
+const ROLES: PackedStringArray = [HOME, EAT, PLAY, WALK, VET]
 
 const BG_IMAGE := "image"
 const BG_TILED := "tiled"
@@ -27,11 +28,17 @@ const BG_GENERATED := "generated"
 const TRANSITION_FADE := "fade"
 const TRANSITION_SLIDE := "slide"
 
+## Backgrounds DogPet can draw itself, with no pictures at all.
+## "room" is a plain indoor wall, skirting band and floor.
+const GENERATED_STYLES: PackedStringArray = ["yard", "park", "room"]
+
 ## Props can claim a job as well as a place. The dog walks to the food bowl
 ## to eat, and the toy is the thing thrown during play. An "_alt" prop is a
 ## backup used only when the main one is missing.
 const ROLE_FOOD_BOWL := "food_bowl"
 const ROLE_TOY := "toy"
+## Where the dog stands to be seen by the vet.
+const ROLE_VET_TABLE := "vet_table"
 
 ## Where the dog stands when the room does not say otherwise.
 const DEFAULT_PET_SPOT := Vector2(0.5, 0.82)
@@ -194,8 +201,10 @@ func _read_tiled_background(data: Dictionary) -> void:
 
 func _read_generated_background(data: Dictionary) -> void:
 	var style: String = str(data.get("style", "yard")).strip_edges().to_lower()
-	if style != "yard" and style != "park":
-		problems.append("background style \"%s\" is not yard or park" % style)
+	if not GENERATED_STYLES.has(style):
+		problems.append(
+			"background style \"%s\" is not one of %s" % [style, ", ".join(GENERATED_STYLES)]
+		)
 		style = "yard"
 	background = {
 		"type": BG_GENERATED,
@@ -210,6 +219,15 @@ func _read_generated_background(data: Dictionary) -> void:
 	# A path is optional; only the park usually has one.
 	if data.has("path"):
 		background["path"] = _color(data, "path", Color(0.85, 0.76, 0.60))
+
+	# An indoor room is painted rather than landscaped, so it reads its own
+	# colours. Named apart from the tiled type's "wall" and "floor", which
+	# are file names rather than colours.
+	if style == "room":
+		background["wall_color"] = _color(data, "wall_color", Color(0.91, 0.89, 0.81))
+		background["wainscot_color"] = _color(data, "wainscot_color", Color(0.33, 0.52, 0.62))
+		background["floor_color"] = _color(data, "floor_color", Color(0.80, 0.86, 0.85))
+		background["floor_ratio"] = clampf(float(data.get("floor_ratio", 0.42)), 0.05, 0.95)
 
 
 # Anything unreadable becomes a plain drawn background rather than nothing.

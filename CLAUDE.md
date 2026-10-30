@@ -160,7 +160,7 @@ States blend. Use short tweens (0.2–0.4 s) to move from one state's resting po
 
 ### 5.4 Scene packs: `assets/scenes/<any_name>/scene.json`
 
-There are four fixed **roles**: `home` (default view), `eat`, `play`, and `walk`.
+There are five fixed **roles**: `home` (default view), `eat`, `play`, `walk`, and `vet` *(v1.13, used by Real play)*.
 
 A room says which role it fills with its own `"role"` field, so the folder may
 be named anything, and **several rooms can offer themselves for the same role**
@@ -189,7 +189,7 @@ carried a `"role"` field.)*
 
 - `"image"` with `"file"`: one picture, scaled to cover the window (crop, don't stretch).
 - `"tiled"` with `"wall"`, `"floor"`, `"floor_ratio"` (fraction of the window height for the floor), and `"tile_scale"` (integer, nearest filter): repeating tiles. Draw a thin darker line where wall meets floor.
-- `"generated"` with a `"style"` of `"yard"` or `"park"`, plus colors: drawn in code (gradient sky, ground, a few clouds; trees and bushes for park; a dirt path when `"path"` is given). If `"scroll": true`, the scene scrolls horizontally at `scroll_speed_px`, with parallax: clouds slow, trees medium, path fast. This is how the walk scene moves.
+- `"generated"` with a `"style"` of `"yard"`, `"park"` or `"room"`, plus colors. `"room"` *(v1.13)* is a plain indoor wall, skirting band and floor, taking `wall_color`, `wainscot_color`, `floor_color` and `floor_ratio` — no pictures at all, which is how the vet clinic's room is drawn. For `"yard"` and `"park"`: drawn in code (gradient sky, ground, a few clouds; trees and bushes for park; a dirt path when `"path"` is given). If `"scroll": true`, the scene scrolls horizontally at `scroll_speed_px`, with parallax: clouds slow, trees medium, path fast. This is how the walk scene moves.
 
 Props:
 
@@ -258,7 +258,14 @@ The needs are staggered slightly on purpose, so all three don't hit critical at 
 
 - **Warning:** 70% of the way to critical (Hunger ≥ 70, Happiness ≤ 30, Energy ≥ 70).
 - **Critical:** at the bad end (Hunger 100, Happiness 0, Energy 100).
-- Values clamp at the bad end. **The dog never dies or runs away.** It stays sad until cared for.
+- Values clamp at the bad end.
+- **Casual play (the default): the dog never dies or runs away.** It stays sad until cared for.
+- **Real Pet play** *(added v1.13, at the owner's request)*: the dog can die, and the owner then starts again with a new one.
+  - **Starvation.** Hunger reaching 100 starts a countdown of one further care interval (`real_play.starve_grace_intervals`). On Moderate that is 3 h to reach starving, then 3 h more. The countdown resets the moment the dog is fed. **This can happen during the offline catch-up**, which was the owner's explicit choice.
+  - **Illness.** At random — on average every 8 hunger intervals — the dog falls ill. A fourth **Sickness** bar climbs from 0 to 100 over 1.5 hunger intervals; at 100 the dog dies. **Take To Vet** takes 60 off the bar, so a badly ill dog needs more than one visit. The bar and the button appear only in Real play.
+  - **Ageing.** The dog ages at two hunger intervals to the dog-day, through Puppy / Young / Adult / Senior. Ageing happens in both modes. **Old age is never fatal** — the owner chose that too.
+  - All of these numbers live in `settings.json` under `real_play`, counted in hunger intervals so they scale with the care setting.
+  - The pure logic is `LifeModel.gd`, with no nodes and time passed in, tested by `tests/test_life.gd`.
 
 ### 6.4 Actions
 

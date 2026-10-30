@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.13 - Phase 8: Casual and Real Pet, ageing, illness and death
   v1.12 - Phase 7: a menu bar, and instructions inside the app
   v1.11 - A build that stops growing every time it runs
   v1.10 - Screenshots, and scenery that scales with the window
@@ -15,6 +16,65 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.13 - Phase 8: Casual and Real Pet, ageing, illness and death
+------------------------------------------------------------
+
+What
+  - Added a Mode menu: Casual and Real Pet.
+  - Added LifeModel: ageing, illness, starvation and death, with no nodes
+    in it, and tests/test_life.gd with 77 checks.
+  - Real play adds a fourth Sickness bar and a Take To Vet button, neither
+    of which appears in Casual.
+  - Added the vet clinic room and the "vet" scene role.
+  - Added a generated background style, "room": a plain indoor wall,
+    skirting band and floor, drawn in code from colours.
+  - Added DeathCard, which is how a Real play game ends and restarts.
+  - 505 checks passing across six suites.
+
+Why
+  - The second of three sets of changes the owner asked for.
+  - Casual is the game as it was: the dog cannot die, whatever happens.
+
+How
+  - Everything in Real play is counted in hunger intervals rather than
+    minutes, so it all scales with the care setting. On Demo an illness
+    runs its course in a minute; on Long it takes most of a day.
+  - A starving dog gets one further care interval before it dies, and that
+    can happen during the offline catch-up. The owner chose this knowing
+    it means a long enough absence is fatal.
+  - Old age is never fatal, also by choice. The dog ages through Puppy,
+    Young, Adult and Senior at two hunger intervals to the dog-day, in
+    both modes, and that is all ageing does.
+  - Illness arrives on an average wait rather than a per-tick chance, so a
+    week away is no more likely to produce an illness than a week spent
+    watching - and no less.
+  - One trip to the vet takes 60 off a bar that runs to 100, so a dog left
+    until it is nearly gone has to be taken back.
+  - Switching to Real play asks first, since it is the choice that lets the
+    dog die. Switching back to Casual does not, and clears any illness.
+  - The vet art is the ThirdAngle Veterinary Clinic Starter, credited in
+    assets/CREDITS.txt. Only its props are used: the pack's walls and
+    floors are isometric diamonds that cannot sit in DogPet's flat
+    side-on rooms, so the clinic's room is drawn in code instead. The
+    sprites were trimmed of their transparent margins, which the licence
+    allows, because DogPet anchors a prop by the bottom of its image and
+    the margin would have left every one of them hovering.
+
+Fixed
+  - An ill dog read as "doing just fine" and behaved like it. Illness and
+    death now come first in both the mood and the line under the dog.
+
+Known
+  - The Sickness bar has no icon; assets/ui has none for it.
+  - Six scripts are now a little over the 300-line guide, needs.gd and
+    scene_view.gd among them.
+  - The Scoreboard item in the Mode menu says it is still to come.
+
+Still to come
+  - The scoreboard of past pets.
 
 
 ------------------------------------------------------------

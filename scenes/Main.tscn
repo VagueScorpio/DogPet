@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/Banner.tscn" id="4_banner"]
 [ext_resource type="PackedScene" path="res://scenes/SettingsPanel.tscn" id="5_settings"]
 [ext_resource type="PackedScene" path="res://scenes/HelpPanel.tscn" id="6_help"]
+[ext_resource type="PackedScene" path="res://scenes/DeathCard.tscn" id="7_death"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -150,6 +151,14 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Walk"
 
+[node name="VetButton" type="Button" parent="Shell/Layout/Column/ActionRow"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Take To Vet"
+
 [node name="SettingsButton" type="Button" parent="Shell/Layout/Column/ActionRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(44, 40)
@@ -173,6 +182,11 @@ visible = false
 layout_mode = 1
 
 [node name="AwayCard" parent="." instance=ExtResource("2_awaycard")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="DeathCard" parent="." instance=ExtResource("7_death")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

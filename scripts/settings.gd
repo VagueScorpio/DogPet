@@ -61,6 +61,37 @@ func set_demo_speed(on: bool) -> void:
 	changed.emit("demo_speed")
 
 
+## "casual" or "real". Casual is the original game, where the dog cannot
+## die; Real adds illness and death.
+func play_mode() -> String:
+	var name: String = str(data.get("play_mode", CareSettings.CASUAL))
+	return name if CareSettings.PLAY_MODES.has(name) else CareSettings.CASUAL
+
+
+func is_real_play() -> bool:
+	return play_mode() == CareSettings.REAL
+
+
+func set_play_mode(name: String) -> void:
+	if not CareSettings.PLAY_MODES.has(name) or name == play_mode():
+		return
+	data["play_mode"] = name
+	_save()
+	Log.info("Play mode changed to " + name)
+	changed.emit("play_mode")
+
+
+## The Real play tuning numbers, all counted in hunger intervals.
+func real_play() -> Dictionary:
+	return data.get("real_play", {})
+
+
+## How long the current care setting gives a starving dog before it dies.
+func starve_grace_seconds() -> float:
+	var interval: float = live_interval_for(NeedsModel.HUNGER)
+	return interval * float(real_play().get("starve_grace_intervals", 1.0))
+
+
 func notifications_enabled() -> bool:
 	return bool(data.get("notifications_enabled", true))
 

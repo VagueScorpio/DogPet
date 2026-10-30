@@ -13,6 +13,15 @@ Pixel Pug, rooms, props and icons (pets/pug_pixel/, scenes/, ui/)
   Nasha's Cozy Pets Pack
   License: licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt
 
+Vet clinic props (scenes/vet/)
+  Isometric Veterinary Clinic Starter by ThirdAngle (Playworks North)
+  https://thirdangle.itch.io/vet-clinic-pack
+  Free to use and modify in commercial and non-commercial projects.
+  Credit appreciated but not required; given here anyway.
+  The sprites were trimmed of their transparent margins to suit DogPet's
+  bottom-anchored props. The pack's isometric wall and floor pieces are
+  not used - the vet room's walls and floor are drawn in code.
+
 Tray icons (ui/tray_icon.png, ui/tray_icon_alert.png) and exe icon
   DogPack
   License: licenses/DogPack_LICENSE.txt

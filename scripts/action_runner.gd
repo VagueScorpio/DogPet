@@ -63,6 +63,10 @@ func run(action: StringName) -> void:
 	await get_tree().create_timer(seconds).timeout
 
 	Needs.apply_action(action)
+	# The vet visit is the one action that does something beyond the three
+	# needs: it is what brings the sickness bar down.
+	if action == ActionPlan.VET:
+		Needs.take_to_vet()
 
 	await _stage.show_role(ScenePack.HOME, style)
 	_return_pet()

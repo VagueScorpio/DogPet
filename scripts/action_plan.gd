@@ -13,7 +13,12 @@ extends RefCounted
 const FEED := &"feed"
 const PLAY := &"play"
 const WALK := &"walk"
-const ACTIONS: Array[StringName] = [FEED, PLAY, WALK]
+## Real play only. The button appears when the dog is ill and not before.
+const VET := &"vet"
+const ACTIONS: Array[StringName] = [FEED, PLAY, WALK, VET]
+
+## The three the owner can do whenever they like.
+const EVERYDAY_ACTIONS: Array[StringName] = [FEED, PLAY, WALK]
 
 
 ## The room this action happens in.
@@ -25,6 +30,8 @@ static func room_role(action: StringName) -> String:
 			return ScenePack.PLAY
 		WALK:
 			return ScenePack.WALK
+		VET:
+			return ScenePack.VET
 	return ScenePack.HOME
 
 
@@ -37,6 +44,9 @@ static func pet_state(action: StringName) -> StringName:
 			return PetMotion.PLAY
 		WALK:
 			return PetMotion.WALK
+		VET:
+			# Subdued, which is how a dog looks at the vet.
+			return PetMotion.SAD
 	return PetMotion.IDLE
 
 
@@ -50,6 +60,8 @@ static func prop_role(action: StringName) -> String:
 			return ScenePack.ROLE_FOOD_BOWL
 		PLAY:
 			return ScenePack.ROLE_TOY
+		VET:
+			return ScenePack.ROLE_VET_TABLE
 	return ""
 
 
@@ -59,7 +71,14 @@ static func walks_to_prop(action: StringName) -> bool:
 
 
 static func label(action: StringName) -> String:
+	if action == VET:
+		return "Take To Vet"
 	return String(action).capitalize()
+
+
+## True for the actions that only exist in Real play.
+static func is_real_play_only(action: StringName) -> bool:
+	return action == VET
 
 
 static func is_action(name: StringName) -> bool:

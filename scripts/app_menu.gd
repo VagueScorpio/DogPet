@@ -14,6 +14,7 @@ extends MenuBar
 signal rename_requested()
 signal instructions_requested()
 signal settings_requested()
+signal scoreboard_requested()
 
 # Pet menu
 const PET_RENAME := 0
@@ -32,12 +33,17 @@ const ASSETS_HELP := 2
 const WINDOW_TRAY := 0
 const WINDOW_QUIT := 1
 
+# Mode menu. The ids are indexes into CareSettings.PLAY_MODES.
+const MODE_SCOREBOARD := 100
+
 var _care_menu: PopupMenu = null
 var _window_menu: PopupMenu = null
+var _mode_menu: PopupMenu = null
 
 
 func _ready() -> void:
 	_build_pet_menu()
+	_build_mode_menu()
 	_build_care_menu()
 	_build_assets_menu()
 	_build_window_menu()
@@ -61,6 +67,69 @@ func _on_pet_pressed(id: int) -> void:
 			rename_requested.emit()
 		PET_SETTINGS:
 			settings_requested.emit()
+
+
+# --- Mode -----------------------------------------------------------------
+
+func _build_mode_menu() -> void:
+	_mode_menu = PopupMenu.new()
+	_mode_menu.name = "Mode"
+	add_child(_mode_menu)
+	_mode_menu.add_radio_check_item("Casual   (the dog cannot die)", 0)
+	_mode_menu.add_radio_check_item("Real Pet   (it can)", 1)
+	_mode_menu.add_separator()
+	_mode_menu.add_item("Scoreboard...", MODE_SCOREBOARD)
+	_mode_menu.id_pressed.connect(_on_mode_pressed)
+	_mode_menu.about_to_popup.connect(_refresh_mode_menu)
+
+
+func _refresh_mode_menu() -> void:
+	for index in CareSettings.PLAY_MODES.size():
+		_mode_menu.set_item_checked(
+			_mode_menu.get_item_index(index),
+			CareSettings.PLAY_MODES[index] == Settings.play_mode()
+		)
+	_mode_menu.set_item_disabled(
+		_mode_menu.get_item_index(MODE_SCOREBOARD), not Settings.is_real_play()
+	)
+
+
+func _on_mode_pressed(id: int) -> void:
+	if id == MODE_SCOREBOARD:
+		scoreboard_requested.emit()
+		return
+	if id < 0 or id >= CareSettings.PLAY_MODES.size():
+		return
+	var wanted: String = CareSettings.PLAY_MODES[id]
+	if wanted == Settings.play_mode():
+		return
+	# Turning Real play on is worth a word of warning. Turning it off is
+	# not: nothing bad can happen in Casual.
+	if wanted == CareSettings.REAL:
+		_confirm_real_play()
+		return
+	Settings.set_play_mode(wanted)
+
+
+func _confirm_real_play() -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = "Switch to Real Pet?"
+	dialog.dialog_text = (
+		"%s can get ill and can die, of starvation or of an illness left"
+		% Needs.pet_name
+		+ " untreated. That happens while DogPet is closed as well as while it"
+		+ " is open.
+
+You would then start again with a new dog."
+	)
+	dialog.ok_button_text = "Switch"
+	dialog.confirmed.connect(func() -> void:
+		Settings.set_play_mode(CareSettings.REAL)
+		dialog.queue_free()
+	)
+	dialog.canceled.connect(dialog.queue_free)
+	add_child(dialog)
+	dialog.popup_centered()
 
 
 # --- Care -----------------------------------------------------------------

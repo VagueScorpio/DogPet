@@ -18,6 +18,7 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _feed_button: Button = %FeedButton
 @onready var _play_button: Button = %PlayButton
 @onready var _walk_button: Button = %WalkButton
+@onready var _vet_button: Button = %VetButton
 @onready var _settings_button: Button = %SettingsButton
 @onready var _pet_view: Control = %PetView
 @onready var _pet_area: PanelContainer = %PetArea
@@ -25,10 +26,12 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _banner: Control = %Banner
 @onready var _settings_panel: Control = %SettingsPanel
 @onready var _help_panel: Control = %HelpPanel
+@onready var _death_card: Control = %DeathCard
 @onready var _menu_host: PanelContainer = %MenuHost
 
 var _stage: SceneStage = null
 var _runner: ActionRunner = null
+var _sickness_bar: Node = null
 
 
 func _ready() -> void:
@@ -45,6 +48,11 @@ func _ready() -> void:
 	Settings.changed.connect(_on_settings_changed)
 	Needs.pet_name_changed.connect(_on_pet_name_changed)
 	Notifier.banner_requested.connect(_banner.show_message)
+	Needs.pet_died.connect(_on_pet_died)
+	Needs.pet_started.connect(_on_pet_started)
+	Needs.fell_ill.connect(_on_fell_ill)
+	Needs.healed.connect(_on_healed)
+	_refresh_real_play()
 
 	# The autoloads all finish before this scene exists, so there was nobody
 	# listening when the catch-up happened. Needs held the summary for us.
@@ -69,6 +77,9 @@ func _build_menu() -> void:
 	menu.rename_requested.connect(_ask_for_name)
 	menu.instructions_requested.connect(_help_panel.open)
 	menu.settings_requested.connect(_settings_panel.open)
+	menu.scoreboard_requested.connect(func() -> void:
+		_banner.show_message("The scoreboard is the next piece of work.", "")
+	)
 
 
 # A small dialog rather than a trip into Settings, since renaming the dog is
@@ -125,6 +136,8 @@ func _build_bars() -> void:
 
 
 func _connect_controls() -> void:
+	_vet_button.pressed.connect(_on_action_pressed.bind(ActionPlan.VET))
+	_death_card.new_pet_requested.connect(Needs.start_new_pet)
 	_feed_button.pressed.connect(_on_action_pressed.bind(&"feed"))
 	_play_button.pressed.connect(_on_action_pressed.bind(&"play"))
 	_walk_button.pressed.connect(_on_action_pressed.bind(&"walk"))
@@ -172,11 +185,60 @@ func _on_action_finished(_action: StringName) -> void:
 func _set_actions_enabled(enabled: bool) -> void:
 	for button in [_feed_button, _play_button, _walk_button]:
 		button.disabled = not enabled
+	# The vet is only ever available when there is something to treat.
+	_vet_button.disabled = not enabled or not Needs.life.ill
+
+
+# --- Real play ------------------------------------------------------------
+
+# The sickness bar and the vet button belong to Real play and are not shown
+# at all in Casual, where the dog cannot become ill in the first place.
+func _refresh_real_play() -> void:
+	var real: bool = Settings.is_real_play()
+	_vet_button.visible = real
+	_vet_button.disabled = not Needs.life.ill or _runner.running
+
+	if real and _sickness_bar == null:
+		_sickness_bar = NEEDS_BAR_SCENE.instantiate()
+		_bars.add_child(_sickness_bar)
+		_sickness_bar.setup_sickness()
+	elif not real and _sickness_bar != null:
+		_sickness_bar.queue_free()
+		_sickness_bar = null
+
+
+func _on_fell_ill() -> void:
+	_vet_button.disabled = _runner.running
+	Notifier.deliver(
+		"%s is unwell." % Needs.pet_name,
+		"A trip to the vet would put it right."
+	)
+
+
+func _on_healed() -> void:
+	_vet_button.disabled = true
+	_banner.show_message("%s is well again." % Needs.pet_name, "")
+
+
+func _on_pet_died(cause: int, pet_name: String, age_days: float) -> void:
+	_set_actions_enabled(false)
+	_death_card.show_death(pet_name, cause, age_days)
+
+
+func _on_pet_started() -> void:
+	_death_card.hide()
+	_set_actions_enabled(true)
+	_refresh_real_play()
+	_refresh_window_title()
+	_pet_view.resume_mood()
+	_banner.show_message("Say hello to %s." % Needs.pet_name, "")
 
 
 func _on_settings_changed(key: String) -> void:
 	if key == "demo_speed":
 		_refresh_demo_badge()
+	elif key == "play_mode":
+		_refresh_real_play()
 
 
 func _on_pet_name_changed(_new_name: String) -> void:

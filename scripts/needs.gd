@@ -18,6 +18,13 @@ signal threshold_crossed(key: StringName, level: int)
 
 signal pet_name_changed(new_name: String)
 
+## Real play only. The dog has died; the owner must start a new one.
+signal pet_died(cause: int, pet_name: String, age_days: float)
+signal fell_ill()
+signal healed()
+## A new dog has been started, so everything on screen should reset.
+signal pet_started()
+
 const AUTOSAVE_SECONDS := 30.0
 
 ## Only bother with the "While you were away" card for a real absence.
@@ -27,6 +34,11 @@ const DEFAULT_PET_NAME := "Biscuit"
 const DEFAULT_PET_PACK_ID := "pug_3d"
 
 var model := NeedsModel.new()
+
+## Ageing, illness and death. Does nothing at all in Casual play.
+var life := LifeModel.new()
+
+var _rng := RandomNumberGenerator.new()
 
 var pet_name: String = DEFAULT_PET_NAME
 var pet_pack_id: String = DEFAULT_PET_PACK_ID
@@ -62,9 +74,12 @@ func _ready() -> void:
 	var before: Dictionary = {}
 
 	var save: Dictionary = SaveFile.read_with_fallback(Paths.pet_save_path())
+	_rng.randomize()
+
 	if save.is_empty():
 		Log.info("No usable save found; starting a fresh, fully cared-for dog.")
 		model.reset_to_cared()
+		life.reset(Time.get_unix_time_from_system())
 	else:
 		if SaveFile.last_read_source == "backup":
 			Log.warn("pet.json was unusable, so the dog was restored from pet.json.bak.")
@@ -78,10 +93,17 @@ func _ready() -> void:
 		)
 		# Always the real care setting here, never Demo Speed. See
 		# Settings.catch_up_interval_name for why.
+		life.from_dictionary(save.get("life", {}))
+		if life.born_unix <= 0.0:
+			# A save from before Real play existed. Treat the dog as born
+			# when it was last saved rather than at the epoch.
+			life.born_unix = float(save.get("last_saved_unix", Time.get_unix_time_from_system()))
 		model.catch_up(elapsed, Settings.catch_up_intervals())
-		Log.info("Loaded a save from %s ago. Needs now: %s" % [
+		_catch_up_life(elapsed)
+		Log.info("Loaded a save from %s ago. Needs now: %s%s" % [
 			NeedsModel.format_duration(elapsed),
 			model.describe(),
+			"" if life.alive else "  (died of %s while away)" % LifeModel.cause_name(life.cause),
 		])
 
 	_levels = model.levels()
@@ -100,7 +122,12 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# A dead dog does not get hungrier. Everything stops until the owner
+	# starts a new one.
+	if not life.alive:
+		return
 	model.drain(delta, Settings.live_intervals())
+	_advance_life(delta, Settings.live_interval_for(NeedsModel.HUNGER))
 	_announce_changes()
 	if _since_action >= 0.0:
 		_since_action += delta
@@ -138,13 +165,85 @@ func countdown_text(key: StringName) -> String:
 	return NeedsModel.format_countdown(seconds_to_critical(key))
 
 
+## What the dog looks like it is feeling, in one line.
+##
+## Illness and death come first: a dog with a fever is not "doing just
+## fine" however full its bowl is.
 func reaction_line() -> String:
+	if not life.alive:
+		return LifeModel.death_line(pet_name, life.cause)
+	if life.ill:
+		return "%s is unwell." % pet_name
 	return model.reaction_line(pet_name)
+
+
+# --- Ageing, illness and death -------------------------------------------
+
+# The catch-up runs at the real care setting, never Demo, exactly as the
+# needs do - otherwise a demo session would kill the dog overnight.
+func _catch_up_life(elapsed: float) -> void:
+	var interval: float = float(Settings.catch_up_intervals().get(NeedsModel.HUNGER, 0.0))
+	_advance_life(elapsed, interval, true)
+
+
+func _advance_life(seconds: float, hunger_interval: float, catching_up: bool = false) -> void:
+	var was_ill: bool = life.ill
+	var news: Dictionary = life.advance(
+		seconds,
+		model.level_of(NeedsModel.HUNGER) >= int(NeedsModel.Level.CRITICAL),
+		Settings.is_real_play(),
+		hunger_interval,
+		Settings.real_play(),
+		_rng.randf(),
+		Time.get_unix_time_from_system()
+	)
+	if bool(news.get("fell_ill", false)) and not was_ill:
+		Log.info("%s has fallen ill." % pet_name)
+		fell_ill.emit()
+	if bool(news.get("died", false)):
+		Log.info("%s died of %s at %s." % [
+			pet_name, LifeModel.cause_name(life.cause), LifeModel.format_age(life.age_days),
+		])
+		save_now()
+		pet_died.emit(life.cause, pet_name, life.age_days)
+		return
+	if catching_up:
+		save_now()
+
+
+## Take the dog to the vet. Returns true if that was enough to cure it.
+func take_to_vet() -> bool:
+	var cured: bool = life.treat(float(Settings.real_play().get("vet_visit_heals", 60.0)))
+	save_now()
+	if cured:
+		Log.info("%s is well again." % pet_name)
+		healed.emit()
+	return cured
+
+
+## Bury the old dog and start a new one. Everything resets.
+func start_new_pet(new_name: String) -> void:
+	var cleaned: String = new_name.strip_edges()
+	if not cleaned.is_empty():
+		pet_name = cleaned
+	model.reset_to_cared()
+	life.reset(Time.get_unix_time_from_system())
+	_levels = model.levels()
+	for key in NeedsModel.KEYS:
+		_shown[key] = roundi(model.get_value(key))
+	_since_action = -1.0
+	save_now()
+	Log.info("A new dog: %s." % pet_name)
+	pet_name_changed.emit(pet_name)
+	pet_started.emit()
 
 
 ## Which animation state suits the dog right now, when it is not busy doing
 ## something the owner asked for.
 func mood_state() -> StringName:
+	# An ill dog mopes, whatever its needs say.
+	if not life.alive or life.ill:
+		return &"sad"
 	return model.mood_state(_since_action)
 
 
@@ -206,6 +305,7 @@ func save_now() -> void:
 		"pet_name": pet_name,
 		"pet_pack_id": pet_pack_id,
 		"last_saved_unix": Time.get_unix_time_from_system(),
+		"life": life.to_dictionary(),
 	}
 	payload.merge(model.to_dictionary())
 	if not SaveFile.write_atomic(Paths.pet_save_path(), payload):

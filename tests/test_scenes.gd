@@ -241,7 +241,11 @@ func _test_actions() -> void:
 	_begin("Nothing else counts as an action")
 	_ok("feed does", Plan.is_action(&"feed"))
 	_ok("fly does not", not Plan.is_action(&"fly"))
-	_ok("there are exactly three", Plan.ACTIONS.size() == 3)
+	_ok("there are four, counting the vet", Plan.ACTIONS.size() == 4)
+	_ok("three of them are everyday", Plan.EVERYDAY_ACTIONS.size() == 3)
+	_ok("the vet is not one of those", not Plan.EVERYDAY_ACTIONS.has(Plan.VET))
+	_ok("because it is Real play only", Plan.is_real_play_only(Plan.VET))
+	_ok("unlike feeding", not Plan.is_real_play_only(Plan.FEED))
 
 
 # --- Small helpers -------------------------------------------------------

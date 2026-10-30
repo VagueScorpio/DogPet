@@ -1,0 +1,53 @@
+{
+  "format_version": 1,
+  "role": "vet",
+  "name": "Vet Clinic",
+  "background": {
+    "type": "generated",
+    "style": "room",
+    "wall_color": "#ece4d2",
+    "wainscot_color": "#4a8296",
+    "floor_color": "#cfe0dc",
+    "floor_ratio": 0.42
+  },
+  "props": [
+    {
+      "file": "vet_reception_desk.png",
+      "x": 0.2,
+      "y": 0.62,
+      "scale": 3
+    },
+    {
+      "file": "kennel_cage_bank.png",
+      "x": 0.86,
+      "y": 0.66,
+      "scale": 3
+    },
+    {
+      "file": "cat_tree_tower.png",
+      "x": 0.05,
+      "y": 0.78,
+      "scale": 3
+    },
+    {
+      "file": "vet_exam_table.png",
+      "x": 0.7,
+      "y": 0.88,
+      "scale": 3,
+      "role": "vet_table"
+    },
+    {
+      "file": "pet_carrier_with_cat.png",
+      "x": 0.95,
+      "y": 0.97,
+      "scale": 3
+    }
+  ],
+  "pet_spot": {
+    "x": 0.38,
+    "y": 0.9
+  },
+  "transition": "fade",
+  "credit": "Isometric Veterinary Clinic Starter by ThirdAngle (Playworks North)",
+  "source_url": "https://thirdangle.itch.io/vet-clinic-pack"
+}
