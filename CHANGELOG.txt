@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.25 - The catch-up bound is written into the blueprint
   v1.24 - The last nine audit findings, from frozen windows to lost saves
   v1.23 - A zip that cannot eat all the memory, and a grace period that holds
   v1.22 - Two ways a file could run code, both closed
@@ -28,6 +29,33 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.25 - The catch-up bound is written into the blueprint
+------------------------------------------------------------
+
+What
+  - CLAUDE.md section 6.3 now records the thirty-day bound on the offline
+    catch-up, and the floors under the Real play numbers, beside the rules
+    they qualify.
+
+Why
+  - The bound was the one change in the v1.24 audit pass that altered how
+    Real play behaves, so it was put to the owner rather than merged
+    quietly. He chose to keep it.
+  - With that settled it belongs in the blueprint and not only in the code.
+    Section 6.3 is where the original decision lives - "this can happen
+    during the offline catch-up, which was the owner's explicit choice" -
+    and a bound on that choice recorded nowhere near it is exactly how a
+    spec and its code come to disagree about the most consequential rule in
+    the app.
+
+How
+  - Two bullets under Real Pet play, dated and attributed like the other
+    decisions there.
+  - No code changed: v1.24 already shipped the behaviour. The 760 checks
+    still pass untouched.
+  - The audit write-up in redteam/ records the sign-off as well.
 
 ------------------------------------------------------------
 v1.24 - The last nine audit findings, from frozen windows to lost saves
