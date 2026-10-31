@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.27 - A single blueprint anyone could rebuild the app from
   v1.26 - The audit write-up joins the repo
   v1.25 - The catch-up bound is written into the blueprint
   v1.24 - The last nine audit findings, from frozen windows to lost saves
@@ -30,6 +31,48 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.27 - A single blueprint anyone could rebuild the app from
+------------------------------------------------------------
+
+What
+  - Added BLUEPRINT.md: the whole app in one document. What it is, its hard
+    constraints, the file layout, the architecture and every script's job,
+    the full functional spec with every tuning number, the testing strategy,
+    the build pipeline, every bug ever found and how it was fixed, the
+    roadmap as built, a recommended build order for recreating it, and
+    appendices listing every constant, every JSON schema and nineteen Godot
+    behaviours worth knowing.
+
+Why
+  - The knowledge was spread across four places and one of them is a
+    conversation nobody else can read: CLAUDE.md has the original intent,
+    CHANGELOG.txt has what changed when, redteam/ has the security
+    reasoning, and the rest was only in the code's own comments. Somebody
+    picking this up - or an AI asked to extend or rebuild it - had no single
+    place to start.
+  - Written so it would actually be enough. Not a summary: the real
+    numbers, the real JSON, the real scene trees, and the decisions that
+    look arbitrary until you know what went wrong without them.
+
+How
+  - Section 14 is the part worth keeping. Six development defects and all
+    thirteen audit findings, each with what was wrong, how it was fixed and
+    WHY that fix rather than another - including the three plans that were
+    wrong and had to be rewritten, and the two defects introduced while
+    fixing other ones.
+  - Section 15.2 records what was deliberately NOT done and why, so a
+    rebuild does not helpfully "fix" a decision.
+  - Section 17.3 lists the engine behaviours that cost real time to find:
+    Vector2i being 32-bit, rename_absolute overwriting after all, ZIPReader
+    having no size API, @"..."@ being an expandable here-string, and the
+    rest. Two of those are things CLAUDE.md states incorrectly, noted as
+    such rather than quietly repeated.
+  - Checked against the code rather than written from memory: the scene
+    trees were read out of the .tscn files, the constants out of the
+    scripts, the signal list verified against every "signal" declaration,
+    and the file and test counts counted.
 
 ------------------------------------------------------------
 v1.26 - The audit write-up joins the repo
