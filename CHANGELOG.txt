@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.28 - The same app, specified without naming a single tool
   v1.27 - A single blueprint anyone could rebuild the app from
   v1.26 - The audit write-up joins the repo
   v1.25 - The catch-up bound is written into the blueprint
@@ -31,6 +32,50 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.28 - The same app, specified without naming a single tool
+------------------------------------------------------------
+
+What
+  - Added SPECIFICATION.md: everything BLUEPRINT.md covers, re-authored so it
+    names no programming language, no engine, no renderer and no animation
+    system, and references no artwork. Whoever builds from it chooses all of
+    that themselves and draws their own art.
+
+Why
+  - BLUEPRINT.md is the right document for maintaining THIS app and the wrong
+    one for building the app again somewhere else: three quarters of its
+    hard-won detail is phrased in terms of one engine's API, so a reader on
+    another stack cannot tell which lessons are about the engine and which
+    are about the problem.
+  - The distinction turns out to be the valuable part. Of the twenty-six
+    defects, nineteen are hazards any implementation can hit and seven were
+    artefacts of this one.
+
+How
+  - Not a strip-out. Every engine detail was re-thought as a requirement
+    plus, where it matters, the question to ask of your own tools. The
+    off-screen transparent render surface became "render the 3D pet over a
+    transparent background so it composites onto a flat room". The here-string
+    injection became "never interpolate user-controlled text into a command
+    or script, because escaping only ever satisfies the parser that actually
+    sees the text".
+  - Every defect is tagged [universal] or [verify], so a reader knows which
+    ones to design against and which to go and check.
+  - Section 16.3 became the most transferable page: nineteen questions to
+    answer about whatever stack is chosen, each with what went wrong here
+    when the answer was assumed. Two of those answers were assumed from
+    comments in this project's own files and were wrong.
+  - Two faults were made and caught while writing it, both from merging two
+    identifier series into one: a defect number got used twice, and the
+    window-freezing tile bug was dropped, leaving a stated count of thirteen
+    review findings with only twelve entries behind it. Checked BLUEPRINT.md
+    for the same faults afterwards - it keeps the two series apart and has
+    neither. The counts differ between the documents on purpose: this one
+    breaks the v1.17 cluster into the seven separate defects it actually
+    was, because a reader rebuilding from scratch needs each one.
+  - No code changed. The 760 checks still pass.
 
 ------------------------------------------------------------
 v1.27 - A single blueprint anyone could rebuild the app from
