@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.26 - The audit write-up joins the repo
   v1.25 - The catch-up bound is written into the blueprint
   v1.24 - The last nine audit findings, from frozen windows to lost saves
   v1.23 - A zip that cannot eat all the memory, and a grace period that holds
@@ -29,6 +30,39 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.26 - The audit write-up joins the repo
+------------------------------------------------------------
+
+What
+  - redteam/ is now in the repo: the findings report, the master report, a
+    document per finding, and the sixteen probes that reproduce them. A
+    README at the top of the folder says plainly that all thirteen findings
+    are fixed, so nobody reads it as a list of live holes.
+
+Why
+  - The fixes shipped in v1.22 to v1.25 without their reasoning, which is
+    half of what makes them maintainable. Each fix document records what was
+    broken, how it was proven, why the fix takes the shape it does, and
+    which other code shares the pattern - including three plans that turned
+    out to be wrong and had to be rewritten.
+  - A fix you cannot re-break is a fix you cannot trust. Keeping the probes
+    means any of these can be re-run later to check the hole is still shut.
+
+How
+  - Checked first that nothing personal goes public with it: no usernames,
+    no email, no absolute paths from this machine. The probes all write
+    inside OS.get_user_data_dir() and never touch saves/ or assets/, and the
+    transcripts in the documents had their paths elided as they were
+    written. The only absolute paths left are generic examples such as
+    C:/Windows/System32/calc.exe.
+  - The flaws are all fixed and none of the versions that carried them was
+    ever released, which is what makes publishing the proofs of concept
+    reasonable rather than reckless.
+  - The regression guards deliberately live in tests/ rather than in
+    redteam/, so the ordinary test runs keep them honest. redteam/tests
+    holds the reproductions, not the suite.
 
 ------------------------------------------------------------
 v1.25 - The catch-up bound is written into the blueprint
