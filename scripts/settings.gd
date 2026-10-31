@@ -82,8 +82,12 @@ func set_play_mode(name: String) -> void:
 
 
 ## The Real play tuning numbers, all counted in hunger intervals.
+##
+## Floored on the way out: settings.json is meant to be edited by hand, and a
+## starve grace of zero there meant a fed dog died of starvation on the first
+## frame. See CareSettings.real_play_from.
 func real_play() -> Dictionary:
-	return data.get("real_play", {})
+	return CareSettings.real_play_from(data)
 
 
 ## How long the current care setting gives a starving dog before it dies.

@@ -38,6 +38,7 @@ func _initialize() -> void:
 	_test_catching_up_on_starvation()
 	_test_illness()
 	_test_vet()
+	_test_broken_tuning()
 	_test_saving()
 
 	print("")
@@ -291,6 +292,83 @@ func _test_vet() -> void:
 
 
 # --- Saving ----------------------------------------------------------------
+
+# settings.json is meant to be edited by hand, so it has to survive being
+# edited badly. A starve grace of zero used to kill a perfectly fed dog on the
+# first frame, because starving_seconds is zero for a dog that is not hungry
+# and "0 >= 0" is true - and then kill the next dog the owner started, too.
+func _test_broken_tuning() -> void:
+	_begin("A broken settings file cannot kill the dog")
+
+	# The model's own guard, whatever it is handed.
+	for grace in [0.0, -5.0]:
+		var life: LifeModel = _fresh()
+		var news: Dictionary = life.advance(
+			0.016, false, true, INTERVAL, {"starve_grace_intervals": grace}, 0.99, 1000.0
+		)
+		_ok("a fed dog survives a grace of %s" % grace,
+			life.alive and not bool(news["died"]))
+
+	# A starving dog with a broken grace is not killed early either; it simply
+	# falls back to a sane period rather than to "now".
+	var floored: Dictionary = Config.real_play_from({"real_play": {
+		"starve_grace_intervals": 0.0, "age_day_intervals": 0.0, "vet_visit_heals": 0.0,
+	}})
+	_ok("the grace is floored, not left at zero",
+		float(floored["starve_grace_intervals"]) >= Config.MIN_STARVE_GRACE_INTERVALS)
+	_ok("so is the length of a dog-day",
+		float(floored["age_day_intervals"]) >= Config.MIN_AGE_DAY_INTERVALS)
+	_ok("and what a vet visit heals",
+		float(floored["vet_visit_heals"]) >= Config.MIN_VET_VISIT_HEALS)
+
+	# With those floors the dog lives a sane life rather than no life at all.
+	var fed: LifeModel = _fresh()
+	fed.advance(HOUR, false, true, INTERVAL, floored, 1.0, 1000.0)
+	_ok("a fed dog lives through an hour of the floored settings", fed.alive)
+	_ok("and has a real age rather than an infinite one", is_finite(fed.age_days))
+
+	var starving: LifeModel = _fresh()
+	for _step in 100:
+		starving.advance(HOUR, true, true, INTERVAL, floored, 1.0, 1000.0)
+	_ok("a genuinely starving dog still dies", not starving.alive)
+	_ok("of starvation", starving.cause == Life.Cause.STARVATION)
+
+	# A hand-edited file can hold the wrong sort of thing entirely.
+	var wrong_type: Dictionary = Config.real_play_from({"real_play": {
+		"starve_grace_intervals": "soon", "vet_visit_heals": null,
+	}})
+	_ok("a word where a number belongs falls back to the default",
+		float(wrong_type["starve_grace_intervals"]) >= Config.MIN_STARVE_GRACE_INTERVALS)
+	_ok("and so does nothing at all",
+		float(wrong_type["vet_visit_heals"]) >= Config.MIN_VET_VISIT_HEALS)
+
+	# The two that are deliberately left alone, because zero already means
+	# "this never happens" and a floor would introduce a death.
+	var untouched: Dictionary = Config.real_play_from({"real_play": {
+		"sickness_rise_intervals": 0.0, "illness_mean_intervals": 0.0,
+	}})
+	_ok("a zero illness speed is left as the file asked",
+		float(untouched["sickness_rise_intervals"]) == 0.0)
+	_ok("and so is a zero illness chance",
+		float(untouched["illness_mean_intervals"]) == 0.0)
+	var never_ill: LifeModel = _fresh()
+	for _step in 200:
+		never_ill.advance(HOUR, false, true, INTERVAL, untouched, 0.0, 1000.0)
+	_ok("so the dog never falls ill and never dies of it",
+		never_ill.alive and not never_ill.ill)
+
+	# And the shipped defaults pass through the floors unchanged.
+	var shipped: Dictionary = Config.real_play_from(Config.DEFAULTS)
+	_ok("the shipped defaults are not altered by the floors",
+		float(shipped["starve_grace_intervals"])
+			== float(Config.DEFAULTS["real_play"]["starve_grace_intervals"])
+		and float(shipped["age_day_intervals"])
+			== float(Config.DEFAULTS["real_play"]["age_day_intervals"])
+		and float(shipped["vet_visit_heals"])
+			== float(Config.DEFAULTS["real_play"]["vet_visit_heals"]))
+	_ok("and reading them did not rewrite the defaults",
+		float(Config.DEFAULTS["real_play"]["starve_grace_intervals"]) == 1.0)
+
 
 func _test_saving() -> void:
 	_begin("The whole of a life survives a save and load")

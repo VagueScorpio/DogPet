@@ -141,7 +141,12 @@ func advance(
 	else:
 		starving_seconds = 0.0
 	var grace: float = hunger_interval * _number(config, "starve_grace_intervals", 1.0)
-	if starving_seconds >= grace:
+	# A grace of zero or less is not an instruction to kill the dog, it is a
+	# broken setting: starving_seconds is zero for a dog that is not hungry, and
+	# "0 >= 0" is true, so a fed dog died on the first frame. CareSettings
+	# floors it long before it gets here; this is so a caller's mistake cannot
+	# do it either. Same shape as the to_fatal guard in seconds_to_fatal.
+	if grace > 0.0 and starving_seconds >= grace:
 		_die(Cause.STARVATION, now_unix)
 		news["died"] = true
 		news["cause"] = Cause.STARVATION

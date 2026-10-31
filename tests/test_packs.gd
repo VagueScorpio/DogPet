@@ -12,6 +12,7 @@ extends SceneTree
 
 const Archive := preload("res://scripts/pack_archive.gd")
 const Links := preload("res://scripts/pack_links.gd")
+const Sizes := preload("res://scripts/zip_sizes.gd")
 
 var _passed: int = 0
 var _failed: int = 0
@@ -28,6 +29,7 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(_scratch)
 
 	_test_zip_slip()
+	_test_zip_sizes()
 	_test_pack_links()
 	_test_inspect()
 	_test_round_trip()
@@ -77,6 +79,96 @@ func _test_zip_slip() -> void:
 	var found: Dictionary = Archive.inspect(path)
 	_ok("it is not usable", not found["problems"].is_empty())
 	_ok("and it says why", str(found["problems"][0]).contains("unsafe"))
+
+
+# --- How big the zip says it is ------------------------------------------
+
+# A zip's compression ratio has no ceiling, so a pack of a few hundred KB can
+# declare gigabytes - and ZIPReader.read_file allocates whatever an entry
+# declares before reading a byte of it. The declared sizes are read out of the
+# zip's index first, and anything implausible is refused rather than read.
+func _test_zip_sizes() -> void:
+	_begin("A zip is measured from its index before it is read")
+
+	# A perfectly ordinary pack, for the figures to be checked against.
+	var plain: String = _scratch.path_join("sizes.zip")
+	var plain_manifest := '{"id":"sizes","kind":"model3d","model":"m.glb","credit":"x"}'
+	var packer := ZIPPacker.new()
+	packer.open(plain)
+	_add(packer, "pet.json", plain_manifest)
+	_add(packer, "notes.txt", "0123456789")
+	packer.close()
+
+	var measured: Dictionary = Sizes.read(plain)
+	_ok("an ordinary zip can be measured", str(measured["problem"]).is_empty())
+	_ok("it reports the right size for a known entry",
+		Sizes.size_of(measured["sizes"], "notes.txt") == 10)
+	_ok("and the right total",
+		int(measured["total"]) == 10 + plain_manifest.to_utf8_buffer().size())
+	_ok("an entry it does not list comes back as -1",
+		Sizes.size_of(measured["sizes"], "nothing.png") == -1)
+	_ok("and such a zip is still accepted", Archive.inspect(plain)["problems"].is_empty())
+
+	# A manifest far larger than any manifest needs to be. Compressible
+	# padding, exactly as a real bomb would use, with a valid manifest behind
+	# it so nothing but the size can refuse it.
+	var bomb: String = _scratch.path_join("bomb.zip")
+	var padding: String = " ".repeat(Archive.MAX_MANIFEST_BYTES + 1024)
+	packer = ZIPPacker.new()
+	packer.open(bomb)
+	_add(packer, "pet.json", padding + '{"id":"bomb","kind":"model3d","model":"m.glb","credit":"x"}')
+	packer.close()
+	var bomb_found: Dictionary = Archive.inspect(bomb)
+	_ok("an over-large manifest is refused", not bomb_found["problems"].is_empty())
+	_ok("the owner is told it was the size",
+		not bomb_found["problems"].is_empty()
+		and str(bomb_found["problems"][0]).contains("more than"))
+	_ok("the zip on disk is far smaller than what it declared",
+		FileAccess.open(bomb, FileAccess.READ).get_length() < Archive.MAX_MANIFEST_BYTES)
+
+	# And extracting one is refused too, in case anything ever skips inspect.
+	var unpacked: String = _scratch.path_join("bomb_out")
+	var extract_problems: PackedStringArray = Archive.extract(bomb, "", unpacked)
+	_ok("extracting it is refused as well", not extract_problems.is_empty())
+	_ok("and nothing of it was written",
+		not FileAccess.file_exists(unpacked.path_join("pet.json")))
+
+	# Too many entries to be a pack.
+	var many: String = _scratch.path_join("many.zip")
+	packer = ZIPPacker.new()
+	packer.open(many)
+	_add(packer, "pet.json", '{"id":"many","kind":"model3d","model":"m.glb","credit":"x"}')
+	for index in Archive.MAX_ENTRIES + 1:
+		_add(packer, "f%d.txt" % index, "x")
+	packer.close()
+	_ok("a zip with too many files in it is refused",
+		not Archive.inspect(many)["problems"].is_empty())
+
+	# Things that are not measurable at all are refused, not read hopefully.
+	var not_a_zip: String = _scratch.path_join("notazip.zip")
+	var file: FileAccess = FileAccess.open(not_a_zip, FileAccess.WRITE)
+	file.store_string("this is not a zip, whatever its name says")
+	file.close()
+	_ok("a file that is not a zip cannot be measured",
+		not str(Sizes.read(not_a_zip)["problem"]).is_empty())
+
+	var truncated: String = _scratch.path_join("truncated.zip")
+	var whole: PackedByteArray = FileAccess.get_file_as_bytes(plain)
+	var cut: FileAccess = FileAccess.open(truncated, FileAccess.WRITE)
+	cut.store_buffer(whole.slice(0, whole.size() / 2))
+	cut.close()
+	_ok("a zip cut in half cannot be measured",
+		not str(Sizes.read(truncated)["problem"]).is_empty())
+	_ok("and is refused rather than read",
+		not Archive.inspect(truncated)["problems"].is_empty())
+
+	_ok("a missing file cannot be measured",
+		not str(Sizes.read(_scratch.path_join("nothing-here.zip"))["problem"]).is_empty())
+
+	_ok("sizes are described in words the owner can read",
+		Sizes.describe_bytes(512) == "512 bytes"
+		and Sizes.describe_bytes(262144) == "256.0 KB"
+		and Sizes.describe_bytes(629145600) == "600.0 MB")
 
 
 # --- The other nasty case ------------------------------------------------

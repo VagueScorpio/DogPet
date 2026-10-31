@@ -47,6 +47,20 @@ const MIN_REMINDER_SECONDS := 10.0
 ## which collapses the walk into a flicker the dog never leaves the room for.
 const MIN_ACTION_SECONDS := 0.5
 
+## The same floors for the Real play numbers, where a zero does more than
+## misbehave - it kills the dog.
+##
+## A starve grace of zero is the worst of them: starving_seconds is zero for a
+## dog that is not hungry, and "0 >= 0" is true, so a perfectly fed dog died of
+## starvation on the first frame. It then did it again on the first frame after
+## the owner started another one, writing a record into history.json each time.
+const MIN_STARVE_GRACE_INTERVALS := 0.1
+## A zero here divides by zero and makes the dog's age infinite, which then
+## shows up on the scoreboard as a vast negative number of days.
+const MIN_AGE_DAY_INTERVALS := 0.1
+## A vet that heals nothing leaves an ill dog with no way back at all.
+const MIN_VET_VISIT_HEALS := 1.0
+
 const DEFAULTS := {
 	"format_version": FORMAT_VERSION,
 	"care_interval": MODERATE,
@@ -158,6 +172,42 @@ static func reminder_seconds_from(from: Dictionary) -> float:
 static func action_seconds_from(from: Dictionary, action: String) -> float:
 	var table: Dictionary = from.get("action_seconds", {})
 	return maxf(MIN_ACTION_SECONDS, float(table.get(action, 5.0)))
+
+
+## The Real play tuning numbers, with the floors above applied.
+##
+## sickness_rise_intervals and illness_mean_intervals are deliberately left as
+## the file gives them: every use of either is already guarded against zero,
+## where they mean "an illness never gets worse" and "the dog never falls ill".
+## A floor there would introduce a death rather than prevent one, which is the
+## wrong direction to be wrong in.
+##
+## The dictionary is copied rather than clamped where it sits, so reading the
+## numbers cannot quietly rewrite Settings.data and save the clamped values
+## back over what the owner wrote.
+static func real_play_from(from: Dictionary) -> Dictionary:
+	var source: Variant = from.get("real_play", {})
+	var tuning: Dictionary = (source as Dictionary).duplicate() if source is Dictionary else {}
+	tuning["starve_grace_intervals"] = maxf(
+		MIN_STARVE_GRACE_INTERVALS, _number(tuning, "starve_grace_intervals", 1.0)
+	)
+	tuning["age_day_intervals"] = maxf(
+		MIN_AGE_DAY_INTERVALS, _number(tuning, "age_day_intervals", 2.0)
+	)
+	tuning["vet_visit_heals"] = maxf(
+		MIN_VET_VISIT_HEALS, _number(tuning, "vet_visit_heals", 60.0)
+	)
+	return tuning
+
+
+# A number from a hand-edited file, or the default when it is not one. Mirrors
+# LifeModel._number: float() would turn a String into 0.0, which for a grace
+# period is the one value that must never get through.
+static func _number(source: Dictionary, key: String, fallback: float) -> float:
+	var raw: Variant = source.get(key, fallback)
+	if (raw is float or raw is int) and is_finite(float(raw)):
+		return float(raw)
+	return fallback
 
 
 ## Copy loaded values over the defaults, but only where the key is one we

@@ -12,12 +12,37 @@ extends RefCounted
 
 enum Kind { UNKNOWN, PET, SCENE }
 
+# Reached by preload rather than by its class_name: a newly added script is not
+# in the editor-generated class cache until the editor has rescanned.
+const ZipSizes := preload("res://scripts/zip_sizes.gd")
+
 const PET_JSON := "pet.json"
 const SCENE_JSON := "scene.json"
 const CREDITS_FILE := "CREDITS.txt"
 
 ## Files that have no business being in a pack.
 const SKIPPED_NAMES: PackedStringArray = [".gdignore", "Thumbs.db", ".DS_Store", "desktop.ini"]
+
+## How much this will read out of a zip.
+##
+## A zip's compression ratio is unbounded, so a pack of a few hundred KB can
+## hold gigabytes - and ZIPReader.read_file allocates whatever an entry says it
+## is before reading a byte of it. A 597 KB zip took 3 GB this way. These are
+## the ceilings, checked against the sizes in the zip's own index before
+## anything is read.
+##
+## Hard-coded on purpose, where every other number in this app lives in
+## settings.json: a limit the owner can edit is a limit an imported pack could
+## edit, and then it is not a limit.
+##
+## A manifest is a few hundred bytes in practice; the shipped pug's pet.json is
+## about five hundred. This ceiling also covers turning it into a String
+## afterwards, which costs up to four bytes for every byte read.
+const MAX_MANIFEST_BYTES := 262144
+## Generous for a .glb or a sprite sheet, both of which run to a few MB.
+const MAX_FILE_BYTES := 67108864
+const MAX_TOTAL_BYTES := 268435456
+const MAX_ENTRIES := 512
 
 
 ## Look inside a zip without unpacking it.
@@ -47,10 +72,14 @@ static func inspect(zip_path: String) -> Dictionary:
 		reader.close()
 		return result
 
-	# Every entry has to be safe before anything is unpacked anywhere.
+	# Every entry has to be safe before anything is unpacked anywhere, and
+	# small enough to read before anything is read at all.
 	for entry in entries:
 		if not is_safe_entry(entry):
 			result["problems"].append("the zip contains an unsafe path: %s" % entry)
+	var measured: Dictionary = measure(zip_path, entries)
+	for problem in measured["problems"]:
+		result["problems"].append(problem)
 	if not result["problems"].is_empty():
 		reader.close()
 		return result
@@ -58,6 +87,18 @@ static func inspect(zip_path: String) -> Dictionary:
 	var manifest: String = _find_manifest(entries)
 	if manifest.is_empty():
 		result["problems"].append("no %s or %s found in the zip" % [PET_JSON, SCENE_JSON])
+		reader.close()
+		return result
+
+	# The manifest has a tighter ceiling than the art does, because it is the
+	# one entry that gets turned into a String and parsed.
+	var manifest_bytes: int = ZipSizes.size_of(measured["sizes"], manifest)
+	if manifest_bytes > MAX_MANIFEST_BYTES:
+		result["problems"].append("the pack's %s is %s, more than the %s this app will read" % [
+			manifest.get_file(),
+			ZipSizes.describe_bytes(manifest_bytes),
+			ZipSizes.describe_bytes(MAX_MANIFEST_BYTES),
+		])
 		reader.close()
 		return result
 
@@ -118,6 +159,18 @@ static func extract(zip_path: String, root_inside_zip: String, target_dir: Strin
 	if not prefix.is_empty() and not prefix.ends_with("/"):
 		prefix += "/"
 
+	# Measured once, up front, for the same reason inspect does it: read_file
+	# allocates whatever an entry claims to be, so the claim is checked before
+	# the read rather than after it.
+	var measured: Dictionary = ZipSizes.read(zip_path)
+	var sizes: Dictionary = measured["sizes"]
+	var measurable: bool = str(measured["problem"]).is_empty()
+	if not measurable:
+		problems.append("could not measure the zip: %s" % str(measured["problem"]))
+		reader.close()
+		return problems
+	var written_bytes: int = 0
+
 	for entry in reader.get_files():
 		if entry.ends_with("/"):
 			continue
@@ -126,6 +179,33 @@ static func extract(zip_path: String, root_inside_zip: String, target_dir: Strin
 			continue
 		if not prefix.is_empty() and not entry.begins_with(prefix):
 			continue
+
+		var bytes: int = ZipSizes.size_of(sizes, entry)
+		# A manifest keeps its own tighter ceiling here as well as in inspect.
+		# It is not about this write - a 60 MB pet.json on disk would be within
+		# the per-file limit and harmless to copy - but about every later read
+		# of it: PetPack and ScenePack load it with get_file_as_string and
+		# parse it on each AssetLibrary.reload().
+		var ceiling: int = MAX_FILE_BYTES
+		var file_name: String = entry.get_file()
+		if file_name == PET_JSON or file_name == SCENE_JSON:
+			ceiling = MAX_MANIFEST_BYTES
+		if bytes < 0 or bytes > ceiling:
+			problems.append("skipped %s: %s" % [
+				file_name,
+				"the zip's index does not mention it" if bytes < 0
+				else "it is %s, more than the %s this app will read" % [
+					ZipSizes.describe_bytes(bytes),
+					ZipSizes.describe_bytes(ceiling),
+				],
+			])
+			continue
+		if written_bytes + bytes > MAX_TOTAL_BYTES:
+			problems.append("stopped at %s: the pack is past the %s this app will unpack" % [
+				entry.get_file(), ZipSizes.describe_bytes(MAX_TOTAL_BYTES),
+			])
+			break
+		written_bytes += bytes
 
 		var relative: String = entry.substr(prefix.length())
 		if relative.is_empty() or SKIPPED_NAMES.has(relative.get_file()):
@@ -179,6 +259,50 @@ static func write_pack(folder: String, zip_path: String, credit: String) -> Pack
 	if written == 0:
 		problems.append("there was nothing in %s to pack" % folder)
 	return problems
+
+
+## Read the zip's own index and say whether what it claims to hold is within
+## the ceilings above.
+##
+## Returns {"sizes": {entry: bytes}, "problems": PackedStringArray}. The sizes
+## are the figures ZIPReader.read_file will allocate from, so checking them is
+## checking the memory. A zip that cannot be measured is refused outright
+## rather than read hopefully.
+static func measure(zip_path: String, entries: PackedStringArray) -> Dictionary:
+	var problems: PackedStringArray = []
+
+	if entries.size() > MAX_ENTRIES:
+		problems.append("the zip holds %d files, more than the %d this app will unpack" % [
+			entries.size(), MAX_ENTRIES,
+		])
+		return {"sizes": {}, "problems": problems}
+
+	var measured: Dictionary = ZipSizes.read(zip_path)
+	if not str(measured["problem"]).is_empty():
+		problems.append(str(measured["problem"]))
+		return {"sizes": {}, "problems": problems}
+
+	var sizes: Dictionary = measured["sizes"]
+	if int(measured["total"]) > MAX_TOTAL_BYTES:
+		problems.append("the pack unpacks to %s, more than the %s this app will read" % [
+			ZipSizes.describe_bytes(int(measured["total"])),
+			ZipSizes.describe_bytes(MAX_TOTAL_BYTES),
+		])
+		return {"sizes": sizes, "problems": problems}
+
+	for entry in entries:
+		var bytes: int = ZipSizes.size_of(sizes, entry)
+		if bytes < 0:
+			problems.append("the zip's index does not mention %s" % entry)
+			continue
+		if bytes > MAX_FILE_BYTES:
+			problems.append("%s is %s, more than the %s this app will read" % [
+				entry.get_file(),
+				ZipSizes.describe_bytes(bytes),
+				ZipSizes.describe_bytes(MAX_FILE_BYTES),
+			])
+
+	return {"sizes": sizes, "problems": problems}
 
 
 ## Is this zip entry safe to unpack?

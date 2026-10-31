@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.23 - A zip that cannot eat all the memory, and a grace period that holds
   v1.22 - Two ways a file could run code, both closed
   v1.21 - The zip unpacks into a folder of its own
   v1.20 - An image size limit, overlapping rooms, and four scripts split
@@ -26,6 +27,72 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.23 - A zip that cannot eat all the memory, and a grace period that holds
+------------------------------------------------------------
+
+What
+  - RT-03. Import pack now reads how big a zip says it is before reading any
+    of it, and refuses one that claims more than it will handle: 256 KB for
+    a pet.json or scene.json, 64 MB for any one file, 256 MB for the pack,
+    512 files. The new scripts/zip_sizes.gd reads those figures out of the
+    zip's own index without decompressing anything.
+  - RT-04. The Real play numbers in settings.json now have floors under
+    them, the same way the reminder gap and the action length already did.
+    A starve grace of zero no longer means the dog dies this instant.
+
+Why
+  - A zip's compression ratio has no ceiling. A 597 KB file holding a
+    pet.json of 600 MB of spaces took peak memory to 3,024 MB and froze the
+    app for four and a half seconds - and it was accepted, because the JSON
+    parser skips the padding. At 4 GB of padding the zip is still only about
+    4 MB and the app is simply gone. Worse, this happened the moment the
+    file was chosen in the dialog, before the "Replace?" confirmation.
+  - A starve grace of zero killed a perfectly fed dog on the first frame:
+    starving_seconds is set to zero for a dog that is not hungry, and
+    "0 >= 0" is true. Starting another one from the death card did it again,
+    writing a record into history.json each time. Real play became
+    unplayable with nothing on screen to say why. settings.json is meant to
+    be edited by hand, so it has to survive being edited badly.
+
+How
+  - ZIPReader in Godot 4.7.2 will not say how big an entry is - it has only
+    open, close, get_files, read_file, file_exists and get_compression_level
+    (CLAUDE.md's note about get_file_info() being there since 4.4 is wrong).
+    So zip_sizes.gd walks the zip's central directory with FileAccess.
+  - That figure is worth trusting for this one purpose, even though a zip's
+    metadata is otherwise only a claim: read_file resizes its buffer to
+    exactly the declared size and reads at most that many bytes, so the
+    declaration IS the allocation. A zip that under-declares only gets a
+    truncated read. Checking the declaration therefore really does bound the
+    memory.
+  - Anything that cannot be measured confidently is refused rather than read
+    hopefully: no index, a cut-short index, or zip64 - which exists for
+    archives past 4 GB or 65535 files, and a pet is neither.
+  - The limits are hard-coded rather than put in settings.json like every
+    other number here. A limit the owner can edit is a limit an unpacked
+    pack could edit, and then it is not a limit.
+  - The floors are MIN_STARVE_GRACE_INTERVALS, MIN_AGE_DAY_INTERVALS (zero
+    divides by zero and makes the dog's age infinite) and
+    MIN_VET_VISIT_HEALS (a vet that heals nothing leaves an ill dog with no
+    way back). sickness_rise_intervals and illness_mean_intervals are
+    deliberately left alone: every use of them already guards against zero,
+    where they simply mean "an illness never gets worse" and "the dog never
+    falls ill". A floor there would introduce a death rather than prevent
+    one, and would take away a setting somebody might be using on purpose.
+  - LifeModel.advance also now refuses to treat a grace of zero or less as
+    an instruction to kill the dog, whatever it is handed. The floors mean
+    it should never see one; it is the one model here where being wrong
+    costs somebody their pet, and it should not depend on its caller.
+  - Checked that none of this refuses real work. All three shipped packs
+    export and re-import cleanly - the biggest, pug_3d, is 1.6 MB against a
+    64 MB ceiling - and a genuinely starving dog still dies after exactly
+    one care interval. The bomb now costs inspect 1 KB and one millisecond,
+    where it used to cost about 3 GB and four and a half seconds.
+  - 686 checks pass, 0 fail, up from 654. 32 of the new ones guard these two
+    fixes: _test_zip_sizes in test_packs.gd and _test_broken_tuning in
+    test_life.gd.
 
 ------------------------------------------------------------
 v1.22 - Two ways a file could run code, both closed
