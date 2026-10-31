@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.22 - Two ways a file could run code, both closed
   v1.21 - The zip unpacks into a folder of its own
   v1.20 - An image size limit, overlapping rooms, and four scripts split
   v1.19 - Tests that start the whole app
@@ -25,6 +26,67 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.22 - Two ways a file could run code, both closed
+------------------------------------------------------------
+
+What
+  - RT-01. The dog's name is no longer part of the PowerShell script that
+    raises a Windows notification. The name, the message and the icon path
+    now travel as base64 and the toast's XML is built through the DOM, so
+    the script DogPet runs is a fixed piece of text with no room in it for
+    anything a dog might be called.
+  - RT-02. A pack's licence and source links are only clickable when they
+    are plain http:// or https:// addresses. Anything else is still shown -
+    it has to be, because showing the licence URI is part of the credit -
+    but as text that does nothing when clicked. The rule is the new
+    scripts/pack_links.gd, with 17 checks in tests/test_packs.gd.
+
+Why
+  - Both were a file being trusted the way typed-in text is trusted, and
+    both ended in code running.
+  - The name went into an @"..."@ here-string, which PowerShell expands, and
+    the substitution happened in GDScript - so the name was in the script's
+    own source before PowerShell had read it. A dog called $(...) had its
+    name run as a command. The XML escaping was right as far as it went; the
+    trouble was that two parsers read that text one after the other and it
+    only ever satisfied the second. Proven by setting the name to a
+    Set-Content call and watching the file appear.
+  - license_url went from pet.json straight to OS.shell_open, which is
+    ShellExecute: it will open a document, launch an exe, find a bare name
+    on the PATH, or hand the string to any protocol handler. A pack could
+    ship a link labelled "CC-BY 3.0" that ran a program from a network
+    share. Proven by pointing it at a .cmd file and clicking it.
+  - Neither needed anything unusual of the owner: typing a name, or
+    clicking what looks like a licence link on a pack someone sent them.
+    assets/ being loose and shareable is the best thing about this app and
+    it is also its whole attack surface.
+
+How
+  - notifier.gd: _xml_escape is gone - CreateTextNode and SetAttribute do
+    that job in the DOM, which is the layer that knows what needs escaping.
+    _base64 replaces it as the one way a value may enter the script, and
+    answers an empty string directly, because raw_to_base64 complains at an
+    empty buffer and a blank body or a missing icon are both normal.
+    _file_uri no longer percent-encodes spaces; nothing needs it to now.
+  - credits_list.gd: asks PackLinks.web_url first, and falls back to a plain
+    dimmed label. PackLinks is reached by preload rather than by its
+    class_name, the way CareSettings reaches NeedsModel, so a headless build
+    works without waiting for the editor to rescan.
+  - PackLinks allows two schemes rather than refusing a list of dangerous
+    ones: which schemes are dangerous depends on what is installed on the
+    machine, and it cannot know that. It also refuses a bare "https://" and
+    anything holding whitespace or a control character.
+  - Checked that none of this broke the point of the features. A real toast
+    still appears, with the tray icon on it, and the shipped pug's CC-BY
+    licence and Poly Pizza source links both still work. A name with
+    accents or Japanese in it arrives in PowerShell with every code point
+    intact - the first printout suggested otherwise, which turned out to be
+    the test's own console codepage rather than the fix.
+  - 654 checks pass, 0 fail, up from 637. The project opens with no script
+    errors. Found by an outside audit of the whole of scripts/; its report
+    and the eleven findings still open are in redteam/, uncommitted.
 
 ------------------------------------------------------------
 v1.21 - The zip unpacks into a folder of its own

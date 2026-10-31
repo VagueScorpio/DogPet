@@ -11,6 +11,7 @@ extends SceneTree
 ## about what is actually in the file rather than what we meant to put there.
 
 const Archive := preload("res://scripts/pack_archive.gd")
+const Links := preload("res://scripts/pack_links.gd")
 
 var _passed: int = 0
 var _failed: int = 0
@@ -27,6 +28,7 @@ func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(_scratch)
 
 	_test_zip_slip()
+	_test_pack_links()
 	_test_inspect()
 	_test_round_trip()
 	_test_broken_zips()
@@ -75,6 +77,47 @@ func _test_zip_slip() -> void:
 	var found: Dictionary = Archive.inspect(path)
 	_ok("it is not usable", not found["problems"].is_empty())
 	_ok("and it says why", str(found["problems"][0]).contains("unsafe"))
+
+
+# --- The other nasty case ------------------------------------------------
+
+# A pack says in its own JSON where its licence and source links point, and a
+# clicked link reaches OS.shell_open - which will launch a program, open a
+# document, resolve a bare name off the PATH, or hand the string to any
+# protocol handler. So only a plain web address may ever be made clickable.
+func _test_pack_links() -> void:
+	_begin("Only plain web addresses become clickable links")
+
+	# The two the shipped pug pack actually uses.
+	for good in [
+		"https://creativecommons.org/licenses/by/3.0/",
+		"https://poly.pizza/m/3nFZQW8yojl",
+		"http://example.com/licence.txt",
+	]:
+		_ok("allowed: %s" % good, Links.is_web_url(good))
+
+	_ok("the scheme is matched whatever its case",
+		Links.is_web_url("HTTPS://Example.COM/x"))
+	_ok("surrounding whitespace is trimmed rather than refused",
+		Links.web_url("  https://example.com/x  ") == "https://example.com/x")
+
+	var backslash: String = String.chr(92)
+	for bad in [
+		"calc.exe",                                   # resolved off the PATH
+		"C:/Windows/System32/calc.exe",               # a program by full path
+		"file:///C:/Windows/System32/calc.exe",       # the same, as a URI
+		backslash + backslash + "host" + backslash + "share" + backslash + "p.exe",
+		"ms-settings:",                               # a protocol handler
+		"javascript:alert(1)",
+		"pack.zip",
+		"",
+		"   ",
+		"https://",                                   # nothing to open
+		"https://example.com/a b",                    # whitespace inside
+		"https://example.com/a" + String.chr(10) + "calc.exe",
+	]:
+		_ok("refused: %s" % (bad if not bad.strip_edges().is_empty() else "(blank)"),
+			not Links.is_web_url(bad))
 
 
 # --- Looking inside a zip ------------------------------------------------

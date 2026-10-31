@@ -226,36 +226,59 @@ func _toast_script(title: String, body: String) -> String:
 	if AssetLibrary.ui != null:
 		icon = AssetLibrary.ui.tray_icon_path()
 
-	var image_tag: String = ""
-	if not icon.is_empty():
-		image_tag = "<image placement=\"appLogoOverride\" src=\"file:///%s\"/>" % _file_uri(icon)
-
+	# Nothing the dog is called, and no file name out of assets/, is allowed to
+	# become part of this script. The three values arrive as base64 and the XML
+	# is built through the DOM, so the script text below is a constant.
+	#
+	# It used to be pasted together instead, with the name escaped for XML and
+	# dropped into an @"..."@ here-string - which PowerShell expands. The name
+	# was therefore in the script's own source before PowerShell had parsed it,
+	# so a dog called $(...) had its name run as code. Escaping for XML was
+	# right as far as it went; the trouble was that two parsers read that text
+	# one after the other, and it only ever satisfied the second one.
 	return """$ErrorActionPreference = 'SilentlyContinue'
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType=WindowsRuntime] | Out-Null
+$title = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{TITLE}'))
+$body = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{BODY}'))
+$icon = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{ICON}'))
 $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
-$doc.LoadXml(@"
-<toast><visual><binding template="ToastGeneric"><text>{TITLE}</text><text>{BODY}</text>{IMAGE}</binding></visual></toast>
-"@)
+$doc.LoadXml('<toast><visual><binding template="ToastGeneric"><text></text><text></text></binding></visual></toast>')
+$texts = $doc.GetElementsByTagName('text')
+$texts.Item(0).AppendChild($doc.CreateTextNode($title)) | Out-Null
+$texts.Item(1).AppendChild($doc.CreateTextNode($body)) | Out-Null
+if ($icon -ne '') {
+	$image = $doc.CreateElement('image')
+	$image.SetAttribute('placement', 'appLogoOverride')
+	$image.SetAttribute('src', 'file:///' + $icon)
+	$doc.GetElementsByTagName('binding').Item(0).AppendChild($image) | Out-Null
+}
 $toast = New-Object Windows.UI.Notifications.ToastNotification $doc
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{APPID}').Show($toast)
-""".replace("{TITLE}", _xml_escape(title)) \
-   .replace("{BODY}", _xml_escape(body)) \
-   .replace("{IMAGE}", image_tag) \
+""".replace("{TITLE}", _base64(title)) \
+   .replace("{BODY}", _base64(body)) \
+   .replace("{ICON}", _base64(_file_uri(icon))) \
    .replace("{APPID}", POWERSHELL_APP_ID)
 
 
-# The dog's name goes straight into XML, and a dog could be called anything.
-static func _xml_escape(text: String) -> String:
-	return (text
-		.replace("&", "&amp;")
-		.replace("<", "&lt;")
-		.replace(">", "&gt;")
-		.replace("\"", "&quot;")
-		.replace("'", "&apos;"))
+# The one way a value is allowed into the script: as base64, inside a
+# single-quoted PowerShell string. Base64 is only A-Za-z0-9+/=, so nothing a
+# dog could be called can end that literal, and a single-quoted string does
+# not expand $ in any case. The XML escaping that used to live here is done by
+# CreateTextNode and SetAttribute above, which is the layer that knows what
+# needs escaping.
+#
+# An empty string is answered directly: raw_to_base64 pushes an engine error
+# when handed nothing, and nothing is perfectly normal here - there may be no
+# icon, and a body is sometimes left blank.
+static func _base64(text: String) -> String:
+	if text.is_empty():
+		return ""
+	return Marshalls.raw_to_base64(text.to_utf8_buffer())
 
 
-# Spaces are the one thing that reliably trips up a file:// URI, and this
-# app's own folder may well have them in it.
+# A file:// URI wants forward slashes whatever Windows hands us. Spaces used to
+# be percent-encoded here as well; they no longer need to be, because the path
+# goes in through SetAttribute rather than into XML by hand.
 static func _file_uri(path: String) -> String:
-	return path.replace("\\", "/").replace(" ", "%20")
+	return path.replace("\\", "/")

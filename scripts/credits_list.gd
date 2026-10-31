@@ -10,6 +10,18 @@ extends RefCounted
 ##
 ## The pet currently on screen comes first, because that is the art actually
 ## being shown.
+##
+## A pack's licence and source links are only made clickable when PackLinks
+## says they are plain web addresses. One that is not is still printed - it has
+## to be, since showing the licence URI is part of the attribution - but as
+## text, because a clicked link reaches OS.shell_open and a pack is a file
+## people download from each other.
+
+# Reached by preload rather than by its class_name, the same way CareSettings
+# reaches NeedsModel: a newly added script is not in the editor-generated class
+# cache until the editor has rescanned, and neither a headless build nor the
+# tests should have to wait for that.
+const PackLinks := preload("res://scripts/pack_links.gd")
 
 
 ## Add the credits to a container. `host` owns the link callbacks.
@@ -104,27 +116,48 @@ static func _entry_block(entry: Dictionary) -> Control:
 	var links := HBoxContainer.new()
 	links.add_theme_constant_override("separation", 10)
 	var any: bool = false
-	if not str(entry["license_url"]).is_empty():
+
+	var licence_url: String = PackLinks.web_url(str(entry["license_url"]))
+	if not licence_url.is_empty():
 		var label: String = str(entry["license"])
 		links.add_child(_link(
-			label if not label.is_empty() else "Licence", str(entry["license_url"])
+			label if not label.is_empty() else "Licence", licence_url
 		))
 		any = true
 	elif not str(entry["license"]).is_empty():
-		var plain := Label.new()
-		plain.text = str(entry["license"])
-		plain.add_theme_font_size_override("font_size", 11)
-		links.add_child(plain)
+		links.add_child(_plain(str(entry["license"])))
 		any = true
-	if not str(entry["source_url"]).is_empty():
-		links.add_child(_link("Source", str(entry["source_url"])))
+	# A licence URI that is not a web address still has to be readable: showing
+	# it is a condition of some of the licences this screen exists to satisfy.
+	if licence_url.is_empty() and not str(entry["license_url"]).strip_edges().is_empty():
+		links.add_child(_plain(str(entry["license_url"])))
 		any = true
+
+	var source_url: String = PackLinks.web_url(str(entry["source_url"]))
+	if not source_url.is_empty():
+		links.add_child(_link("Source", source_url))
+		any = true
+	elif not str(entry["source_url"]).strip_edges().is_empty():
+		links.add_child(_plain(str(entry["source_url"])))
+		any = true
+
 	if any:
 		box.add_child(links)
 
 	return box
 
 
+# A URL shown but not armed, in the same quiet style as the rest of the block.
+static func _plain(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
+	label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+	return label
+
+
+# Only ever handed a URL that web_url above has already approved.
 static func _link(text: String, url: String) -> LinkButton:
 	var button := LinkButton.new()
 	button.text = text
