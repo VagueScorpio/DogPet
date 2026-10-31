@@ -19,6 +19,10 @@ signal banner_requested(title: String, body: String)
 
 const PAUSE_SECONDS := 3600.0
 
+## The wscript helper's name. See _launch_via_wscript for where it lives and
+## why it does not live beside the app any more.
+const VBS_PREFIX := "dogpet_notify_"
+
 ## The AppUserModelID Windows already knows about, so no registration is
 ## needed. This is PowerShell's own.
 const POWERSHELL_APP_ID := "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe"
@@ -39,7 +43,18 @@ func _ready() -> void:
 		return
 	Needs.threshold_crossed.connect(_on_threshold_crossed)
 	Needs.pet_started.connect(_forget_previous_dog)
+	_sweep_stale_helpers()
 	_adopt_current_levels()
+
+
+# Clear out any wscript helper left lying about: from a previous run, or from
+# the previous notification in this one. Called at startup and before each new
+# helper is written, so they cannot pile up.
+func _sweep_stale_helpers() -> void:
+	var folder: String = OS.get_user_data_dir()
+	for name in DirAccess.get_files_at(folder):
+		if name.begins_with(VBS_PREFIX) and name.ends_with(".vbs"):
+			DirAccess.remove_absolute(folder.path_join(name))
 
 
 # A new dog inherits nothing from the last one, and least of all this.
@@ -203,8 +218,24 @@ func _launch_via_powershell(encoded: String) -> void:
 
 # The belt-and-braces route, for if a console window ever does flash.
 # wscript.exe ships with Windows too, and runs with no window at all.
+#
+# The helper goes in the owner's own user data folder rather than beside the
+# exe. saves/ sits next to the app on purpose, so unzipping it anywhere keeps
+# everything together - right for a save file, wrong for a script the app then
+# executes: unzip DogPet somewhere several accounts can reach and anyone who can
+# write there can replace the script and have it run as the owner. The name is
+# unpredictable so nothing can be lying in wait at the path, and the file is
+# removed once wscript has taken it.
 func _launch_via_wscript(encoded: String) -> void:
-	var vbs_path: String = Paths.saves_dir.path_join("notify.vbs")
+	# Last time's helper goes now. wscript is started without waiting, so the
+	# file cannot be removed the moment it is handed over - and a timer to do it
+	# later is no good either: Notifier is an autoload, get_tree() is null
+	# before it is in the tree, and a notification can be raised from there.
+	# Clearing up at the start of the next one needs nothing but the folder.
+	_sweep_stale_helpers()
+	var vbs_path: String = OS.get_user_data_dir().path_join(
+		"%s%d_%d.vbs" % [VBS_PREFIX, Time.get_ticks_usec(), randi()]
+	)
 	var line: String = (
 		"CreateObject(\"WScript.Shell\").Run \"powershell.exe -NoProfile "
 		+ "-NonInteractive -ExecutionPolicy Bypass -EncodedCommand "

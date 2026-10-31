@@ -287,6 +287,30 @@ func _test_catch_up() -> void:
 	_close("elapsed_between never returns a negative", Model.elapsed_between(500.0, 100.0), 0.0)
 	_close("elapsed_between measures forwards", Model.elapsed_between(100.0, 460.0), 360.0)
 
+	# A clock that went FORWARDS is the likelier fault - a dead CMOS battery
+	# reads 2099, not 1970 - and used to be unhandled, so one bad reading
+	# killed a pet in Real play before the window had opened.
+	_begin("Catch-up with a clock that jumped forwards")
+	var cap: float = 30.0 * DAY
+	_close("nothing at all stays nothing", Model.capped_elapsed(0.0, cap), 0.0)
+	_close("an ordinary hour is untouched", Model.capped_elapsed(HOUR, cap), HOUR)
+	_close("a week is untouched", Model.capped_elapsed(7.0 * DAY, cap), 7.0 * DAY)
+	_close("exactly the cap is untouched", Model.capped_elapsed(cap, cap), cap)
+	_close("one second past it is clamped", Model.capped_elapsed(cap + 1.0, cap), cap)
+	_close("a year is clamped", Model.capped_elapsed(365.0 * DAY, cap), cap)
+	_close("a negative is nothing", Model.capped_elapsed(-5000.0, cap), 0.0)
+	_close("an infinity is nothing", Model.capped_elapsed(INF, cap), 0.0)
+	_close("a negative infinity is nothing", Model.capped_elapsed(-INF, cap), 0.0)
+	_close("a NaN is nothing", Model.capped_elapsed(NAN, cap), 0.0)
+
+	# The cap must not change the design: a real month away still ruins
+	# everything, which is the whole reason it is set where it is.
+	var capped := Model.new()
+	capped.catch_up(Model.capped_elapsed(365.0 * DAY, cap), row)
+	_close("a clamped absence still maxes hunger", capped.get_value(Model.HUNGER), 100.0)
+	_close("still bottoms happiness", capped.get_value(Model.HAPPINESS), 0.0)
+	_close("and still maxes energy", capped.get_value(Model.ENERGY), 100.0)
+
 
 func _test_catch_up_ignores_demo() -> void:
 	_begin("Catch-up ignores Demo Speed")

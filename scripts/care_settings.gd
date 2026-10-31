@@ -224,7 +224,10 @@ static func merge_into(target: Dictionary, source: Dictionary) -> void:
 			merge_into(want, got)
 		elif want is bool and got is bool:
 			target[key] = got
-		elif want is float and (got is float or got is int):
+		elif want is float and (got is float or got is int) and is_finite(float(got)):
+			# is_finite too: a hand-edited interval of 1e999 parses as inf, and
+			# an infinite interval makes the countdown on screen read
+			# "~-9223372036854775808m".
 			target[key] = float(got)
 		elif want is int and got is int:
 			target[key] = got

@@ -51,16 +51,18 @@ static func load_records(path: String) -> Array[Dictionary]:
 	return out
 
 
+## Write the record out.
+##
+## Through SaveFile so it gets the same temp-file-then-rename treatment and the
+## same spare copy as the dog itself. This file is rewritten in full every time
+## a dog dies, and it is the one thing in the app meant to outlive every pet in
+## it, so a crash halfway through a write should not be able to take the whole
+## record with it.
 static func save_records(path: String, records: Array[Dictionary]) -> bool:
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	if file == null:
-		return false
-	file.store_string(JSON.stringify({
+	return SaveFile.write_atomic(path, {
 		"format_version": FORMAT_VERSION,
 		"pets": records,
-	}, "\t"))
-	file.close()
-	return true
+	})
 
 
 ## Build the record for a dog that has just died.
@@ -79,8 +81,14 @@ static func make_record(
 # --- Reading it back -------------------------------------------------------
 
 ## "29 Oct 2026, 14:32". Local time, since it is the owner's own history.
+## Unix times outside this are not dates, they are a broken clock or a broken
+## file: 1970 to roughly the year 5000.
+const MAX_PLAUSIBLE_UNIX := 95617584000.0
+
+
 static func format_date(unix: float) -> String:
-	if unix <= 0.0:
+	# A born_unix of 1e999 used to print "27 Jan -292277022657, 08:29".
+	if not is_finite(unix) or unix <= 0.0 or unix > MAX_PLAUSIBLE_UNIX:
 		return "unknown"
 	var when: Dictionary = Time.get_datetime_dict_from_unix_time(int(unix))
 	var months: PackedStringArray = [
@@ -98,6 +106,8 @@ static func format_date(unix: float) -> String:
 ## dog-days of its age. Useful because the two can differ a lot: a dog on
 ## Demo speed ages a year in an afternoon.
 static func format_lifespan(born_unix: float, died_unix: float) -> String:
+	if not is_finite(born_unix) or not is_finite(died_unix):
+		return "unknown"
 	if born_unix <= 0.0 or died_unix <= born_unix:
 		return "unknown"
 	return NeedsText.format_duration(died_unix - born_unix)

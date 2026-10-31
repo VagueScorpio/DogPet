@@ -23,6 +23,18 @@ const CREDITS_FILE := "CREDITS.txt"
 ## Files that have no business being in a pack.
 const SKIPPED_NAMES: PackedStringArray = [".gdignore", "Thumbs.db", ".DS_Store", "desktop.ini"]
 
+## Names Windows resolves to devices rather than to files, whatever folder they
+## sit in and whatever extension they carry: assets/pets/x/CON is the console.
+##
+## Nothing is known to go wrong - FileAccess.open on one of these fails and
+## extract records that and carries on - but opening a serial port can block,
+## and that is a "probably fine" worth five lines to be rid of.
+const DEVICE_NAMES: PackedStringArray = [
+	"CON", "PRN", "AUX", "NUL",
+	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+	"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+]
+
 ## How much this will read out of a zip.
 ##
 ## A zip's compression ratio is unbounded, so a pack of a few hundred KB can
@@ -305,6 +317,31 @@ static func measure(zip_path: String, entries: PackedStringArray) -> Dictionary:
 	return {"sizes": sizes, "problems": problems}
 
 
+## Empty a folder without removing the folder itself.
+##
+## What makes "Replace this pack?" mean it. Importing over an existing pack used
+## to write the new files on top and remove nothing, so every file the new pack
+## did not happen to overwrite survived - a pet.json that no longer lists a walk
+## strip, with the old walk.png still beside it. The dialog said "replaced"; the
+## behaviour was a merge.
+##
+## The caller must have taken a backup first. PackTransfer does, and checks it
+## worked before calling this.
+static func empty_folder(folder: String) -> void:
+	var dir: DirAccess = DirAccess.open(folder)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var name: String = dir.get_next()
+	while not name.is_empty():
+		if name != "." and name != "..":
+			if dir.current_is_dir():
+				empty_folder(folder.path_join(name))
+			DirAccess.remove_absolute(folder.path_join(name))
+		name = dir.get_next()
+	dir.list_dir_end()
+
+
 ## Is this zip entry safe to unpack?
 ##
 ## An archive can name its entries anything it likes, including "..\..\
@@ -321,6 +358,11 @@ static func is_safe_entry(entry: String) -> bool:
 		return false
 	for part in name.split("/"):
 		if part == "..":
+			return false
+		# Matched on the part before the first dot, without case: COM1.png,
+		# com1 and CON.txt are all the device. "console.png" and "nullify.png"
+		# are not, which is why this is not a prefix match.
+		if DEVICE_NAMES.has(part.get_slice(".", 0).to_upper()):
 			return false
 	return true
 

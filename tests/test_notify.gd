@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_test_what_to_say()
 	_test_tray_display()
 	_test_icon_pack()
+	_test_log_rotation()
 
 	print("")
 	print("=========================")
@@ -156,3 +157,70 @@ func _ok(label: String, condition: bool) -> void:
 	else:
 		_failed += 1
 		print("  FAIL  " + label)
+
+
+# --- The log file ---------------------------------------------------------
+
+# RT-11. Log._rotate_if_large was only ever called from _ready, so the 1 MB
+# ceiling was enforced at launch and never again - and DogPet is meant to be
+# left in the tray for days. A long session with reminders firing grew the file
+# without limit.
+#
+# Log itself is an autoload and names Paths, so it cannot be loaded in a
+# --script run. What is checked here is the rule it now follows: a running byte
+# count, rotation when the count passes the ceiling, one .old kept.
+func _test_log_rotation() -> void:
+	_begin("The log rotates while the app is running, not only at startup")
+	var dir: String = ProjectSettings.globalize_path("user://test_log")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path: String = dir.path_join("dogpet.log")
+	var old: String = path + ".old"
+	for leftover in [path, old]:
+		DirAccess.remove_absolute(leftover)
+
+	var ceiling: int = 2048
+	var bytes: int = 0
+	var rotations: int = 0
+	for index in 400:
+		var line: String = "2026-10-31 12:00:00 [INFO] a line of the log, number %d" % index
+		var file: FileAccess = (
+			FileAccess.open(path, FileAccess.READ_WRITE) if FileAccess.file_exists(path)
+			else FileAccess.open(path, FileAccess.WRITE)
+		)
+		if file == null:
+			_ok("could write the log fixture", false)
+			return
+		file.seek_end()
+		file.store_line(line)
+		file.close()
+		bytes += line.to_utf8_buffer().size() + 1
+		if bytes >= ceiling:
+			if FileAccess.file_exists(old):
+				DirAccess.remove_absolute(old)
+			if DirAccess.rename_absolute(path, old) == OK:
+				bytes = 0
+				rotations += 1
+
+	_ok("it rotated during the run rather than never", rotations > 1)
+	_ok("the current log is small again", _file_size(path) < ceiling)
+	_ok("there is exactly one .old beside it", FileAccess.file_exists(old))
+	_ok("and no .old.old piling up", not FileAccess.file_exists(old + ".old"))
+	_ok("the newest line is in the current log",
+		FileAccess.get_file_as_string(path).contains("number 399"))
+	_ok("and the count, not the file, is what decides",
+		bytes == _file_size(path))
+
+	for leftover in [path, old]:
+		DirAccess.remove_absolute(leftover)
+	DirAccess.remove_absolute(dir)
+
+
+func _file_size(path: String) -> int:
+	if not FileAccess.file_exists(path):
+		return 0
+	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return 0
+	var size: int = file.get_length()
+	file.close()
+	return size

@@ -162,6 +162,21 @@ func _test_formatting() -> void:
 	_ok("zero", History.format_date(0.0) == "unknown")
 	_ok("negative", History.format_date(-5.0) == "unknown")
 
+	# RT-09. A save can hold 1e999, which JSON parses as inf and stringify
+	# writes back out as 1e99999 - so once an infinity is in a save file it
+	# stays there. A born_unix of inf used to print "27 Jan -292277022657",
+	# because int() of an infinity is undefined.
+	_begin("A date that is not a date says so too")
+	_ok("an infinity", History.format_date(INF) == "unknown")
+	_ok("a negative infinity", History.format_date(-INF) == "unknown")
+	_ok("a NaN", History.format_date(NAN) == "unknown")
+	_ok("a year long past anything", History.format_date(1e18) == "unknown")
+	_ok("but a real date still works", History.format_date(1762000000.0) != "unknown")
+	_ok("an infinite lifespan", History.format_lifespan(1000.0, INF) == "unknown")
+	_ok("an infinite birthday", History.format_lifespan(-INF, 1000.0) == "unknown")
+	_ok("and a record built from infinities still describes itself",
+		History.describe(_record("A", INF, INF, INF, 99)).contains("unknown"))
+
 	_begin("Real time is reported as well as dog-days")
 	# Dog-days and real time differ a lot: on Demo a dog ages a year in an
 	# afternoon, so the scoreboard shows both.

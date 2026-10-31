@@ -16,6 +16,16 @@ extends Control
 ## sizes and parallax of their scenery. What is left here is the room's own
 ## job: loading its pictures, drawing them and its props, and scrolling.
 
+## The most tiles either axis will ever be covered with.
+##
+## ScenePack raises a room's tile_scale when its tiles are tiny, which handles
+## every case where the size could be read from the file's header. This is the
+## backstop for the case it cannot: a picture that is not a PNG, whose size is
+## only known once it has been decoded into a texture. Past this the tile is
+## stretched instead, which looks wrong and keeps the window alive - and
+## ScenePack will have said something in the log.
+const MAX_TILES_PER_AXIS := 256
+
 var pack: ScenePack = null
 
 # Loaded once per room and kept, so _draw never touches the disk.
@@ -150,7 +160,7 @@ func _draw_tiled_background() -> void:
 	var floor_y: float = size.y * (1.0 - float(pack.background.get("floor_ratio", 0.38)))
 
 	if wall != null:
-		var tile: Vector2 = wall.get_size() * tile_scale
+		var tile: Vector2 = _tile_step(wall.get_size() * tile_scale, Vector2(size.x, floor_y))
 		if tile.x > 0.0 and tile.y > 0.0:
 			# Walk upwards from the floor line so the bottom row is whole.
 			var y: float = floor_y - tile.y
@@ -162,7 +172,9 @@ func _draw_tiled_background() -> void:
 				y -= tile.y
 
 	if floor_tex != null:
-		var tile: Vector2 = floor_tex.get_size() * tile_scale
+		var tile: Vector2 = _tile_step(
+			floor_tex.get_size() * tile_scale, Vector2(size.x, size.y - floor_y)
+		)
 		if tile.x > 0.0 and tile.y > 0.0:
 			var y: float = floor_y
 			while y < size.y:
@@ -175,6 +187,23 @@ func _draw_tiled_background() -> void:
 	# A thin darker line where the wall meets the floor, so the room reads
 	# as having a corner rather than being a flat pattern.
 	draw_rect(Rect2(0.0, floor_y - 2.0, size.x, 2.0), Color(0, 0, 0, 0.22))
+
+
+# The step to actually tile with: the tile's own size, unless that would mean
+# covering the area with more than MAX_TILES_PER_AXIS of them, in which case it
+# is grown until it would not. Stretched pixel art looks wrong; a window that
+# has stopped responding is worse, and the owner cannot reach Settings to pick
+# another room from inside a frozen one.
+func _tile_step(tile: Vector2, area: Vector2) -> Vector2:
+	if tile.x <= 0.0 or tile.y <= 0.0:
+		return tile
+	var grow: float = maxf(
+		area.x / (tile.x * MAX_TILES_PER_AXIS),
+		area.y / (tile.y * MAX_TILES_PER_AXIS)
+	)
+	if grow <= 1.0:
+		return tile
+	return tile * ceil(grow)
 
 
 func _draw_props() -> void:

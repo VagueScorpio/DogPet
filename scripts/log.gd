@@ -13,9 +13,20 @@ const MAX_BYTES := 1024 * 1024
 var _path: String = ""
 var _writable: bool = true
 
+# How many bytes are in the log now, so the ceiling holds while the app is
+# running rather than only when it starts - which matters because DogPet is
+# meant to be left in the tray for days, and rotating once at launch let the
+# file grow without limit for the whole session.
+#
+# Counted rather than measured: this script's whole design is one open, one
+# line, one close, and a get_length() per line would quietly make it something
+# else. Seeded from the real size below so a restart does not forget.
+var _bytes: int = 0
+
 
 func _ready() -> void:
 	_path = Paths.log_path()
+	_bytes = _size_on_disk()
 	_rotate_if_large()
 	info("--- DogPet v%s starting ---" % app_version())
 	info("Godot %s" % Engine.get_version_info().get("string", "?"))
@@ -63,6 +74,10 @@ func _write(level: String, message: String) -> void:
 		return
 	file.store_line(line)
 	file.close()
+	# +1 for the newline store_line adds.
+	_bytes += line.to_utf8_buffer().size() + 1
+	if _bytes >= MAX_BYTES:
+		_rotate_if_large()
 
 
 # Godot 4 has no append mode, so open read-write and jump to the end.
@@ -77,16 +92,22 @@ func _open_for_append() -> FileAccess:
 
 
 func _rotate_if_large() -> void:
-	if not FileAccess.file_exists(_path):
-		return
-	var file: FileAccess = FileAccess.open(_path, FileAccess.READ)
-	if file == null:
-		return
-	var size: int = file.get_length()
-	file.close()
-	if size < MAX_BYTES:
+	if _bytes < MAX_BYTES or not FileAccess.file_exists(_path):
 		return
 	var old: String = _path + ".old"
 	if FileAccess.file_exists(old):
 		DirAccess.remove_absolute(old)
-	DirAccess.rename_absolute(_path, old)
+	if DirAccess.rename_absolute(_path, old) == OK:
+		_bytes = 0
+
+
+# Only asked once, at startup, so the running count starts from the truth.
+func _size_on_disk() -> int:
+	if not FileAccess.file_exists(_path):
+		return 0
+	var file: FileAccess = FileAccess.open(_path, FileAccess.READ)
+	if file == null:
+		return 0
+	var size: int = file.get_length()
+	file.close()
+	return size

@@ -68,6 +68,17 @@ func _test_zip_slip() -> void:
 	# A file merely containing dots is not the same as a ".." path part.
 	_ok("allows a file with dots in it", Archive.is_safe_entry("pack/my..thing.png"))
 
+	# RT-13. Windows resolves these to devices rather than files whatever folder
+	# they sit in and whatever extension they carry, so assets/pets/x/CON is the
+	# console. Nothing was known to go wrong, but a serial port can block when
+	# opened, and that is a "probably fine" not worth keeping.
+	for device in ["CON", "sub/NUL", "COM1.png", "lpt3", "CON.txt", "pack/aux"]:
+		_ok("refuses the device name %s" % device, not Archive.is_safe_entry(device))
+	# And names that merely look like one are still perfectly fine, which is
+	# why this is not a prefix match.
+	for fine in ["console.png", "aux_bits/idle.png", "nullify.png", "common/pet.json"]:
+		_ok("still allows %s" % fine, Archive.is_safe_entry(fine))
+
 	_begin("A zip containing an escape is rejected whole")
 	var path: String = _scratch.path_join("nasty.zip")
 	var packer := ZIPPacker.new()
@@ -330,6 +341,38 @@ func _test_round_trip() -> void:
 		"not still inside its folder",
 		not FileAccess.file_exists(flat_target.path_join("some_folder/pet.json"))
 	)
+
+	# RT-08. Importing over an existing pack wrote the new files on top and
+	# removed nothing, so every file the new pack did not happen to overwrite
+	# survived - a pet.json with no walk strip listed, and the old walk.png
+	# still sitting beside it. "Replace" has to mean replace.
+	_begin("Replacing a pack does not leave the old one's files behind")
+	var existing: String = _scratch.path_join("existing_pack")
+	DirAccess.make_dir_recursive_absolute(existing.path_join("extra"))
+	for stale in ["pet.json", "walk.png", "extra/old.png"]:
+		var leftover: FileAccess = FileAccess.open(existing.path_join(stale), FileAccess.WRITE)
+		leftover.store_string("stale")
+		leftover.close()
+	_ok("the stale files are there to begin with",
+		FileAccess.file_exists(existing.path_join("walk.png")))
+
+	Archive.empty_folder(existing)
+	_ok("the folder itself survives", DirAccess.dir_exists_absolute(existing))
+	_ok("the stale file is gone", not FileAccess.file_exists(existing.path_join("walk.png")))
+	_ok("so is the stale manifest", not FileAccess.file_exists(existing.path_join("pet.json")))
+	_ok("and a nested stale folder with it",
+		not DirAccess.dir_exists_absolute(existing.path_join("extra")))
+
+	# Then the new pack goes in, and only the new pack is there.
+	Archive.extract(zip_path, "", existing)
+	_ok("the replacing pack landed", FileAccess.file_exists(existing.path_join("pet.json")))
+	_ok("and it loads", PetPack.load_from_dir(existing).is_usable())
+	# Emptying a folder that is not there must simply do nothing rather than
+	# error, because _do_import reaches it on paths that may not exist yet.
+	var absent: String = _scratch.path_join("never_existed")
+	Archive.empty_folder(absent)
+	_ok("emptying a folder that is not there is harmless",
+		not DirAccess.dir_exists_absolute(absent))
 
 
 # --- Zips that are no good ----------------------------------------------

@@ -32,6 +32,7 @@ const SCENARIOS: PackedStringArray = [
 	"reminder_gap_is_clamped",
 	"overlapping_room_changes",
 	"panels_build",
+	"clock_jumped_forward",
 ]
 
 const SANDBOX_FOLDER := "integration_sandbox"
@@ -151,6 +152,8 @@ func _run_scenario(name: String) -> void:
 			await _overlapping_room_changes()
 		"panels_build":
 			await _panels_build()
+		"clock_jumped_forward":
+			await _clock_jumped_forward()
 		_:
 			_ok("a scenario called %s exists" % name, false)
 
@@ -462,6 +465,36 @@ func _starving_save() -> Dictionary:
 			"cause": int(Life.Cause.NONE),
 		},
 	}
+
+
+# RT-07. A system clock that jumps forward is indistinguishable from a real
+# absence from inside the app, and used to be acted on in full: a save a year
+# old meant a year of starvation credited during the catch-up, so the dog was
+# dead before the window opened. A year is now treated as the cap instead, and
+# the owner is told the clock looked wrong.
+func _clock_jumped_forward() -> void:
+	# A dog that was perfectly well when the app closed, and a clock that now
+	# claims a year has gone by.
+	var save: Dictionary = _starving_save()
+	save["hunger"] = 0.0
+	save["last_saved_unix"] = Time.get_unix_time_from_system() - 365.0 * 86400.0
+	var main: Node = await _boot(save, _real_play(), true)
+
+	_ok("the dog is still alive after a year-long absence", needs.life.alive)
+	_ok("so there is no death card", not main._death_card.visible)
+	_ok("and the care buttons still work", not main._feed_button.disabled)
+
+	var summary: Dictionary = main._away_card._shown_summary
+	_ok("the absence was capped rather than acted on in full",
+		float(summary.get("elapsed", 0.0)) <= needs.MAX_CATCH_UP_SECONDS + 1.0)
+	_ok("the owner is told the clock looked wrong",
+		bool(summary.get("clock_looks_wrong", false)))
+
+	# The cap must not soften the game: a month of neglect still ruins
+	# everything, which is why it is set where it is.
+	_ok("hunger is still maxed", needs.level_of(Model.HUNGER) == int(Model.Level.CRITICAL))
+	_ok("happiness is still bottomed",
+		needs.level_of(Model.HAPPINESS) == int(Model.Level.CRITICAL))
 
 
 # Notifications are off in every scenario on purpose. The notifier would

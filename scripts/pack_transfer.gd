@@ -73,9 +73,16 @@ func _on_import_chosen(zip_path: String) -> void:
 
 
 func _do_import(zip_path: String, found: Dictionary, target: String, id: String) -> void:
-	if DirAccess.dir_exists_absolute(target) and not _back_up(target, id):
-		finished.emit("Could not back up the existing \"%s\", so nothing was changed." % id)
-		return
+	if DirAccess.dir_exists_absolute(target):
+		if not _back_up(target, id):
+			finished.emit("Could not back up the existing \"%s\", so nothing was changed." % id)
+			return
+		# Replace means replace. Writing the new pack over the old one left
+		# behind every file the new one did not happen to overwrite - a pet.json
+		# that no longer lists a walk strip, with the old walk.png still sitting
+		# beside it. Only ever after _back_up has said yes: the copy in
+		# assets/_backup is the whole reason emptying this is safe.
+		PackArchive.empty_folder(target)
 
 	var problems: PackedStringArray = PackArchive.extract(zip_path, str(found["root"]), target)
 	if not problems.is_empty():

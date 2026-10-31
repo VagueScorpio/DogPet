@@ -55,8 +55,19 @@ static func level_label(level: int) -> String:
 	return "Fine"
 
 
+## Past this a countdown says nothing useful; it only means the numbers it was
+## worked out from are wrong. A hundred years.
+const MAX_PLAUSIBLE_SECONDS := 3153600000.0
+
+
 ## Reads as "~1h 20m", or "now" once the need is already critical.
+##
+## "unknown" for a figure that is not real - an interval of 1e999 in a
+## hand-edited settings.json made this read "~-9223372036854775808m", because
+## int(ceil(inf)) is undefined.
 static func format_countdown(seconds: float) -> String:
+	if not is_finite(seconds) or seconds > MAX_PLAUSIBLE_SECONDS:
+		return "unknown"
 	if seconds <= 0.0:
 		return "now"
 	if seconds < 60.0:
@@ -72,7 +83,12 @@ static func format_countdown(seconds: float) -> String:
 
 
 ## Reads as "3h 12m", for the heading on the "While you were away" card.
+##
+## An infinity used to come out as "less than a minute", which is the most
+## misleading thing it could possibly have said.
 static func format_duration(seconds: float) -> String:
+	if not is_finite(seconds) or seconds > MAX_PLAUSIBLE_SECONDS:
+		return "an unknown time"
 	var total_minutes: int = int(floor(maxf(seconds, 0.0) / 60.0))
 	if total_minutes < 1:
 		return "less than a minute"

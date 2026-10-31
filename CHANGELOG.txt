@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.24 - The last nine audit findings, from frozen windows to lost saves
   v1.23 - A zip that cannot eat all the memory, and a grace period that holds
   v1.22 - Two ways a file could run code, both closed
   v1.21 - The zip unpacks into a folder of its own
@@ -27,6 +28,102 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.24 - The last nine audit findings, from frozen windows to lost saves
+------------------------------------------------------------
+
+What
+  - RT-05. A room whose tiles are tiny is drawn at a larger whole-number
+    scale instead of one draw call per screen pixel. SceneView has its own
+    ceiling for a tile whose size could not be read beforehand.
+  - RT-06. Saving no longer deletes the previous good save to make room for
+    the new one. The backup is taken by copying, the new file goes into
+    place last, and a save that could not refresh its backup says so.
+    history.json gets the same treatment.
+  - RT-07. An absence longer than thirty days is treated as a broken clock:
+    the needs still drain in full, but the dog does not age, fall ill or
+    starve over a number the app does not believe. Said on the away card.
+  - RT-08. Replacing a pack on import now empties the folder first, after
+    the backup has been confirmed. "Replace" used to mean "write over".
+  - RT-09. Numbers read back from a save or settings file have to be finite,
+    and the four functions that turn a number into words say "unknown"
+    rather than printing rubbish.
+  - RT-10. A PNG declaring a side too big to express is refused rather than
+    mistaken for "size unknown". PetPack's duplicate header reader is gone.
+  - RT-11. The log rotates while the app is running, not only at startup.
+  - RT-12. The wscript notification helper is written to the owner's own
+    user data folder under an unpredictable name, not to saves/notify.vbs.
+  - RT-13. Zip entries named after Windows devices - CON, NUL, COM1 - are
+    refused alongside the ".." paths that already were.
+
+Why
+  - A 1x1 pixel tile asked for 3.7 million draw calls a frame on a maximised
+    window. The window stops responding, and the room is remembered in
+    settings.json, so restarting goes straight back into it.
+  - write_atomic removed the old backup, then moved the only good save aside,
+    then deleted it outright if the move failed - and still reported success.
+    On Windows that move fails whenever anything holds the file open:
+    antivirus, a sync client, Explorer's preview pane. The next corrupt write
+    then had nothing to fall back on, which is the one thing the file exists
+    to prevent. Proven by making pet.json.bak unusable: the dog was gone.
+  - elapsed_between guarded a clock that moved backwards but not forwards,
+    which is the likelier fault - a dead CMOS battery reads 2099, not 1970.
+    A save a year old meant a year of starvation credited during the
+    catch-up, so the dog was dead before the window opened.
+  - Importing a pack over an existing one left behind every file the new one
+    did not happen to overwrite: a pet.json with no walk strip listed, and
+    the old walk.png still sitting beside it.
+  - A save can hold 1e999. JSON parses it as inf and stringify writes it back
+    as 1e99999, so once an infinity is in a save file it stays there - and an
+    infinite age printed "-9223372036854775808 days old" on the scoreboard,
+    because int() of an infinity is undefined.
+  - Vector2i holds 32-bit components, so a PNG claiming 4294967295 wide
+    wrapped to -1 and read as "size unknown", which is never too large. The
+    one file the guard existed to refuse went straight to the decoder.
+  - The log's 1 MB ceiling was only ever applied at launch, and this app is
+    meant to be left in the tray for days.
+  - saves/ sits beside the exe so the app stays portable. That is right for a
+    save file and wrong for a script the app then executes: unzip DogPet
+    somewhere several accounts can reach and anyone who can write there can
+    replace notify.vbs and have it run as the owner.
+  - Windows resolves CON and COM1 to devices whatever folder they are in.
+    Nothing was known to go wrong, but a serial port can block when opened.
+
+How
+  - RT-07 took two goes. Capping the elapsed time was not enough on its own:
+    thirty days of starvation is far past any grace period, so a clock that
+    jumped a year still killed the dog, and the integration test said so. No
+    cap can work, because stopping that needs a cap below one grace period
+    while leaving real absences alone needs one far above it. So the two
+    halves of a catch-up are now treated by how recoverable they are - a
+    maxed bar is one click from fixed, a death is not - and the irreversible
+    half is skipped when the clock cannot be believed. This is the one change
+    here that alters Real play: a dog genuinely left for forty days now
+    survives to be looked at. Reverting it is deleting one if in Needs.
+  - Godot's rename_absolute does overwrite an existing file on Windows,
+    contrary to the comment in SaveFile that justified the old destructive
+    order. Checked before relying on it. So the new save can go into place
+    last and nothing good is destroyed first.
+  - Three fixes moved while being written, because the code they belonged in
+    could not be tested: a script that names an autoload cannot be compiled
+    by a --script run at all, which is what ImageLimits and CareSettings
+    already say. PackLinks and ZipSizes exist for that reason, and the folder
+    delete went to PackArchive.empty_folder rather than PackTransfer.
+  - Two defects introduced and caught by running the probes rather than by
+    reading the diff: raw_to_base64 complains at an empty buffer, and
+    get_tree() is null in an autoload before it is in the tree, so the vbs
+    helper is swept up at the start of the next notification instead of on a
+    timer.
+  - Checked that none of it refuses real work: all three shipped packs still
+    export and re-import, the shipped rooms come through with their tile
+    scales untouched, a genuinely starving dog still dies on time, real
+    toasts still appear with the tray icon on them, and a name with accents
+    or Japanese in it reaches PowerShell with every code point intact.
+  - 760 checks pass, 0 fail, up from 637 before the audit. 123 of those are
+    new regression guards across all eight suites. The full write-up is in
+    redteam/, which is not committed: it holds working proofs of concept and
+    quotes absolute paths.
 
 ------------------------------------------------------------
 v1.23 - A zip that cannot eat all the memory, and a grace period that holds

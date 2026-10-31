@@ -372,6 +372,39 @@ func _test_image_limits() -> void:
 	_ok("with a reason worth reading", Limits.describe(fake, claimed).contains("20000 x 20000"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(fake))
 
+	# RT-10. A declared side past 2^31 used to wrap negative in the Vector2i
+	# and be mistaken for "size unknown", which is never too large - so the one
+	# file this guard exists to refuse went straight to the decoder. The figure
+	# saturates now instead: honest, still positive, and refused on the spot.
+	_begin("A size too big to express is refused, not mistaken for unknown")
+	var absurd: String = "user://claims_four_billion.png"
+	var header2: PackedByteArray = PackedByteArray([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+	header2.append_array(PackedByteArray([0, 0, 0, 13]))
+	header2.append_array("IHDR".to_ascii_buffer())
+	header2.append_array(PackedByteArray([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]))
+	var file2: FileAccess = FileAccess.open(absurd, FileAccess.WRITE)
+	if file2 == null:
+		_ok("could write the four-billion header fixture", false)
+		return
+	file2.store_buffer(header2)
+	file2.close()
+
+	var saturated: Vector2i = Limits.png_size_from_header(absurd)
+	_ok("it saturates rather than wrapping negative", saturated.x > 0 and saturated.y > 0)
+	_ok("to the largest side it can report", saturated == Vector2i(Limits.MAX_SIDE, Limits.MAX_SIDE))
+	_ok("and is refused", Limits.is_too_large(saturated))
+	_ok("where before it read as unknown and passed",
+		not Limits.is_too_large(Vector2i(-1, -1)))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(absurd))
+
+	# And the one reader is the shared one now: the copy inside PetPack checked
+	# neither the signature nor the size, so an enormous sheet was listed as
+	# usable and only refused later, by PetLoader.
+	_begin("A sprite pack measures its sheets through the shared reader")
+	var real_pack: PetPack = PetPack.load_from_dir(assets.path_join("pug_pixel"))
+	_ok("the real pixel pug still loads", real_pack.is_usable())
+	_ok("and still measures its tallest frame", real_pack.tallest_frame_height() == 43)
+
 
 func _begin(section: String) -> void:
 	print("")

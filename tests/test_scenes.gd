@@ -27,6 +27,7 @@ func _initialize() -> void:
 	_test_roles()
 	_test_backgrounds()
 	_test_props()
+	_test_tile_sizes()
 	_test_actions()
 
 	print("")
@@ -205,6 +206,51 @@ func _test_props() -> void:
 
 
 # --- The care actions ----------------------------------------------------
+
+# RT-05. A room is drawn by stepping across and down the window one tile at a
+# time, so the cost is the window's area divided by the tile's. A 1x1 pixel
+# tile asked for 3.7 million draw calls a frame on a maximised window, which
+# froze the app - and the room is remembered, so restarting went straight back
+# into it. The scale is raised to suit the tile rather than the room refused.
+func _test_tile_sizes() -> void:
+	_begin("A room's tiles cannot be small enough to freeze the window")
+	var dir: String = ProjectSettings.globalize_path("user://test_tiles")
+	DirAccess.make_dir_recursive_absolute(dir)
+
+	for side in [1, 4, 32]:
+		var image: Image = Image.create_empty(side, side, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0.5, 0.4, 0.3))
+		image.save_png(dir.path_join("t%d.png" % side))
+
+	_ok("a 1x1 tile is raised to the minimum", _scale_for(dir, 1, 1) == Room.MIN_TILE_PIXELS)
+	_ok("a 4x4 tile is raised to reach it", _scale_for(dir, 4, 1) == 2)
+	_ok("a 32x32 tile is left alone", _scale_for(dir, 32, 1) == 1)
+	_ok("and keeps a larger scale the author asked for", _scale_for(dir, 32, 4) == 4)
+	# The check is on the drawn result, so a scale that is bigger but still not
+	# big enough cannot slip through.
+	_ok("a 1x1 tile at scale 4 is still raised", _scale_for(dir, 1, 4) == Room.MIN_TILE_PIXELS)
+	_ok("and the room says so", not _tiled(dir, 1, 1).problems.is_empty())
+	_ok("while an ordinary room stays quiet", _tiled(dir, 32, 4).problems.is_empty())
+	_ok("a room with raised tiles is still perfectly usable", _tiled(dir, 1, 1).is_usable())
+
+	for side in [1, 4, 32]:
+		DirAccess.remove_absolute(dir.path_join("t%d.png" % side))
+	DirAccess.remove_absolute(dir)
+
+
+func _tiled(dir: String, side: int, asked: int) -> ScenePack:
+	return Room.from_dictionary({
+		"role": "home", "name": "T",
+		"background": {
+			"type": "tiled", "wall": "t%d.png" % side,
+			"floor": "t%d.png" % side, "tile_scale": asked,
+		},
+	}, dir)
+
+
+func _scale_for(dir: String, side: int, asked: int) -> int:
+	return int(_tiled(dir, side, asked).background["tile_scale"])
+
 
 func _test_actions() -> void:
 	_begin("Each action knows its room, state and prop")

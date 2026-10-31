@@ -357,6 +357,22 @@ func _test_broken_tuning() -> void:
 	_ok("so the dog never falls ill and never dies of it",
 		never_ill.alive and not never_ill.ill)
 
+	# RT-09. A save holding 1e999 parses as inf and round-trips for ever,
+	# because stringify writes it back out as 1e99999. An infinite age_days
+	# printed "-9223372036854775808 days old" on the scoreboard.
+	var infinite = _fresh()
+	infinite.from_dictionary({
+		"born_unix": INF, "age_days": INF, "sickness": INF,
+		"starving_seconds": INF, "died_unix": -INF, "alive": true,
+	})
+	_ok("an infinite age does not survive loading", is_finite(infinite.age_days))
+	_ok("nor an infinite sickness", is_finite(infinite.sickness))
+	_ok("nor an infinite birthday", is_finite(infinite.born_unix))
+	_ok("nor an infinite starving clock", is_finite(infinite.starving_seconds))
+	_ok("an age that is not a number reads as unknown", Life.format_age(INF) == "unknown")
+	_ok("and so does an absurd one", Life.format_age(1e18) == "unknown")
+	_ok("but a real age still reads properly", Life.format_age(4.0) == "4 days old")
+
 	# And the shipped defaults pass through the floors unchanged.
 	var shipped: Dictionary = Config.real_play_from(Config.DEFAULTS)
 	_ok("the shipped defaults are not altered by the floors",

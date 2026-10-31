@@ -43,6 +43,16 @@ const ROLE_VET_TABLE := "vet_table"
 ## Where the dog stands when the room does not say otherwise.
 const DEFAULT_PET_SPOT := Vector2(0.5, 0.82)
 
+## How small a drawn tile is allowed to get.
+##
+## SceneView places one tile per step across and down the window, so a room
+## costs the window's area divided by the tile's. A 1x1 pixel tile at scale 1
+## asks for 3.7 million draw calls a frame on a maximised window, which is a
+## frozen app rather than a slow one - and the room is remembered in
+## settings.json, so restarting lands straight back in it. tile_scale is
+## floored at 1, but 1 only means anything next to how big the tile is.
+const MIN_TILE_PIXELS := 8
+
 var id: String = ""
 var role: String = HOME
 var display_name: String = ""
@@ -194,8 +204,11 @@ func _read_tiled_background(data: Dictionary) -> void:
 		"floor": floor_file,
 		# How much of the height the floor takes up.
 		"floor_ratio": clampf(float(data.get("floor_ratio", 0.38)), 0.05, 0.95),
-		# Whole numbers only; these are pixel art tiles.
-		"tile_scale": maxi(1, int(data.get("tile_scale", 1))),
+		# Whole numbers only; these are pixel art tiles. Raised if the tiles
+		# themselves are small enough to make drawing the room ruinous.
+		"tile_scale": _tile_scale_for(
+			maxi(1, int(data.get("tile_scale", 1))), [wall, floor_file]
+		),
 	}
 
 
@@ -228,6 +241,34 @@ func _read_generated_background(data: Dictionary) -> void:
 		background["wainscot_color"] = _color(data, "wainscot_color", Color(0.33, 0.52, 0.62))
 		background["floor_color"] = _color(data, "floor_color", Color(0.80, 0.86, 0.85))
 		background["floor_ratio"] = clampf(float(data.get("floor_ratio", 0.42)), 0.05, 0.95)
+
+
+# Raise the scale until the drawn tile is at least MIN_TILE_PIXELS on both
+# axes, so a room cannot ask for one draw call per screen pixel.
+#
+# Raised rather than refused: a pack with small tiles is far more likely to be
+# well meant than hostile, and pixel art is scaled by whole numbers everywhere
+# in this app, so a bigger integer scale is an ordinary thing for it to be. A
+# tile whose size cannot be read here is left alone - SceneView has its own
+# ceiling for that case, since the size only becomes known once the picture has
+# been decoded.
+func _tile_scale_for(asked: int, files: Array) -> int:
+	var scale: int = asked
+	for file in files:
+		var size: Vector2i = ImageLimits.png_size_from_header(dir.path_join(str(file)))
+		if size.x <= 0 or size.y <= 0:
+			continue
+		var smallest: int = mini(size.x, size.y)
+		if smallest >= MIN_TILE_PIXELS:
+			continue
+		var wanted: int = int(ceil(float(MIN_TILE_PIXELS) / float(smallest)))
+		if wanted > scale:
+			problems.append(
+				"the %dx%d tile %s is too small to tile a window with, so it is drawn at %dx"
+				% [size.x, size.y, str(file), wanted]
+			)
+			scale = wanted
+	return scale
 
 
 # Anything unreadable becomes a plain drawn background rather than nothing.

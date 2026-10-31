@@ -22,29 +22,61 @@ const REQUIRED_KEYS: PackedStringArray = ["hunger", "happiness", "energy", "last
 ## Needs.gd logs this; the tests check it.
 static var last_read_source: String = "none"
 
+## Whether the last write left a usable backup behind it.
+##
+## Apart from the return value on purpose: a write can perfectly well succeed
+## while the backup could not be refreshed, and the caller wants to know that
+## the net under the next write is older than it should be - or missing.
+static var last_write_kept_backup: bool = true
 
-## Write the save, then swap it into place. Returns false if nothing could be
-## written at all, which is the caller's cue to tell the owner.
+
+## Write the save, then put it into place. Returns false only if the save
+## itself did not land, which is the caller's cue to tell the owner. Check
+## last_write_kept_backup for whether the fallback survived with it.
+##
+## The order here is the whole point. It used to move the old save aside to
+## make room, deleting it outright if the move failed - so a pet.json that
+## something else had open (antivirus mid-scan, a sync client, Explorer's
+## preview pane) was destroyed, the backup had already been removed a line
+## earlier to clear the way, and the function still reported success. The next
+## corrupt write then had nothing to fall back on, which is the one thing this
+## file exists to prevent.
+##
+## Nothing good is destroyed now. The backup is refreshed by *copying*, which
+## leaves the original in place while it happens, and the new save goes in last
+## by renaming over the old one - which Godot's rename does handle on Windows,
+## contrary to the comment that used to be here justifying the old order.
 static func write_atomic(path: String, payload: Dictionary) -> bool:
 	var tmp_path: String = path + TMP_SUFFIX
 	var bak_path: String = path + BAK_SUFFIX
+	var bak_tmp_path: String = bak_path + TMP_SUFFIX
 
 	var file: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
+		last_write_kept_backup = FileAccess.file_exists(bak_path)
 		return false
 	file.store_string(JSON.stringify(payload, "\t"))
 	file.close()
 
-	# Keep the file we are about to replace as the backup. Windows will not
-	# rename onto a file that already exists, so clear the way first.
+	# Refresh the backup from the save that is about to be replaced. Written to
+	# its own temp file first, so an interrupted copy cannot leave a half-built
+	# backup where a whole one used to be.
+	last_write_kept_backup = true
 	if FileAccess.file_exists(path):
-		if FileAccess.file_exists(bak_path):
-			DirAccess.remove_absolute(bak_path)
-		if DirAccess.rename_absolute(path, bak_path) != OK:
-			# No backup this time, but a good save still beats a stale one.
-			DirAccess.remove_absolute(path)
+		var kept: bool = DirAccess.copy_absolute(path, bak_tmp_path) == OK
+		if kept:
+			kept = DirAccess.rename_absolute(bak_tmp_path, bak_path) == OK
+		if not kept:
+			DirAccess.remove_absolute(bak_tmp_path)
+			# Whatever backup is already there stays. A slightly stale dog is
+			# worth incomparably more than no dog.
+			last_write_kept_backup = FileAccess.file_exists(bak_path)
 
-	return DirAccess.rename_absolute(tmp_path, path) == OK
+	if DirAccess.rename_absolute(tmp_path, path) != OK:
+		# The old save is still sitting there, untouched and still good.
+		DirAccess.remove_absolute(tmp_path)
+		return false
+	return true
 
 
 ## Read the save, falling back to the backup if the main file is missing,

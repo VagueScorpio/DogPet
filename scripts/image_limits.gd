@@ -27,6 +27,18 @@ const PNG_SIGNATURE: Array[int] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0
 ## How much of the file has to be read to learn its size.
 const HEADER_BYTES := 24
 
+## The largest side this will report.
+##
+## Vector2i holds 32-bit components, so a PNG declaring 4294967295 wide used to
+## wrap round to -1 and be mistaken for "size unknown" - which is_too_large
+## treats as never too large, so the one file the guard existed to refuse went
+## straight to the decoder.
+##
+## Saturating is honest rather than clever: the file really is at least this
+## big, the figure stays positive so it still reads as known, and is_too_large
+## refuses it immediately. Vector2i.ZERO keeps meaning "could not be read".
+const MAX_SIDE := 0x7FFFFFFF
+
 
 ## True for a size with more pixels than this app will decode.
 ##
@@ -60,7 +72,12 @@ static func png_size_from_header(path: String) -> Vector2i:
 		if header[index] != PNG_SIGNATURE[index]:
 			return Vector2i.ZERO
 
-	return Vector2i(_big_endian_u32(header, 16), _big_endian_u32(header, 20))
+	# Clamped on the way into the Vector2i, not after: past 2^31 the component
+	# would already have wrapped negative and the size would read as unknown.
+	return Vector2i(
+		mini(_big_endian_u32(header, 16), MAX_SIDE),
+		mini(_big_endian_u32(header, 20), MAX_SIDE)
+	)
 
 
 ## A one-line reason for the log, for a size that has been refused.

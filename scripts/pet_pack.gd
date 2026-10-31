@@ -264,9 +264,17 @@ func _read_one_sprite_animation(state: String, spec: Dictionary) -> void:
 
 	# Measure the sheet now, so the frame size is known before anything is
 	# drawn and a sheet that does not divide evenly is caught here.
-	var size: Vector2i = _png_size(path)
+	#
+	# Through ImageLimits rather than a reader of its own: the copy that used to
+	# live in this file checked neither the PNG signature nor the size, so a
+	# sheet far too big to show was listed as usable and only refused later, by
+	# PetLoader, after the pack had been offered to the owner.
+	var size: Vector2i = ImageLimits.png_size_from_header(path)
 	if size.x <= 0 or size.y <= 0:
 		problems.append("could not read the size of %s" % path)
+		return
+	if ImageLimits.is_too_large(size):
+		problems.append(ImageLimits.describe(path, size))
 		return
 	if size.x % frames != 0:
 		problems.append(
@@ -281,21 +289,6 @@ func _read_one_sprite_animation(state: String, spec: Dictionary) -> void:
 		"frame_width": size.x / frames,
 		"frame_height": size.y,
 	}
-
-
-# Read width and height straight out of the PNG header, without decoding the
-# whole image. Every PNG begins with an 8-byte signature, then an IHDR chunk
-# whose width and height are two big-endian 32-bit numbers at offset 16.
-static func _png_size(path: String) -> Vector2i:
-	var file: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if file == null or file.get_length() < 24:
-		return Vector2i.ZERO
-	file.big_endian = true
-	file.seek(16)
-	var width: int = file.get_32()
-	var height: int = file.get_32()
-	file.close()
-	return Vector2i(width, height)
 
 
 static func _broken(folder: String, reason: String) -> PetPack:

@@ -170,6 +170,28 @@ static func elapsed_between(then_unix: float, now_unix: float) -> float:
 	return maxf(now_unix - then_unix, 0.0)
 
 
+## The elapsed time to actually act on, given what the clock said.
+##
+## An absence is capped because a very long one is far more likely to be a
+## broken clock than a real absence. elapsed_between above guards a clock that
+## moved backwards; this guards one that moved forwards, which is the likelier
+## fault of the two - a dead CMOS battery usually reads 2099, not 1970 - and
+## was the unhandled one. Without a cap, one bad clock reading irreversibly
+## kills a pet in Real play before the window has even opened.
+##
+## The limit is set well past every care interval, so a genuine month away
+## still maxes every bar and still starves a dog in Real play. It only bites
+## where the number was never real.
+##
+## A non-finite elapsed counts as no time at all. It arrives from a save
+## holding 1e999, which JSON parses as inf, and it used to make the offline
+## starvation maths work out inf - inf = NaN.
+static func capped_elapsed(elapsed: float, limit: float) -> float:
+	if not is_finite(elapsed) or elapsed <= 0.0:
+		return 0.0
+	return minf(elapsed, limit)
+
+
 ## Of a stretch of draining, how much of it this need spent sitting at its
 ## bad end, in seconds.
 ##
@@ -247,7 +269,10 @@ func from_dictionary(source: Dictionary) -> void:
 		if not source.has(field):
 			continue
 		var raw: Variant = source[field]
-		if raw is float or raw is int:
+		# is_finite as well as the type check: clampf absorbs an infinity by
+		# luck rather than by intent, and a NaN would pass straight through it
+		# and then poison every sum the need took part in.
+		if (raw is float or raw is int) and is_finite(float(raw)):
 			set_value(key, float(raw))
 
 

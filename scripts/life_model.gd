@@ -63,8 +63,20 @@ func stage() -> String:
 	return stage_for(age_days)
 
 
+## Past this an age is not a number anybody can act on, only a symptom of a
+## broken save. Nearly three thousand years of dog-days.
+const MAX_PLAUSIBLE_DAYS := 1000000.0
+
+
 ## "4 days old", or hours while it is still very young.
+##
+## "unknown" for a figure that is not real. int(floor(inf)) is undefined and
+## lands on INT64_MIN, so an infinite age used to read "-9223372036854775808
+## days old" - which looks far more like the app having lost the dog than like
+## a corrupt number.
 static func format_age(days: float) -> String:
+	if not is_finite(days) or days < 0.0 or days > MAX_PLAUSIBLE_DAYS:
+		return "unknown"
 	if days < 1.0:
 		var hours: int = int(floor(days * 24.0))
 		if hours < 1:
@@ -252,8 +264,15 @@ func from_dictionary(source: Dictionary) -> void:
 	cause = int(source.get("cause", Cause.NONE))
 
 
+# A number out of a save file, or the fallback when it is not one.
+#
+# is_finite as well as the type check. JSON cannot write "inf", but it can
+# write 1e999, which Godot's parser reads as inf - and stringify writes it back
+# out as 1e99999, so once an infinity is in a save file it round-trips and
+# stays there. An infinite age_days then printed as "-9223372036854775808 days
+# old" on the scoreboard, because int(floor(inf)) is undefined.
 static func _number(source: Dictionary, key: String, fallback: float) -> float:
 	var raw: Variant = source.get(key, fallback)
-	if raw is float or raw is int:
+	if (raw is float or raw is int) and is_finite(float(raw)):
 		return float(raw)
 	return fallback

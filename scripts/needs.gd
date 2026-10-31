@@ -30,6 +30,15 @@ const AUTOSAVE_SECONDS := 30.0
 ## Only bother with the "While you were away" card for a real absence.
 const AWAY_CARD_MIN_SECONDS := 60.0
 
+## The longest absence this will act on: thirty days.
+##
+## Past this, a broken system clock is far likelier than a real absence, and
+## one bad clock reading should not be able to kill a pet in Real play before
+## the window has opened. Well past every care setting, so a genuine month away
+## still maxes every bar and still starves a dog - the cap only bites where the
+## number was never real. See NeedsModel.capped_elapsed.
+const MAX_CATCH_UP_SECONDS := 2592000.0
+
 const DEFAULT_PET_NAME := "Biscuit"
 const DEFAULT_PET_PACK_ID := "pug_3d"
 
@@ -72,6 +81,7 @@ func _ready() -> void:
 
 	var elapsed: float = 0.0
 	var before: Dictionary = {}
+	var clock_looks_wrong: bool = false
 
 	var save: Dictionary = SaveFile.read_with_fallback(Paths.pet_save_path())
 	_rng.randomize()
@@ -87,10 +97,20 @@ func _ready() -> void:
 		pet_name = str(save.get("pet_name", DEFAULT_PET_NAME))
 		pet_pack_id = str(save.get("pet_pack_id", DEFAULT_PET_PACK_ID))
 		before = model.to_dictionary()
-		elapsed = NeedsModel.elapsed_between(
+		# Capped once, here, so the drain, the life model and the away card all
+		# work from the same figure and cannot disagree about how long the owner
+		# was gone.
+		var reported: float = NeedsModel.elapsed_between(
 			float(save.get("last_saved_unix", 0.0)),
 			Time.get_unix_time_from_system()
 		)
+		elapsed = NeedsModel.capped_elapsed(reported, MAX_CATCH_UP_SECONDS)
+		clock_looks_wrong = reported > elapsed
+		if clock_looks_wrong:
+			Log.warn("The save is dated %s ago, longer than this app will catch up; treating it as %s, and not ageing or starving the dog over it. The system clock has probably moved." % [
+				NeedsText.format_duration(reported),
+				NeedsText.format_duration(elapsed),
+			])
 		# Always the real care setting here, never Demo Speed. See
 		# Settings.catch_up_interval_name for why.
 		life.from_dictionary(save.get("life", {}))
@@ -99,9 +119,23 @@ func _ready() -> void:
 			# when it was last saved rather than at the epoch.
 			life.born_unix = float(save.get("last_saved_unix", Time.get_unix_time_from_system()))
 		model.catch_up(elapsed, Settings.catch_up_intervals())
-		# The hunger the dog started the absence with, so the starving clock
-		# only counts the part of it the bowl was actually empty.
-		_catch_up_life(elapsed, float(before.get(String(NeedsModel.HUNGER), 0.0)))
+		# Ageing, illness and death are the irreversible half of a catch-up, and
+		# they are skipped entirely when the clock cannot be believed.
+		#
+		# Capping the elapsed time is not enough on its own: thirty days of
+		# starvation is far past any grace period, so a clock that jumped a year
+		# still killed the dog. The app cannot tell a bad clock from a real year
+		# away - it has only last_saved_unix to go on - so the two halves of a
+		# catch-up are treated by how recoverable they are. A maxed bar is one
+		# click from fixed, so the needs still drain and a dog left a long time
+		# still looks neglected. A death cannot be undone, so an elapsed time
+		# this app does not believe is not allowed to cause one. A dog that is
+		# genuinely starving still dies within one grace period of being looked
+		# at.
+		if not clock_looks_wrong:
+			# The hunger the dog started the absence with, so the starving clock
+			# only counts the part of it the bowl was actually empty.
+			_catch_up_life(elapsed, float(before.get(String(NeedsModel.HUNGER), 0.0)))
 		Log.info("Loaded a save from %s ago. Needs now: %s%s" % [
 			NeedsText.format_duration(elapsed),
 			model.describe(),
@@ -120,6 +154,8 @@ func _ready() -> void:
 			# The death-aware line: a dog that starved while the app was shut
 			# should not be described as merely "very hungry".
 			"reaction": reaction_line(),
+			# So the card can say why a year away cost only a month of hunger.
+			"clock_looks_wrong": clock_looks_wrong,
 		}
 
 	save_now()
@@ -366,6 +402,13 @@ func save_now() -> void:
 	payload.merge(model.to_dictionary())
 	if not SaveFile.write_atomic(Paths.pet_save_path(), payload):
 		Log.error("Could not save the dog to " + Paths.pet_save_path())
+	elif not SaveFile.last_write_kept_backup:
+		# The save landed but the spare copy beside it did not, so the next
+		# corrupt write has nothing to fall back on. Usually something else
+		# holding the file open. Worth saying out loud rather than discovering
+		# it at the only moment it matters.
+		Log.warn("Saved, but could not refresh the backup at "
+			+ Paths.pet_save_path() + SaveFile.BAK_SUFFIX)
 
 
 # --- Signals -------------------------------------------------------------
