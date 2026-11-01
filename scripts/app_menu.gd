@@ -154,19 +154,8 @@ func _summary(name: String) -> String:
 	var row: Dictionary = CareSettings.intervals_from(Settings.data, name)
 	var parts: PackedStringArray = []
 	for key in NeedsModel.KEYS:
-		parts.append(_short(float(row[key])))
+		parts.append(UiBits.duration(float(row[key]), true))
 	return " / ".join(parts)
-
-
-func _short(seconds: float) -> String:
-	if seconds < 60.0:
-		return "%ds" % roundi(seconds)
-	if seconds < 3600.0:
-		return "%dm" % roundi(seconds / 60.0)
-	var hours: float = seconds / 3600.0
-	if is_equal_approx(hours, roundf(hours)):
-		return "%dh" % roundi(hours)
-	return "%.1fh" % hours
 
 
 func _refresh_care_menu() -> void:

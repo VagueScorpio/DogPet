@@ -83,12 +83,15 @@ static func button(text: String, action: Callable) -> Button:
 
 
 ## "40 min", "3 h", "45 s" - whichever reads most plainly.
-static func duration(seconds: float) -> String:
+##
+## `compact` drops the space and shortens the unit, for the care menu, where
+## three of these sit side by side on one line: "40m / 45m / 50m".
+static func duration(seconds: float, compact: bool = false) -> String:
 	if seconds < 60.0:
-		return "%d s" % roundi(seconds)
+		return ("%ds" if compact else "%d s") % roundi(seconds)
 	if seconds < 3600.0:
-		return "%d min" % roundi(seconds / 60.0)
+		return ("%dm" if compact else "%d min") % roundi(seconds / 60.0)
 	var hours: float = seconds / 3600.0
 	if is_equal_approx(hours, roundf(hours)):
-		return "%d h" % roundi(hours)
-	return "%.1f h" % hours
+		return ("%dh" if compact else "%d h") % roundi(hours)
+	return ("%.1fh" if compact else "%.1f h") % hours
