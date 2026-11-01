@@ -136,6 +136,10 @@ the model, because that is the one thing no amount of measuring can answer.
 Credit is asked for every time, with the reason: some of the art is licensed
 only while its credit stays visible.
 
+**[docs/IMPORT-GUIDE.md](docs/IMPORT-GUIDE.md)** walks through every option in
+the wizard, what each one writes into the pack, and how a sprite sheet has to
+be laid out.
+
 ## Share a pack
 
 **Settings → Assets → Export** writes a pet or a room out as a `.zip`, with
