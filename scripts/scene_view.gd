@@ -91,17 +91,6 @@ func _load(file: String) -> void:
 
 # --- Where things are ----------------------------------------------------
 
-## Where a prop sits on screen, in this view's coordinates: the middle of
-## it, along the ground. The dog walks to this to eat.
-func prop_screen_position(role: String) -> Vector2:
-	if pack == null:
-		return size * 0.5
-	var prop: Dictionary = pack.prop_with_role(role)
-	if prop.is_empty():
-		return Vector2(size.x * pack.pet_spot.x, size.y * pack.pet_spot.y)
-	return Vector2(size.x * float(prop["x"]), size.y * float(prop["y"]))
-
-
 ## Throw the toy about for a while: an arc out and back, a few times over.
 func throw_toy(seconds: float) -> void:
 	if pack == null or pack.prop_with_role(ScenePack.ROLE_TOY).is_empty():
