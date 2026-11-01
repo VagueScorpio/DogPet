@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for ageing, illness and death.
 ##
 ## Run them from the project root with:
@@ -21,15 +21,11 @@ const HOUR := 3600.0
 # Moderate hunger, which is what the defaults use.
 const INTERVAL := 3.0 * HOUR
 
-var _passed: int = 0
-var _failed: int = 0
 var _tuning: Dictionary = {}
 
 
 func _initialize() -> void:
-	print("")
-	print("DogPet life tests")
-	print("=================")
+	_open("DogPet life tests")
 	_tuning = Config.DEFAULTS["real_play"]
 
 	_test_casual_never_kills()
@@ -41,11 +37,7 @@ func _initialize() -> void:
 	_test_broken_tuning()
 	_test_saving()
 
-	print("")
-	print("=================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 # A dog that is always starving, always unlucky, for as long as you like.
@@ -427,27 +419,3 @@ func _test_saving() -> void:
 	_begin("Death is described plainly")
 	_ok("starvation", Life.death_line("Biscuit", Life.Cause.STARVATION) == "Biscuit starved.")
 	_ok("illness", Life.death_line("Biscuit", Life.Cause.SICKNESS).contains("did not recover"))
-
-
-# --- Small helpers ---------------------------------------------------------
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])

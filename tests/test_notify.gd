@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for the notification rules and the icon pack.
 ##
 ## Run them from the project root with:
@@ -17,14 +17,9 @@ const FINE := 0
 const WARNING := 1
 const CRITICAL := 2
 
-var _passed: int = 0
-var _failed: int = 0
-
 
 func _initialize() -> void:
-	print("")
-	print("DogPet notification tests")
-	print("=========================")
+	_open("DogPet notification tests")
 
 	_test_when_to_speak()
 	_test_what_to_say()
@@ -32,11 +27,7 @@ func _initialize() -> void:
 	_test_icon_pack()
 	_test_log_rotation()
 
-	print("")
-	print("=========================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 func _test_when_to_speak() -> void:
@@ -144,20 +135,6 @@ func _test_icon_pack() -> void:
 
 
 # --- Small helpers -------------------------------------------------------
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
 
 # --- The log file ---------------------------------------------------------
 

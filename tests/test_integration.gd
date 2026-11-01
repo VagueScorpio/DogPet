@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Integration tests: the real autoloads, and the real Main scene.
 ##
 ## Every other suite here tests a pure class on its own, and that is exactly
@@ -45,8 +45,6 @@ const SETTLE_FRAMES := 3
 ## How long to wait for the engine's own startup before giving up on it.
 const BOOT_FRAME_LIMIT := 120
 
-var _passed: int = 0
-var _failed: int = 0
 
 # The autoloads, fetched from the tree rather than written as Paths, Needs
 # and so on. A script run with --script is compiled before the autoload
@@ -117,6 +115,10 @@ func _count_child_results(text: String, exit_code: int) -> void:
 	print(text)
 
 
+# Overrides the shared one on purpose. This suite reports from two places: the
+# parent run, which has printed a heading, and a child scenario, which has not.
+# The shared version underlines with a rule the width of the heading it printed,
+# which in a child would be nothing at all - so the rule is spelled out here.
 func _report() -> void:
 	print("")
 	print("========================")
@@ -507,22 +509,3 @@ func _real_play() -> Dictionary:
 
 func _casual_demo() -> Dictionary:
 	return {"play_mode": "casual", "demo_speed": true, "notifications_enabled": false}
-
-
-# --- Reporting ------------------------------------------------------------
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])

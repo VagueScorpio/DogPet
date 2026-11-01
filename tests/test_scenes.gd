@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for the rooms and the care actions.
 ##
 ## Run them from the project root with:
@@ -14,14 +14,9 @@ const Motion := preload("res://scripts/pet_motion.gd")
 
 const ASSETS_SCENES := "assets/scenes"
 
-var _passed: int = 0
-var _failed: int = 0
-
 
 func _initialize() -> void:
-	print("")
-	print("DogPet room tests")
-	print("=================")
+	_open("DogPet room tests")
 
 	_test_real_rooms()
 	_test_roles()
@@ -30,11 +25,7 @@ func _initialize() -> void:
 	_test_tile_sizes()
 	_test_actions()
 
-	print("")
-	print("=================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 func _rooms_dir() -> String:
@@ -292,27 +283,3 @@ func _test_actions() -> void:
 	_ok("the vet is not one of those", not Plan.EVERYDAY_ACTIONS.has(Plan.VET))
 	_ok("because it is Real play only", Plan.is_real_play_only(Plan.VET))
 	_ok("unlike feeding", not Plan.is_real_play_only(Plan.FEED))
-
-
-# --- Small helpers -------------------------------------------------------
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])

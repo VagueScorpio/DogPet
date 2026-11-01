@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for the record of past pets.
 ##
 ## Run them from the project root with:
@@ -15,15 +15,11 @@ const Life := preload("res://scripts/life_model.gd")
 
 const DAY := 86400.0
 
-var _passed: int = 0
-var _failed: int = 0
 var _path: String = ""
 
 
 func _initialize() -> void:
-	print("")
-	print("DogPet history tests")
-	print("====================")
+	_open("DogPet history tests")
 
 	var folder: String = ProjectSettings.globalize_path("user://test_history")
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -39,11 +35,7 @@ func _initialize() -> void:
 	_clean()
 	DirAccess.remove_absolute(folder)
 
-	print("")
-	print("====================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 func _record(name: String, born: float, died: float, age: float, cause: int) -> Dictionary:
@@ -200,25 +192,3 @@ func _test_formatting() -> void:
 func _clean() -> void:
 	if FileAccess.file_exists(_path):
 		DirAccess.remove_absolute(_path)
-
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])

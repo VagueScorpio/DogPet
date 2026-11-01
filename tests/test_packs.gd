@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for importing and exporting pack zips.
 ##
 ## Run them from the project root with:
@@ -14,15 +14,11 @@ const Archive := preload("res://scripts/pack_archive.gd")
 const Links := preload("res://scripts/pack_links.gd")
 const Sizes := preload("res://scripts/zip_sizes.gd")
 
-var _passed: int = 0
-var _failed: int = 0
 var _scratch: String = ""
 
 
 func _initialize() -> void:
-	print("")
-	print("DogPet pack tests")
-	print("=================")
+	_open("DogPet pack tests")
 
 	_scratch = ProjectSettings.globalize_path("user://test_packs")
 	_clean()
@@ -37,11 +33,7 @@ func _initialize() -> void:
 
 	_clean()
 
-	print("")
-	print("=================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 # --- The nasty case ------------------------------------------------------
@@ -444,17 +436,3 @@ func _remove_tree(folder: String) -> void:
 		name = dir.get_next()
 	dir.list_dir_end()
 	DirAccess.remove_absolute(folder)
-
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)

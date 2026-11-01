@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for the pet packs and the procedural animation.
 ##
 ## Run them from the project root with:
@@ -20,14 +20,9 @@ const Limits := preload("res://scripts/image_limits.gd")
 
 const ASSETS_PETS := "assets/pets"
 
-var _passed: int = 0
-var _failed: int = 0
-
 
 func _initialize() -> void:
-	print("")
-	print("DogPet pet tests")
-	print("================")
+	_open("DogPet pet tests")
 
 	_test_real_packs()
 	_test_pack_validation()
@@ -37,11 +32,7 @@ func _initialize() -> void:
 	_test_motion()
 	_test_image_limits()
 
-	print("")
-	print("================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	print("TESTS FAILED" if _failed > 0 else "All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 # --- The packs that actually ship ----------------------------------------
@@ -404,25 +395,3 @@ func _test_image_limits() -> void:
 	var real_pack: PetPack = PetPack.load_from_dir(assets.path_join("pug_pixel"))
 	_ok("the real pixel pug still loads", real_pack.is_usable())
 	_ok("and still measures its tallest frame", real_pack.tallest_frame_height() == 43)
-
-
-func _begin(section: String) -> void:
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])

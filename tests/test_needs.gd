@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tests/suite.gd"
 ## Headless tests for the needs maths and the save file.
 ##
 ## Run them from the project root with:
@@ -29,15 +29,10 @@ const MINUTE := 60.0
 const HOUR := 3600.0
 const DAY := 86400.0
 
-var _passed: int = 0
-var _failed: int = 0
-var _section: String = ""
 
 
 func _initialize() -> void:
-	print("")
-	print("DogPet needs tests")
-	print("==================")
+	_open("DogPet needs tests")
 
 	_test_interval_table()
 	_test_setting_floors()
@@ -51,14 +46,7 @@ func _initialize() -> void:
 	_test_formatting()
 	_test_corrupt_save_falls_back()
 
-	print("")
-	print("==================")
-	print("%d passed, %d failed" % [_passed, _failed])
-	if _failed > 0:
-		print("TESTS FAILED")
-	else:
-		print("All good.")
-	quit(1 if _failed > 0 else 0)
+	_report()
 
 
 # --- The checks -----------------------------------------------------------
@@ -564,26 +552,3 @@ func _clean_up(path: String) -> void:
 	for suffix in ["", ".bak", ".tmp"]:
 		if FileAccess.file_exists(path + suffix):
 			DirAccess.remove_absolute(path + suffix)
-
-
-func _begin(section: String) -> void:
-	_section = section
-	print("")
-	print(section)
-
-
-func _ok(label: String, condition: bool) -> void:
-	if condition:
-		_passed += 1
-		print("  PASS  " + label)
-	else:
-		_failed += 1
-		print("  FAIL  " + label)
-
-
-func _close(label: String, got: float, want: float, tolerance: float = 0.01) -> void:
-	if absf(got - want) <= tolerance:
-		_ok(label, true)
-	else:
-		_ok(label, false)
-		print("          got %.4f, wanted %.4f" % [got, want])
