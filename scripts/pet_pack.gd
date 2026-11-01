@@ -128,11 +128,6 @@ func model_path() -> String:
 	return dir.path_join(model_file)
 
 
-func sprite_path(state: String) -> String:
-	var spec: Dictionary = sprite_animations.get(state, {})
-	return dir.path_join(str(spec.get("file", "")))
-
-
 ## The clip inside the .glb for this state, or "" to use procedural motion.
 func clip_for(state: String) -> String:
 	return str(clip_names.get(state, ""))
