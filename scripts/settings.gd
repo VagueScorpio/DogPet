@@ -90,12 +90,6 @@ func real_play() -> Dictionary:
 	return CareSettings.real_play_from(data)
 
 
-## How long the current care setting gives a starving dog before it dies.
-func starve_grace_seconds() -> float:
-	var interval: float = live_interval_for(NeedsModel.HUNGER)
-	return interval * float(real_play().get("starve_grace_intervals", 1.0))
-
-
 func notifications_enabled() -> bool:
 	return bool(data.get("notifications_enabled", true))
 
