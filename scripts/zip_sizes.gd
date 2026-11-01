@@ -17,8 +17,8 @@ extends RefCounted
 ##
 ## Nothing here touches a node or an autoload, so the tests can drive it.
 
-## The four-byte markers that start each kind of record.
-const EOCD_SIGNATURE := 0x06054b50
+## The four-byte marker that starts a central-directory record. The end-of-
+## directory marker is compared byte by byte in _find_eocd instead.
 const CENTRAL_SIGNATURE := 0x02014b50
 
 ## An End of Central Directory record is 22 bytes plus a comment of up to
