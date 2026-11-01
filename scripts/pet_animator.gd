@@ -85,11 +85,6 @@ func advance(delta: float) -> PetPose:
 	return pose
 
 
-## The pose handed out last frame, for anything that needs to look back.
-func current_pose() -> PetPose:
-	return _current
-
-
 func _advance_fidget(delta: float) -> void:
 	if _fidget_time >= 0.0:
 		_fidget_time += delta
