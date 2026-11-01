@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.29 - A closed-catalogue edition, and what closing it actually buys
   v1.28 - The same app, specified without naming a single tool
   v1.27 - A single blueprint anyone could rebuild the app from
   v1.26 - The audit write-up joins the repo
@@ -32,6 +33,51 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.29 - A closed-catalogue edition, and what closing it actually buys
+------------------------------------------------------------
+
+What
+  - Added SPECIFICATION-BUNDLED.md: the same tool-agnostic specification, in a
+    variant where every pet, background and room ships inside the application
+    and the user picks from a fixed catalogue. Import and export are gone
+    entirely, and so is the loose content folder.
+
+Why
+  - Asked for as a separate document rather than a change to the open one,
+    which is right: they are two products. One sells "swap in your own dog",
+    the other sells a curated set and a much smaller attack surface. Keeping
+    both means the choice can be made with the consequences written down.
+
+How
+  - Not a strip-out. Closing the content system ripples: the content service
+    loses its scanning and its fallback path, five models and two views stop
+    existing, packaging drops to a single self-contained file, and runtime
+    defensiveness about bad content becomes a build-time validation suite -
+    which is section 11.3 and is the part most likely to be skipped. Skipping
+    it makes this edition LESS robust than the open one, not more, and the
+    document says so in those words.
+  - The honest accounting is the valuable part. Of the thirteen security
+    review findings, five are deleted outright because their input cannot
+    arrive, one stops being an attack but stays a correctness hazard, and
+    seven apply completely unchanged - including the worst one, because the
+    pet's name is still typed by a user and still read back from a save file.
+    Closing a content system removes inputs, not vulnerabilities. Section
+    13.3 lists the five with what each one bought.
+  - Section 7.1 argues the catalogue should stay DATA even though nothing is
+    user-supplied, and says why hard-coding it is the one part of this change
+    that would be hard to undo.
+  - Section 7.6 covers the problem this edition introduces and the open one
+    did not: a saved selection naming a catalogue entry a later version
+    retired. Resolve to the default, never reuse an identifier, prefer keeping
+    entries.
+  - Three count claims were wrong on the first pass and were caught by
+    checking rather than by re-reading: the applicable-findings figure, the
+    eliminated-findings heading, and a roadmap tally that double-counted one
+    defect and omitted two others entirely. All 26 identifiers are now
+    verified present, unique and gap-free.
+  - No code changed. The 760 checks still pass.
 
 ------------------------------------------------------------
 v1.28 - The same app, specified without naming a single tool
