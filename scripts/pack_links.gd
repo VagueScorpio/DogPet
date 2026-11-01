@@ -30,17 +30,14 @@ const WEB_SCHEMES: PackedStringArray = ["http://", "https://"]
 static func web_url(raw: String) -> String:
 	var url: String = raw.strip_edges()
 	var lower: String = url.to_lower()
-	var scheme_ok: bool = false
-	for scheme in WEB_SCHEMES:
-		if lower.begins_with(scheme):
-			scheme_ok = true
+	var scheme: String = ""
+	for candidate in WEB_SCHEMES:
+		if lower.begins_with(candidate):
+			scheme = candidate
 			break
-	if not scheme_ok:
+	# No scheme, or nothing after it, means there is nothing to open.
+	if scheme.is_empty() or url.length() == scheme.length():
 		return ""
-	# There has to be something after the scheme, or there is nothing to open.
-	for scheme in WEB_SCHEMES:
-		if lower == scheme:
-			return ""
 	# A URL has no business holding a space, a tab, a newline or a control
 	# character. One that does is either a mistake or an attempt at something.
 	for index in url.length():
