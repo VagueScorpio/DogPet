@@ -131,7 +131,7 @@ static func inspect(zip_path: String) -> Dictionary:
 	# a pack without an id still lands somewhere sensible.
 	var fallback: String = result["root"] if not str(result["root"]).is_empty() \
 		else zip_path.get_file().get_basename()
-	result["id"] = _clean_id(str(data.get("id", fallback)))
+	result["id"] = clean_id(str(data.get("id", fallback)))
 	result["name"] = str(data.get("name", result["id"]))
 	result["role"] = str(data.get("role", "")).to_lower()
 
@@ -143,7 +143,7 @@ static func inspect(zip_path: String) -> Dictionary:
 		if role.is_empty():
 			# A room with no role gets one from its folder name, same as on
 			# disk. If that is no good either, say so.
-			result["role"] = _clean_id(fallback)
+			result["role"] = clean_id(fallback)
 			role = str(result["role"])
 		if not ScenePack.ROLES.has(role):
 			result["problems"].append(
@@ -388,7 +388,7 @@ static func _find_manifest(entries: PackedStringArray) -> String:
 const ID_ALLOWED := "abcdefghijklmnopqrstuvwxyz0123456789_-"
 
 
-static func _clean_id(raw: String) -> String:
+static func clean_id(raw: String) -> String:
 	var cleaned: String = raw.strip_edges().to_lower()
 	var out: String = ""
 	for index in cleaned.length():
