@@ -16,12 +16,9 @@ signal new_pet_requested(name: String)
 
 
 func _ready() -> void:
-    var style := StyleBoxFlat.new()
-    style.bg_color = Color(0.15, 0.13, 0.14)
-    style.border_color = Color(0.85, 0.32, 0.29, 0.7)
-    style.set_border_width_all(1)
-    style.set_corner_radius_all(8)
-    _frame.add_theme_stylebox_override("panel", style)
+    _frame.add_theme_stylebox_override(
+        "panel", UiBits.panel_style(Color(0.15, 0.13, 0.14), Color(0.85, 0.32, 0.29, 0.7), 8)
+    )
 
     _start_button.pressed.connect(_start)
     _name_field.text_submitted.connect(func(_text: String) -> void: _start())

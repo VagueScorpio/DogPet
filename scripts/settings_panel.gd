@@ -20,14 +20,9 @@ var _about: VBoxContainer = null
 
 
 func _ready() -> void:
-	# The default panel is translucent, which left the whole window showing
-	# through the settings screen.
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.13, 0.14, 0.18)
-	style.border_color = Color(1, 1, 1, 0.15)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
-	_frame.add_theme_stylebox_override("panel", style)
+	_frame.add_theme_stylebox_override(
+		"panel", UiBits.panel_style(UiBits.PANEL_FILL, UiBits.PANEL_BORDER, 8)
+	)
 
 	_done_button.pressed.connect(close)
 	_transfer = PackTransfer.new()

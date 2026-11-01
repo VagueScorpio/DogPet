@@ -11,6 +11,29 @@ extends RefCounted
 ## Static on purpose: a builder that needs no state should not need an
 ## instance either.
 
+## The fill and border the full-screen panels share: the settings screen, the
+## instructions and the scoreboard. The cards that sit over the window have
+## their own colours, because they are meant to read as something on top
+## rather than as the screen itself.
+const PANEL_FILL := Color(0.13, 0.14, 0.18)
+const PANEL_BORDER := Color(1, 1, 1, 0.15)
+
+
+## The frame a panel or a card is drawn in: a flat fill, a hairline border and
+## rounded corners.
+##
+## Godot's default panel is translucent, which left whatever was behind
+## showing through the text on top of it. Six screens were each assembling
+## this by hand.
+static func panel_style(fill: Color, border: Color, corner: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(corner)
+	return style
+
+
 ## Plain text at a given size, and a colour if it wants one.
 ##
 ## The colour override is only applied when one is asked for, so a heading

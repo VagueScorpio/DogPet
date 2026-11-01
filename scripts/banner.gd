@@ -22,7 +22,11 @@ var _hide_left: float = 0.0
 func _ready() -> void:
 	_close_button.pressed.connect(dismiss)
 	_close_button.tooltip_text = "Dismiss"
-	_card.add_theme_stylebox_override("panel", _card_style())
+	# A warm border, so a message reads as the dog asking for something rather
+	# than as part of the window behind it.
+	_card.add_theme_stylebox_override(
+		"panel", UiBits.panel_style(Color(0.18, 0.19, 0.24), Color(0.99, 0.83, 0.3, 0.6), 6)
+	)
 	_load_icon()
 	set_process(false)
 
@@ -78,10 +82,3 @@ func _load_icon() -> void:
 	_icon.show()
 
 
-func _card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.18, 0.19, 0.24)
-	style.border_color = Color(0.99, 0.83, 0.3, 0.6)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	return style

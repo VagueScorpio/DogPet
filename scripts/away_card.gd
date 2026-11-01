@@ -23,18 +23,9 @@ var _shown_summary: Dictionary = {}
 
 func _ready() -> void:
 	_close_button.pressed.connect(hide)
-	_card.add_theme_stylebox_override("panel", _card_style())
-
-
-# The default panel is translucent, which left the screen behind showing
-# through the card's own text.
-func _card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.16, 0.17, 0.21)
-	style.border_color = Color(1, 1, 1, 0.18)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	return style
+	_card.add_theme_stylebox_override(
+		"panel", UiBits.panel_style(Color(0.16, 0.17, 0.21), Color(1, 1, 1, 0.18), 6)
+	)
 
 
 ## Fill in and show the card. The summary comes from Needs.take_away_summary.
