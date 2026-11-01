@@ -45,6 +45,14 @@ func _instructions() -> String:
 
 Nothing is baked into the app, so you can change the dog, the rooms and the icons without rebuilding anything. Use [b]Reload assets[/b] below after a change, or just restart.
 
+[font_size=17]The easy way: let DogPet do it[/font_size]
+
+[b]Assets - Add Art[/b] in the menu bar, or [b]Add art[/b] in [b]Settings - Assets[/b], does everything below for you. Point it at a model, at some pictures, or at a pack somebody sent you, and it asks the few things it cannot work out by itself - how big the dog is, which way it faces, which picture is which, what the room is for - then writes the description file and copies everything into place.
+
+You can pick several files at once by holding Ctrl while you click, which is how a dog with a standing picture and a walking strip goes in together.
+
+The rest of this page is the same job done by hand, which is worth knowing if you want to change something afterwards.
+
 [font_size=17]Change the dog for another 3D model[/font_size]
 
 [b]1.[/b] Make a new folder in [code]assets/pets/[/code] - call it anything, for example [code]beagle_3d[/code].
@@ -92,9 +100,9 @@ One thing to know: the [b]walk[/b] room is the only one that moves. A replacemen
 
 [font_size=17]Give a pet or a room to somebody[/font_size]
 
-[b]Settings - Assets - Export[/b] writes a pet or a room out as a [code].zip[/code], with its credit tucked inside. [b]Import pack[/b] reads one back.
+[b]Settings - Assets - Export[/b] writes a pet or a room out as a [code].zip[/code], with its credit tucked inside. [b]Add Art[/b] reads one back - hand it the [code].zip[/code] and it installs it as it is.
 
-Importing never replaces anything without asking first, and keeps a copy of whatever it replaced in [code]assets/_backup/[/code].
+Nothing is ever replaced without asking first, and whatever gets replaced is copied into [code]assets/_backup/[/code] before it goes.
 
 [font_size=17]If something goes wrong[/font_size]
 

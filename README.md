@@ -30,6 +30,8 @@ in your own dogs and rooms without rebuilding the app.
 - Both 3D (`.glb`/`.gltf`) and 2D pixel-art sprite pets, loaded at runtime
 - System tray icon with Windows toast notifications
 - Care interval you pick: Frequent, Moderate or Long, plus a ⚡ Demo Speed toggle
+- An import wizard that takes a bare `.glb` or a handful of PNGs, asks what they
+  are, and writes the pack description itself - no files to edit by hand
 - Import and export pet and scene packs as `.zip` files
 - Two ways to play: **Casual**, where the dog cannot die, and **Real Pet**, where
   it ages, falls ill, needs taking to the vet, and can be lost to starvation or
@@ -120,13 +122,26 @@ fresh clone, run this once first so Godot builds its caches:
 godot --headless --path . --import
 ```
 
+## Add art without editing anything
+
+**Assets → Add Art** (or **Add art** in Settings) is the short way round
+everything below. Point it at a `.glb`, at some PNGs, or at a pack in a
+`.zip`, and it works out what it has been given, asks only what it cannot
+measure — how big the dog is and which way it faces, which picture is the
+walk strip and how many frames it holds, which slot a room fills and where
+its props stand — and then writes the `pet.json` or `scene.json` and copies
+everything into `assets/`. The facing is dragged against a live preview of
+the model, because that is the one thing no amount of measuring can answer.
+
+Credit is asked for every time, with the reason: some of the art is licensed
+only while its credit stays visible.
+
 ## Share a pack
 
 **Settings → Assets → Export** writes a pet or a room out as a `.zip`, with
-its credit line tucked inside as `CREDITS.txt`. **Import pack** reads one
-back. A pack is checked before anything is unpacked, you are asked before
-anything is replaced, and whatever gets replaced is copied into
-`assets/_backup/` first.
+its credit line tucked inside as `CREDITS.txt`. **Add Art** reads one back. A
+pack is checked before anything is unpacked, you are asked before anything is
+replaced, and whatever gets replaced is copied into `assets/_backup/` first.
 
 ## Add your own room
 

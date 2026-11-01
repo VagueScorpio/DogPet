@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.31 - Add Art: the import wizard writes the pet.json for you
   v1.30 - An outside optimisation pass: 228 lines out, same behaviour
   v1.29 - A closed-catalogue edition, and what closing it actually buys
   v1.28 - The same app, specified without naming a single tool
@@ -33,6 +34,93 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.31 - Add Art: the import wizard writes the pet.json for you
+------------------------------------------------------------
+
+What
+  - A new import wizard, reached from Assets - Add Art in the menu bar and
+    from Add art in Settings - Assets. It takes loose files - a .glb, a
+    .gltf with its companion files, one or more PNGs - works out what they
+    could be, asks only what cannot be measured, then writes the pet.json
+    or scene.json itself and copies everything into assets/.
+  - A 3D model is asked two things: how big the dog is (small / normal /
+    big) and which way it faces, dragged on a slider against a live preview
+    of the model in the window. Nothing else - the model is measured and
+    scaled as it always was, so its own scale never mattered and now nobody
+    has to know that.
+  - Pictures are listed one per row with the job each does. For a dog that
+    is the state it belongs to - idle, walk, happy and the rest - with the
+    frame count already read off the sheet's width and offered for
+    correcting. For a room it is backdrop, wall tile, floor tile, or a thing
+    standing in the room, placed in words: on the left, near the front,
+    medium, the food bowl.
+  - A room can have no pictures at all. The generated backgrounds the app
+    has always been able to paint - an indoor room, a yard, a park with a
+    path - are offered as "drawn by DogPet", so a couple of props make a
+    whole room. Only the walk slot gets a background that scrolls.
+  - A .zip that is already a pack still goes straight to PackArchive, so
+    there is one button for everything now instead of two. Import pack is
+    gone from Settings; Add art replaces it.
+  - Credit is asked for every time, with the reason said plainly, and a pack
+    about to be installed without one is warned about on the same screen.
+  - New: scripts/pack_builder.gd, scripts/pack_install.gd,
+    scripts/import_wizard.gd, scripts/import_form.gd,
+    scripts/import_preview.gd, scenes/ImportWizard.tscn,
+    tests/test_builder.gd. 848 checks pass, up from 760.
+
+Why
+  - The old Import pack only ever accepted a .zip that already held a
+    pet.json. Anyone who had just downloaded a model from Poly Pizza or
+    drawn a dog in Aseprite had to make a folder, copy somebody else's
+    pet.json, work out what target_height and rotation_y_degrees and frames
+    meant, and get the JSON syntactically right, with a silent pet that
+    does not appear as the only feedback. That is the one part of DogPet
+    that asked the owner to know how DogPet works.
+  - Everything the app needed from that file except two numbers was already
+    derivable: the model's size is measured from its geometry, a sheet's
+    frame size from its header, the frame count from its proportions, the
+    file names from the files. The two that are not - which way a model
+    faces, and which strip is the walk - are now a slider against a preview
+    and a dropdown.
+
+How
+  - The thinking is in two scripts with no nodes in them. PackBuilder says
+    what a set of files could become, suggests the name, the folder name,
+    the file names and the frame count, and builds the manifest.
+    PackInstall checks the answers, decides what lands where under what
+    name, and copies it. Both are driven by tests/test_builder.gd: real
+    PNGs in, a real pack folder out, read back with PetPack.load_from_dir
+    and ScenePack.load_from_dir, because a wizard that writes a manifest
+    the app cannot load has helped nobody.
+  - The questions are controls, and the answers are read off them, which is
+    a seam no pure test can see: the builder can be perfectly correct while
+    the form hands it the wrong field. So the wizard is also driven end to
+    end by a scenario in tests/test_integration.gd, in the real Main scene
+    with the real autoloads - a sprite pet from two PNGs, a drawn room, and
+    the shipped pug installed as a second 3D pet - with assets/ pointed at
+    a sandbox so nothing lands in the project folder.
+  - Models and their companion files keep their own file names, because a
+    .gltf refers to its .bin and its textures by name and renaming them
+    would break the model invisibly. Pictures are renamed to the characters
+    an id may hold, since the wizard writes the references itself. Two
+    files of the same name from different folders do not overwrite each
+    other; the second becomes walk_2.png.
+  - A name that reduces to a Windows device name - CON.png becomes con.png,
+    which is still the console - is prefixed rather than kept. That is
+    PackArchive's rule for zip entries applied to chosen files, through its
+    clean_id, which stopped being private for the purpose.
+  - PackTransfer.pick, confirm and back_up are public now, and pick takes a
+    dialog mode and its filters, so the wizard asks for loose art through
+    the same Windows picker and reuses the same ask-then-back-up before
+    replacing anything. import_pack went with the button that called it.
+  - Two things the wizard found rather than added. A room made only of
+    props had nowhere to go, which is what turned the generated backgrounds
+    into an offer. And a missing credit cannot simply be allowed: PetPack
+    counts one as a problem, so the wizard says so while the field is still
+    on screen instead of letting it be discovered in the pack list.
 
 
 ------------------------------------------------------------

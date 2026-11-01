@@ -223,7 +223,14 @@ If `assets/` is missing, damaged, or a pack fails to load, the app falls back to
 - **Pet picker:** list every valid pet pack with its name, kind, and credit. Show a small live preview if practical. Switching pets keeps the needs; it is the same dog in a new body.
 - **Open assets folder:** `OS.shell_open(assets_dir)`.
 - **Reload assets:** rescan without restarting.
-- **Import pack (.zip):** open a native file dialog (`DisplayServer.file_dialog_show`). Read the zip with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<id>/`, where a room's `<id>` is its folder name rather than its role, so importing a second kitchen adds one rather than replacing the first. Ask before overwriting a folder that already exists. A replaced pack is backed up to `assets/_backup/<id>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
+- **Add art (the import wizard)** *(v1.31, at the owner's request)*: the one entry point for installing anything, reached from **Assets → Add Art** and from this screen. It opens a native file dialog that accepts several files at once (`.glb`, `.gltf`, `.png`, `.zip`), works out what it has been handed, asks only what cannot be measured, then writes the manifest itself and copies the files into `assets/pets/<id>/` or `assets/scenes/<id>/`. **No owner should ever have to write a `pet.json` by hand.**
+  - A `.zip` is already a pack, so it goes to the zip import below unchanged.
+  - A model asks how big the dog is and which way it faces, dragged against a live preview of the model in a `SubViewport` — the one question no measurement can answer. Everything else is measured: the AABB normalising of 5.1 means the model's own scale never matters. A `.gltf` keeps its geometry and textures in files beside it, so those are chosen with it and copied under their own names; renaming them would break the model.
+  - Pictures ask a job per file — the state names of 5.1 for a pet, or backdrop / wall tile / floor tile / a thing in the room for a room. Frame counts are guessed from the sheet's width over its height and shown for correcting; a sheet whose width does not divide by its frames is refused while the number is still on screen. Props are placed in words (left / middle / right, back / mid / front, small / medium / large), never in fractions.
+  - A room may have **no pictures at all**: the `generated` styles of 5.4 are offered as "drawn by DogPet", which makes a couple of props a whole room. Only the `walk` role gets `"scroll": true`.
+  - Credit is asked for every time, with the reason given. A pack installed without one is warned about rather than blocked, because `PetPack` already treats a missing credit as a problem and the owner should hear that before it happens, not after.
+  - The pure halves are `PackBuilder.gd` (what the files could be, and the manifest) and `PackInstall.gd` (checking the answers, and what lands where), both free of nodes and tested by `tests/test_builder.gd`. The wizard itself is `ImportWizard.tscn` with `import_form.gd` and `import_preview.gd`, driven end to end by a scenario in `tests/test_integration.gd`.
+- **Import pack (.zip):** reached by handing the wizard a `.zip`. Read it with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<id>/`, where a room's `<id>` is its folder name rather than its role, so importing a second kitchen adds one rather than replacing the first. Ask before overwriting a folder that already exists. A replaced pack is backed up to `assets/_backup/<id>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
 - **Export pack (.zip):** pick a pet pack or scene role, then write a zip with `ZIPPacker` to a location chosen in a save dialog. Include the pack's credit line in a `CREDITS.txt` inside the zip.
 
 ## 6. The needs system (autoload `Needs.gd`)
@@ -365,7 +372,7 @@ Sections:
 1. **Care:** Frequent / Moderate / Long (radio). Show the interval table so the choice is clear. ⚡ Demo Speed toggle.
 2. **Pet:** name field (default "Biscuit"), pet pack picker (5.7).
 2b. **Rooms:** one picker per role (Home, Eat, Play, Walk), listing every room offering itself for that role. Saved to `settings.json` under `rooms`.
-3. **Assets:** Open folder, Reload, Import pack, Export pack.
+3. **Assets:** Open folder, Reload, Add art (the import wizard of 5.7), Export pack.
 4. **Window:** close-button behavior (Minimize to tray / Quit), Start minimized (off by default).
 5. **Notifications:** on/off, Test.
 6. **About:** version, a credits list, and the save and asset folder paths (click to open). The credits list shows every pack's `credit` line exactly as written. When a pack has `license_url` or `source_url`, show them as clickable links (`OS.shell_open`). Also show the full text of `assets/CREDITS.txt`. The active pet's credit always appears first.
@@ -375,7 +382,7 @@ Save to `saves/settings.json` immediately on change.
 ## 9. Code structure
 
 - **Autoloads:** `Paths`, `Log`, `Settings`, `Needs`, `AssetLibrary`, `Notifier`, `Tray`.
-- **Scenes:** `Main.tscn` (layout + scene switching), `PetView.tscn` (2D or 3D pet + `PetAnimator`), `NeedsBar.tscn`, `SettingsPanel.tscn`, `AwayCard.tscn`, `Banner.tscn`.
+- **Scenes:** `Main.tscn` (layout + scene switching), `PetView.tscn` (2D or 3D pet + `PetAnimator`), `NeedsBar.tscn`, `SettingsPanel.tscn`, `ImportWizard.tscn`, `AwayCard.tscn`, `Banner.tscn`.
 - Communicate with signals (`Needs.need_changed`, `Needs.threshold_crossed`, `AssetLibrary.pet_changed`, and so on). Don't reach across nodes with long `get_node` paths.
 - Keep each script focused and under about 300 lines. Comment the non-obvious parts in plain English; the owner is learning Godot from this code.
 
