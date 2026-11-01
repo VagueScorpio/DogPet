@@ -95,3 +95,12 @@ static func duration(seconds: float, compact: bool = false) -> String:
 	if is_equal_approx(hours, roundf(hours)):
 		return ("%dh" if compact else "%d h") % roundi(hours)
 	return ("%.1fh" if compact else "%.1f h") % hours
+
+
+## "7 days old (Young)", or "newborn (Puppy)" for one just started.
+##
+## The number itself is LifeModel's to format; this only joins it to the life
+## stage. One wording in one place, so the header on the main screen and the
+## Scoreboard's entry for the living dog cannot drift apart.
+static func age_line(days: float, stage: String) -> String:
+	return "%s (%s)" % [LifeModel.format_age(days), stage]

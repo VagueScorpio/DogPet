@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.32 - The dog's age on the main screen
   v1.31 - Add Art: the import wizard writes the pet.json for you
   v1.30 - An outside optimisation pass: 228 lines out, same behaviour
   v1.29 - A closed-catalogue edition, and what closing it actually buys
@@ -34,6 +35,49 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.32 - The dog's age on the main screen
+------------------------------------------------------------
+
+What
+  - The header beside the dog's name now says how old it is and what life
+    stage it is in: "newborn (Puppy)" for one just started, "7 days old
+    (Young)", "41 days old (Senior)". Small dim text, in the same row as
+    the name and the DEMO SPEED badge.
+  - It is there in both play modes, because ageing has always happened in
+    both, and it updates itself as the dog gets older.
+  - New in Needs: an "aged" signal, which fires when the age as it is said
+    on screen changes rather than every frame. 855 checks pass, up from
+    848.
+
+Why
+  - The dog has aged since v1.13 and the number was already written down,
+    but the only way to see it was Mode - Scoreboard, which is a screen
+    about dogs that have died. Nobody opens that to check on a dog that is
+    fine, so the owner asked for the age where it can simply be read.
+
+How
+  - One wording, in one place. UiBits.age_line joins LifeModel.format_age
+    to the life stage, and both the header and the Scoreboard's entry for
+    the living dog now go through it, so the two cannot drift apart. The
+    Scoreboard previously built that line itself.
+  - The label is driven by the new signal, not polled per frame, in the
+    same way the need bars are driven by need_changed. Needs keeps the last
+    age wording it announced - the same trick _shown uses for the
+    percentages - so the signal fires on a whole new hour, a whole new day
+    or a new stage, and nothing else. The age itself creeps up every frame;
+    what is written on screen does not.
+  - Built in code from UiBits.dim rather than placed in Main.tscn, so it is
+    a dim line like every other quiet piece of text in the app. HeaderRow
+    gained a unique name so main.gd can reach it; that is the whole of the
+    scene change.
+  - A scenario in tests/test_integration.gd boots the real Main scene with
+    a seven-day-old save and checks the label is on screen, sits in the
+    header, and says exactly what the life model says - then starts a new
+    dog and checks it reads as a newborn Puppy rather than keeping the age
+    of the one before.
 
 
 ------------------------------------------------------------

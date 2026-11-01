@@ -24,6 +24,7 @@ extends "res://tests/suite.gd"
 const Model := preload("res://scripts/needs_model.gd")
 const Life := preload("res://scripts/life_model.gd")
 const Install := preload("res://scripts/pack_install.gd")
+const Bits := preload("res://scripts/ui_bits.gd")
 
 const SCENARIOS: PackedStringArray = [
 	"dead_save_shows_death_card",
@@ -35,6 +36,7 @@ const SCENARIOS: PackedStringArray = [
 	"panels_build",
 	"import_wizard_installs",
 	"clock_jumped_forward",
+	"age_shown_in_header",
 ]
 
 const SANDBOX_FOLDER := "integration_sandbox"
@@ -160,6 +162,8 @@ func _run_scenario(name: String) -> void:
 			await _import_wizard_installs()
 		"clock_jumped_forward":
 			await _clock_jumped_forward()
+		"age_shown_in_header":
+			await _age_shown_in_header()
 		_:
 			_ok("a scenario called %s exists" % name, false)
 
@@ -349,6 +353,37 @@ func _panels_build() -> void:
 	main._scoreboard.open()
 	await _settle()
 	_ok("so does the scoreboard", main._scoreboard.visible)
+
+
+# The dog's age on the main screen, which until v1.32 could only be seen by
+# opening the Scoreboard. Worth a scenario rather than a pure test for the
+# same reason as the rest of this file: the wording is LifeModel's and the
+# label is Main's, and nothing but a cold boot proves the two are joined up.
+#
+# Casual play on purpose - ageing happens in both modes, and Casual is the
+# one where it is the only thing happening to the dog.
+func _age_shown_in_header() -> void:
+	var main: Node = await _boot(_starving_save(), _casual_demo(), true)
+	var label: Label = main._age_label
+	_ok("the age is on the main screen", label.is_visible_in_tree())
+	_ok("it sits in the header, beside the name",
+		label.get_parent() == main.get_node("%HeaderRow"))
+	_ok("and it says what the life model says",
+		label.text == Bits.age_line(needs.life.age_days, needs.life.stage()))
+	_ok("which for this save is a seven-day-old dog", label.text == "7 days old (Young)")
+
+	# A new dog after a death and a restart starts again from nothing, rather
+	# than keeping the age of the one before it.
+	needs.start_new_pet("Rex")
+	await _settle()
+	_ok("a brand-new dog reads as a newborn Puppy", label.text == "newborn (Puppy)")
+
+	# And the label is driven by the signal, not by the frame: the wording
+	# only moves when there is something new to say.
+	needs.life.age_days = 4.0
+	needs._announce_changes()
+	await _settle()
+	_ok("ageing into the next stage updates it", label.text == "4 days old (Young)")
 
 
 # The import wizard, driven the way a person drives it: choose files, say

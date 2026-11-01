@@ -83,9 +83,7 @@ func _living_entry() -> Control:
 	var box: VBoxContainer = _entry_box()
 	box.add_child(_name_row(Needs.pet_name, "still with you", LIVING_COLOR))
 	box.add_child(_detail("Born", PetHistory.format_date(Needs.life.born_unix)))
-	box.add_child(_detail("Age", "%s  (%s)" % [
-		LifeModel.format_age(Needs.life.age_days), Needs.life.stage(),
-	]))
+	box.add_child(_detail("Age", UiBits.age_line(Needs.life.age_days, Needs.life.stage())))
 	if not Settings.is_real_play():
 		box.add_child(_detail("Mode", "Casual, so nothing can happen to them"))
 	elif Needs.life.ill:

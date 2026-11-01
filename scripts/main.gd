@@ -8,6 +8,7 @@ extends Control
 const MIN_WINDOW_SIZE := Vector2i(420, 600)
 const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 
+@onready var _header_row: HBoxContainer = %HeaderRow
 @onready var _title_label: Label = %TitleLabel
 @onready var _demo_badge: Label = %DemoBadge
 @onready var _notice_panel: PanelContainer = %NoticePanel
@@ -34,6 +35,7 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 var _stage: SceneStage = null
 var _runner: ActionRunner = null
 var _sickness_bar: Node = null
+var _age_label: Label = null
 
 
 func _ready() -> void:
@@ -42,13 +44,16 @@ func _ready() -> void:
 	_build_menu()
 	_build_stage()
 	_build_bars()
+	_build_age_label()
 	_connect_controls()
 	_refresh_window_title()
 	_refresh_demo_badge()
+	_refresh_age()
 	_show_startup_notice()
 
 	Settings.changed.connect(_on_settings_changed)
 	Needs.pet_name_changed.connect(_on_pet_name_changed)
+	Needs.aged.connect(func(_days: float, _stage: String) -> void: _refresh_age())
 	Notifier.banner_requested.connect(_banner.show_message)
 	Needs.pet_died.connect(_on_pet_died)
 	Needs.pet_started.connect(_on_pet_started)
@@ -149,6 +154,25 @@ func _build_bars() -> void:
 		var bar: Node = NEEDS_BAR_SCENE.instantiate()
 		_bars.add_child(bar)
 		bar.setup(key)
+
+
+# How old the dog is, beside its name. Ageing happens in both play modes, so
+# this is always on screen; until v1.32 it was only in the Scoreboard.
+#
+# Built here rather than in the scene so it is a UiBits dim line like every
+# other quiet piece of text, and so the wording comes from the one place the
+# Scoreboard reads it from too. Kept to one short phrase on purpose: at the
+# 420-wide minimum this row carries the name and the Demo badge as well.
+func _build_age_label() -> void:
+	_age_label = UiBits.dim("", 13, 0.0, false)
+	_age_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_header_row.add_child(_age_label)
+	# Straight after the name, ahead of the spacer, so the two read together.
+	_header_row.move_child(_age_label, 1)
+
+
+func _refresh_age() -> void:
+	_age_label.text = UiBits.age_line(Needs.life.age_days, Needs.life.stage())
 
 
 func _connect_controls() -> void:

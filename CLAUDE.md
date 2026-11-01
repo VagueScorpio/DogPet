@@ -332,6 +332,7 @@ Run the tests after any change to needs logic.
 
 - Default 540×760, resizable, minimum 420×600. Stretch mode `canvas_items`, aspect `expand`. Layout must not break when resized.
 - Window title: `DogPet — <pet name>`. Set the exe icon in the export preset from `icons/app_icon.ico`. Also use `icons/app_icon.png` as the project icon.
+- Header: the dog's name, its age and life stage beside it *(v1.32)*, and the ⚡ Demo badge. The age is small dim text built from `UiBits.age_line`, which the Scoreboard's entry for the living dog shares, and it is refreshed from the `Needs.aged` signal — which fires when the wording changes, not every frame. It shows in both play modes, since ageing happens in both.
 - Top bar: the three need bars. Bottom bar: Feed, Play, and Walk buttons with icons and text, plus a ⚙ Settings button.
 - Pixel-art packs use nearest filtering. UI text uses Godot's default font at a readable size; the UI scales with the window.
 

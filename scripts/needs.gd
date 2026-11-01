@@ -18,6 +18,12 @@ signal threshold_crossed(key: StringName, level: int)
 
 signal pet_name_changed(new_name: String)
 
+## The dog has aged into a new whole hour, day or life stage - that is, the
+## age as it is said on screen has changed. Fires on the wording changing
+## rather than every frame, like need_changed, so connecting to it is cheap.
+signal aged(age_days: float, stage: String)
+
+
 ## Real play only. The dog has died; the owner must start a new one.
 signal pet_died(cause: int, pet_name: String, age_days: float)
 signal fell_ill()
@@ -60,6 +66,11 @@ var _levels: Dictionary[StringName, int] = {}
 var _shown: Dictionary[StringName, int] = {}
 
 var _autosave_left: float = AUTOSAVE_SECONDS
+
+# The age wording last announced, for the same reason: the age creeps up
+# every frame, but what is written on screen only changes at a whole hour,
+# a whole day or a new life stage.
+var _shown_age: String = ""
 
 # The catch-up summary, waiting for Main to collect it. The autoloads all
 # run before the first scene exists, so there is nobody listening to a
@@ -145,6 +156,7 @@ func _ready() -> void:
 	_levels = model.levels()
 	for key in NeedsModel.KEYS:
 		_shown[key] = roundi(model.get_value(key))
+	_shown_age = _age_wording()
 
 	if elapsed > AWAY_CARD_MIN_SECONDS:
 		_away_summary = {
@@ -424,3 +436,18 @@ func _announce_changes() -> void:
 		if _levels.get(key, -1) != level:
 			_levels[key] = level
 			threshold_crossed.emit(key, level)
+	_announce_age()
+
+
+# What the age reads as, so a change can be spotted without formatting it
+# twice. LifeModel owns the wording; this only needs to know when it moves.
+func _age_wording() -> String:
+	return "%s %s" % [LifeModel.format_age(life.age_days), life.stage()]
+
+
+func _announce_age() -> void:
+	var wording: String = _age_wording()
+	if _shown_age == wording:
+		return
+	_shown_age = wording
+	aged.emit(life.age_days, life.stage())
