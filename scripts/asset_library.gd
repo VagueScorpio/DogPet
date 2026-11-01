@@ -216,25 +216,6 @@ func set_active_pet(id: String) -> void:
 	_activate(pack, true)
 
 
-## Every credit line we are showing art for, the active pet's first,
-## because that is the one on screen. Settings shows these in About.
-func credit_lines() -> PackedStringArray:
-	var lines: PackedStringArray = []
-	if active_pet != null and not active_pet.credit.is_empty():
-		lines.append(active_pet.credit)
-	for pack in pets:
-		if pack == active_pet or pack.credit.is_empty():
-			continue
-		if not lines.has(pack.credit):
-			lines.append(pack.credit)
-	for role in ScenePack.ROLES:
-		for pack in scenes_for(role):
-			if pack.credit.is_empty() or lines.has(pack.credit):
-				continue
-			lines.append(pack.credit)
-	return lines
-
-
 # --- Scanning ------------------------------------------------------------
 
 func _scan(folder: String) -> Array[PetPack]:
