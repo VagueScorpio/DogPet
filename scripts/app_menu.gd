@@ -15,6 +15,7 @@ signal rename_requested()
 signal instructions_requested()
 signal settings_requested()
 signal scoreboard_requested()
+signal import_requested()
 
 # Pet menu
 const PET_RENAME := 0
@@ -25,9 +26,10 @@ const PET_SETTINGS := 1
 const CARE_DEMO := 100
 
 # Assets menu
-const ASSETS_OPEN := 0
-const ASSETS_RELOAD := 1
-const ASSETS_HELP := 2
+const ASSETS_IMPORT := 0
+const ASSETS_OPEN := 1
+const ASSETS_RELOAD := 2
+const ASSETS_HELP := 3
 
 # Window menu
 const WINDOW_TRAY := 0
@@ -182,6 +184,12 @@ func _build_assets_menu() -> void:
 	var menu := PopupMenu.new()
 	menu.name = "Assets"
 	add_child(menu)
+	menu.add_item("Add Art...", ASSETS_IMPORT)
+	menu.set_item_tooltip(
+		menu.get_item_index(ASSETS_IMPORT),
+		"Install a model, some pictures or a pack. DogPet writes the rest itself."
+	)
+	menu.add_separator()
 	menu.add_item("Open Assets Folder", ASSETS_OPEN)
 	menu.set_item_tooltip(
 		menu.get_item_index(ASSETS_OPEN),
@@ -195,6 +203,8 @@ func _build_assets_menu() -> void:
 
 func _on_assets_pressed(id: int) -> void:
 	match id:
+		ASSETS_IMPORT:
+			import_requested.emit()
 		ASSETS_OPEN:
 			open_assets_folder()
 		ASSETS_RELOAD:

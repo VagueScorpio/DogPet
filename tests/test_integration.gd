@@ -23,6 +23,7 @@ extends "res://tests/suite.gd"
 
 const Model := preload("res://scripts/needs_model.gd")
 const Life := preload("res://scripts/life_model.gd")
+const Install := preload("res://scripts/pack_install.gd")
 
 const SCENARIOS: PackedStringArray = [
 	"dead_save_shows_death_card",
@@ -32,6 +33,7 @@ const SCENARIOS: PackedStringArray = [
 	"reminder_gap_is_clamped",
 	"overlapping_room_changes",
 	"panels_build",
+	"import_wizard_installs",
 	"clock_jumped_forward",
 ]
 
@@ -154,6 +156,8 @@ func _run_scenario(name: String) -> void:
 			await _overlapping_room_changes()
 		"panels_build":
 			await _panels_build()
+		"import_wizard_installs":
+			await _import_wizard_installs()
 		"clock_jumped_forward":
 			await _clock_jumped_forward()
 		_:
@@ -345,6 +349,148 @@ func _panels_build() -> void:
 	main._scoreboard.open()
 	await _settle()
 	_ok("so does the scoreboard", main._scoreboard.visible)
+
+
+# The import wizard, driven the way a person drives it: choose files, say
+# what they are, answer the questions, install.
+#
+# Worth a scenario of its own rather than a pure test, because the questions
+# are controls and the answers are read back off them. PackBuilder can be
+# proved correct on its own all day while the wizard hands it the wrong
+# field, and only this notices.
+func _import_wizard_installs() -> void:
+	var main: Node = await _boot(_starving_save(), _casual_demo(), true)
+
+	# Installing writes into assets/, so this one points assets/ at the
+	# sandbox. Nothing may land in the project folder.
+	var sandbox: String = OS.get_user_data_dir().path_join(SANDBOX_FOLDER)
+	var art: String = sandbox.path_join("wizard_assets")
+	var source: String = sandbox.path_join("wizard_source")
+	PackArchive.empty_folder(art)
+	DirAccess.make_dir_recursive_absolute(art)
+	DirAccess.make_dir_recursive_absolute(source)
+	paths.assets_dir = art
+	paths.assets_available = true
+	library.reload()
+	await _settle()
+
+	var idle: String = _write_png(source.path_join("my dog.png"), 32, 32)
+	var walk: String = _write_png(source.path_join("walk.png"), 128, 32)
+
+	var wizard: Node = main._import_wizard
+	wizard.open()
+	await _settle()
+	_ok("the wizard opens", wizard.visible)
+	_ok("it starts by asking for files", wizard._step == 0)
+
+	# What the file dialog would have handed back.
+	wizard._on_files_chosen(PackedStringArray([idle, walk]))
+	await _settle()
+	_ok("pictures could be a dog or a room, so it asks", wizard._step == 1)
+
+	wizard._go_next()
+	await _settle()
+	_ok("then it asks the questions", wizard._step == 2)
+	_ok("and it built some", wizard._body.get_child_count() > 4)
+
+	var form: RefCounted = wizard._form
+	_ok("the name came from the file", str(form.answers()["name"]) == "My Dog")
+	_ok("the folder name was cleaned", str(form.answers()["id"]) == "my_dog")
+	# The first picture is offered as idle; the strip is given a job by hand,
+	# and its four frames were counted from its width.
+	form._pictures[1]["job"].select(PetPack.VALID_STATES.find("walk") + 1)
+	form._credit.text = "Someone, CC-BY"
+	var sheets: Array = form.answers()["sheets"]
+	_ok("both pictures have a job now", sheets.size() == 2)
+	_ok("the strip was counted at four frames", int(sheets[1]["frames"]) == 4)
+
+	wizard._go_next()
+	await _settle()
+	_ok("it says it is done", wizard._step == 3)
+	var installed: String = art.path_join("pets/my_dog")
+	_ok("a pet.json was written", FileAccess.file_exists(installed.path_join("pet.json")))
+	_ok("the awkward file name was cleaned on the way in",
+		FileAccess.file_exists(installed.path_join("my_dog.png")))
+	_ok("the pack loads with no problems",
+		PetPack.load_from_dir(installed).problems.is_empty())
+	_ok("and the app can see it now", library.pet_ids().has("my_dog"))
+
+	# The same picture, installed as a room instead - with a background
+	# DogPet draws itself, so the one small picture is just a thing standing
+	# in the room rather than the backdrop.
+	wizard.open()
+	wizard._on_files_chosen(PackedStringArray([idle]))
+	wizard._kind = 3  # PackBuilder.Kind.ROOM
+	wizard._step = 2
+	wizard._rebuild()
+	await _settle()
+	var room_form: RefCounted = wizard._form
+	room_form._name.text = "Spare Room"
+	room_form._folder.text = "spare_room"
+	room_form._credit.text = "Someone"
+	_ok("a room made only of props is refused while nothing draws it",
+		not Install.check(3, room_form.answers()).is_empty())
+	room_form._drawn.select(1)  # an indoor room, painted in code
+	wizard._go_next()
+	await _settle()
+	_ok("a room installs too", FileAccess.file_exists(
+		art.path_join("scenes/spare_room/scene.json")
+	))
+	var room: ScenePack = ScenePack.load_from_dir(art.path_join("scenes/spare_room"))
+	_ok("it fills the slot it was given", room.role == ScenePack.HOME)
+	_ok("and DogPet paints it rather than needing a picture",
+		str(room.background["type"]) == ScenePack.BG_GENERATED)
+	_ok("the prop came with it", room.props.size() == 1)
+	_ok("and it is offered for that slot", _room_ids(library.scenes_for("home")).has("spare_room"))
+
+	# And a real 3D model, the shipped pug, pointed at from outside assets/.
+	# This is the path with nothing to fall back on: the model is read with
+	# GLTFDocument, measured, and shown in the preview so the owner can turn
+	# it to face the camera.
+	var pug: String = ProjectSettings.globalize_path("res://assets/pets/pug_3d/model.glb")
+	wizard.open()
+	wizard._on_files_chosen(PackedStringArray([pug]))
+	await _settle()
+	_ok("a model goes straight to the questions", wizard._step == 2)
+	# The preview stage itself, rather than what it shows: the model inside
+	# it cannot be read under --script at all, because a static call on a
+	# global class finds nothing there - which is also why the app's own
+	# SceneView prints errors in this suite. The real app loads it fine.
+	_ok("and the preview stage was built", wizard._preview._world != null)
+	var model_form: RefCounted = wizard._form
+	model_form._name.text = "Second Pug"
+	model_form._folder.text = "second_pug"
+	model_form._credit.text = "Smirnoff Alexander, CC-BY 3.0"
+	model_form._facing.value = -29.0
+	wizard._go_next()
+	await _settle()
+	var pet: PetPack = PetPack.load_from_dir(art.path_join("pets/second_pug"))
+	_ok("the model pack installed", pet.problems.is_empty())
+	_ok("the model file came with it", FileAccess.file_exists(
+		art.path_join("pets/second_pug/model.glb")
+	))
+	_close("the facing was written down", pet.rotation_y_degrees, -29.0)
+	_ok("and the pack it wrote is one the app will use", pet.is_usable())
+
+	wizard.close()
+	_ok("the wizard closes", not wizard.visible)
+	PackArchive.empty_folder(art)
+
+
+func _room_ids(rooms: Array) -> PackedStringArray:
+	var ids: PackedStringArray = []
+	for room in rooms:
+		ids.append(room.id)
+	return ids
+
+
+# A real PNG, so the wizard can read its size out of the header the way it
+# will when the owner points at one.
+func _write_png(path: String, width: int, height: int) -> String:
+	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.8, 0.4, 0.2, 1.0))
+	image.save_png(path)
+	return path
 
 
 # --- Booting the real thing -----------------------------------------------

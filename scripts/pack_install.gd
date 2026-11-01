@@ -106,10 +106,13 @@ static func _check_sprites(answers: Dictionary, problems: PackedStringArray) -> 
 static func _check_room(answers: Dictionary, problems: PackedStringArray) -> void:
 	if not ScenePack.ROLES.has(str(answers.get("role", ""))):
 		problems.append("the room needs to say which slot it fills")
-	var wanted: PackedStringArray = (
-		["wall", "floor"] if str(answers.get("background", "")) == Builder.BG_TILED
-		else ["image"]
-	)
+	var background: String = str(answers.get("background", ""))
+	# A drawn background needs no pictures, so there is nothing to check.
+	var wanted: PackedStringArray = PackedStringArray()
+	if background == Builder.BG_TILED:
+		wanted = ["wall", "floor"]
+	elif background == Builder.BG_IMAGE:
+		wanted = ["image"]
 	for key in wanted:
 		var path: String = str(answers.get(key, ""))
 		if path.is_empty():

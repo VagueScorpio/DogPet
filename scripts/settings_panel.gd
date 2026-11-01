@@ -10,6 +10,10 @@ extends Control
 ## the small helpers at the bottom do most of the work and each section
 ## reads as a description of itself.
 
+## Asked for by the Add art button. Main owns the wizard, because it sits
+## over the whole window rather than inside this panel.
+signal import_requested()
+
 @onready var _frame: PanelContainer = %Frame
 @onready var _done_button: Button = %DoneButton
 @onready var _sections: VBoxContainer = %Sections
@@ -181,7 +185,10 @@ func _build_assets() -> void:
 	))
 
 	var transfer_row: HBoxContainer = UiBits.row(box)
-	transfer_row.add_child(UiBits.button("Import pack...", func() -> void: _transfer.import_pack()))
+	# Adding art goes through the wizard, which asks what the files are and
+	# writes the pet.json or scene.json itself. A .zip that is already a pack
+	# is recognised there too, so there is no second button for it.
+	transfer_row.add_child(UiBits.button("Add art...", import_requested.emit))
 	transfer_row.add_child(UiBits.button("Export pet...", func() -> void:
 		if AssetLibrary.active_pet != null:
 			_transfer.export_pet(AssetLibrary.active_pet)

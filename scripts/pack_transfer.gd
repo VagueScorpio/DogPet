@@ -27,11 +27,13 @@ func _export(folder: String, id: String, credit: String, what: String) -> void:
 	if folder.begins_with("res://"):
 		finished.emit("That is the built-in %s, which cannot be exported." % what)
 		return
-	_pick_file(
+	pick(
 		"Export %s \"%s\"" % [what, id],
-		true,
+		DisplayServer.FILE_DIALOG_MODE_SAVE_FILE,
 		id + ".zip",
-		func(path: String) -> void:
+		ZIP_FILTER,
+		func(paths: PackedStringArray) -> void:
+			var path: String = paths[0]
 			var target: String = path if path.to_lower().ends_with(".zip") else path + ".zip"
 			var problems: PackedStringArray = PackArchive.write_pack(folder, target, credit)
 			if problems.is_empty():
@@ -45,11 +47,12 @@ func _export(folder: String, id: String, credit: String, what: String) -> void:
 
 # --- Import ---------------------------------------------------------------
 
-func import_pack() -> void:
-	_pick_file("Import a pack", false, "", _on_import_chosen)
-
-
-func _on_import_chosen(zip_path: String) -> void:
+## Install a pack from a zip somebody else made.
+##
+## There is no longer a dialog of its own in front of this: the import wizard
+## asks for files of every kind at once and sends a .zip here when that is
+## what was chosen.
+func import_zip(zip_path: String) -> void:
 	var found: Dictionary = PackArchive.inspect(zip_path)
 	if not found["problems"].is_empty():
 		Log.warn("Import refused: %s" % found["problems"][0])
@@ -61,7 +64,7 @@ func _on_import_chosen(zip_path: String) -> void:
 	var target: String = Paths.assets_subdir(subdir).path_join(id)
 
 	if DirAccess.dir_exists_absolute(target):
-		_confirm(
+		confirm(
 			"Replace \"%s\"?" % id,
 			"There is already a %s called \"%s\". The one you have will be copied into"
 			% [subdir.trim_suffix("s"), id]
@@ -74,7 +77,7 @@ func _on_import_chosen(zip_path: String) -> void:
 
 func _do_import(zip_path: String, found: Dictionary, target: String, id: String) -> void:
 	if DirAccess.dir_exists_absolute(target):
-		if not _back_up(target, id):
+		if not back_up(target, id):
 			finished.emit("Could not back up the existing \"%s\", so nothing was changed." % id)
 			return
 		# Replace means replace. Writing the new pack over the old one left
@@ -96,7 +99,7 @@ func _do_import(zip_path: String, found: Dictionary, target: String, id: String)
 
 # Keep whatever is about to be replaced, stamped with the time so repeated
 # imports do not overwrite each other's backups either.
-func _back_up(folder: String, id: String) -> bool:
+func back_up(folder: String, id: String) -> bool:
 	var stamp: String = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
 	var destination: String = Paths.assets_subdir(BACKUP_DIR).path_join("%s-%s" % [id, stamp])
 	if DirAccess.make_dir_recursive_absolute(destination) != OK:
@@ -128,20 +131,26 @@ func _copy_tree(from: String, to: String) -> bool:
 
 # --- Dialogs --------------------------------------------------------------
 
-# Windows has a perfectly good file picker, so use it where it is offered.
-# Godot's own dialog is the fallback, and works everywhere.
-func _pick_file(title: String, saving: bool, suggested: String, action: Callable) -> void:
+## Ask for a file, or for several at once, and hand the answer on.
+##
+## Windows has a perfectly good picker and the owner knows how to drive it,
+## so it is used wherever it is offered. Godot's own dialog is the fallback,
+## and works everywhere. The action is always called with a list, even when
+## only one file can be chosen, so neither caller has to care which dialog
+## it got.
+##
+## Public because the import wizard asks for loose art with its own title
+## and its own filters, and there is no reason for two copies of this.
+func pick(
+	title: String, mode: int, suggested: String, filters: PackedStringArray, action: Callable
+) -> void:
 	var start: String = Paths.assets_dir
 	if DisplayServer.has_feature(DisplayServer.FEATURE_NATIVE_DIALOG_FILE):
-		var mode: int = (
-			DisplayServer.FILE_DIALOG_MODE_SAVE_FILE if saving
-			else DisplayServer.FILE_DIALOG_MODE_OPEN_FILE
-		)
 		var error: int = DisplayServer.file_dialog_show(
-			title, start, suggested, false, mode, ZIP_FILTER,
+			title, start, suggested, false, mode, filters,
 			func(accepted: bool, paths: PackedStringArray, _filter: int) -> void:
 				if accepted and not paths.is_empty():
-					action.call(paths[0])
+					action.call(paths)
 		)
 		if error == OK:
 			return
@@ -149,16 +158,18 @@ func _pick_file(title: String, saving: bool, suggested: String, action: Callable
 
 	var dialog := FileDialog.new()
 	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.file_mode = (
-		FileDialog.FILE_MODE_SAVE_FILE if saving else FileDialog.FILE_MODE_OPEN_FILE
-	)
+	dialog.file_mode = _fallback_mode(mode)
 	dialog.title = title
-	dialog.filters = ZIP_FILTER
+	dialog.filters = filters
 	dialog.current_dir = start
 	if not suggested.is_empty():
 		dialog.current_file = suggested
 	dialog.file_selected.connect(func(path: String) -> void:
-		action.call(path)
+		action.call(PackedStringArray([path]))
+		dialog.queue_free()
+	)
+	dialog.files_selected.connect(func(paths: PackedStringArray) -> void:
+		action.call(paths)
 		dialog.queue_free()
 	)
 	dialog.canceled.connect(dialog.queue_free)
@@ -166,7 +177,18 @@ func _pick_file(title: String, saving: bool, suggested: String, action: Callable
 	dialog.popup_centered_ratio(0.8)
 
 
-func _confirm(title: String, message: String, action: Callable) -> void:
+static func _fallback_mode(mode: int) -> int:
+	match mode:
+		DisplayServer.FILE_DIALOG_MODE_SAVE_FILE:
+			return FileDialog.FILE_MODE_SAVE_FILE
+		DisplayServer.FILE_DIALOG_MODE_OPEN_FILES:
+			return FileDialog.FILE_MODE_OPEN_FILES
+	return FileDialog.FILE_MODE_OPEN_FILE
+
+
+## Ask before doing something that cannot be taken back. Public for the same
+## reason pick is: the wizard replaces packs too.
+func confirm(title: String, message: String, action: Callable) -> void:
 	var dialog := ConfirmationDialog.new()
 	dialog.title = title
 	dialog.dialog_text = message

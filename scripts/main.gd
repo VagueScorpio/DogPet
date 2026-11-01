@@ -28,6 +28,7 @@ const NEEDS_BAR_SCENE := preload("res://scenes/NeedsBar.tscn")
 @onready var _help_panel: Control = %HelpPanel
 @onready var _death_card: Control = %DeathCard
 @onready var _scoreboard: Control = %Scoreboard
+@onready var _import_wizard: Control = %ImportWizard
 @onready var _menu_host: PanelContainer = %MenuHost
 
 var _stage: SceneStage = null
@@ -87,6 +88,14 @@ func _build_menu() -> void:
 	menu.instructions_requested.connect(_help_panel.open)
 	menu.settings_requested.connect(_settings_panel.open)
 	menu.scoreboard_requested.connect(_scoreboard.open)
+	menu.import_requested.connect(_import_wizard.open)
+	# Reachable from Settings as well, which is where somebody looking for it
+	# will try first.
+	_settings_panel.import_requested.connect(_import_wizard.open)
+	# Said again as a banner, because the wizard is usually closed by then.
+	_import_wizard.installed.connect(func(message: String) -> void:
+		Notifier.banner_requested.emit(message, "")
+	)
 
 
 # A small dialog rather than a trip into Settings, since renaming the dog is

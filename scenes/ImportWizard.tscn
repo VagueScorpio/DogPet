@@ -1,0 +1,105 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/import_wizard.gd" id="1_wizard"]
+
+[node name="ImportWizard" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_wizard")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65)
+
+[node name="Frame" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+
+[node name="Pad" type="MarginContainer" parent="Frame"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="Column" type="VBoxContainer" parent="Frame/Pad"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderRow" type="HBoxContainer" parent="Frame/Pad/Column"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Frame/Pad/Column/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+text = "Add art to DogPet"
+
+[node name="CloseButton" type="Button" parent="Frame/Pad/Column/HeaderRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Cancel"
+
+[node name="StepLabel" type="Label" parent="Frame/Pad/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_font_sizes/font_size = 12
+text = "Step 1 of 3 - choose the files"
+
+[node name="Stage" type="PanelContainer" parent="Frame/Pad/Column"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 190)
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Frame/Pad/Column"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="Frame/Pad/Column/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="MessageLabel" type="Label" parent="Frame/Pad/Column"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.72, 0.4, 1)
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 3
+
+[node name="FooterRow" type="HBoxContainer" parent="Frame/Pad/Column"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="BackButton" type="Button" parent="Frame/Pad/Column/FooterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Back"
+
+[node name="NextButton" type="Button" parent="Frame/Pad/Column/FooterRow"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Next"

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/AwayCard.tscn" id="2_awaycard"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/HelpPanel.tscn" id="6_help"]
 [ext_resource type="PackedScene" path="res://scenes/DeathCard.tscn" id="7_death"]
 [ext_resource type="PackedScene" path="res://scenes/Scoreboard.tscn" id="8_score"]
+[ext_resource type="PackedScene" path="res://scenes/ImportWizard.tscn" id="9_wizard"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -193,6 +194,11 @@ visible = false
 layout_mode = 1
 
 [node name="Scoreboard" parent="." instance=ExtResource("8_score")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="ImportWizard" parent="." instance=ExtResource("9_wizard")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

@@ -35,6 +35,7 @@ const DEFAULT_PROP_SCALE := 3
 
 const BG_IMAGE := "image"
 const BG_TILED := "tiled"
+const BG_GENERATED := "generated"
 
 
 ## Sort chosen paths by what they are. Anything unrecognised is listed under
@@ -257,6 +258,21 @@ static func subdir_for(kind: int) -> String:
 
 
 static func _background(answers: Dictionary) -> Dictionary:
+	# A room needs no pictures at all: DogPet can paint an indoor room, a
+	# yard or a park in code, which is how the shipped play and walk scenes
+	# are drawn. That makes a handful of props enough for a whole room.
+	if str(answers.get("background", BG_IMAGE)) == BG_GENERATED:
+		var style: String = str(answers.get("style", "room"))
+		var drawn: Dictionary = {"type": BG_GENERATED, "style": style}
+		if style == "park":
+			drawn["path"] = "#d9c29a"
+		# Only the walk scene is meant to go past. A living room that slid
+		# sideways all day would be a surprise.
+		if str(answers.get("role", "")) == ScenePack.WALK:
+			drawn["scroll"] = true
+			drawn["scroll_speed_px"] = 60.0
+		return drawn
+
 	if str(answers.get("background", BG_IMAGE)) == BG_TILED:
 		return {
 			"type": BG_TILED,
