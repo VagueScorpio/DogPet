@@ -118,11 +118,29 @@ come — has to be **cut up first**, one row saved per animation, before the
 wizard can use it. Otherwise each "frame" is a slab of the grid with several
 poses in it.
 
-> This is worth watching for. The `pet_poses_sprite_sheet.png` currently in
-> `assets/pets/` is 2752 × 1536, so the wizard guessed 2 frames (the width is
+> This is worth watching for. The `pet_poses_sprite_sheet.png` that came in
+> during testing is 2752 × 1536, so the wizard guessed 2 frames (the width is
 > about twice the height, and divides exactly) — but it is a grid, so each of
 > those two "frames" is a 1376 × 1536 block holding several poses at once. Cut
 > one pose row out as its own PNG and import that instead.
+
+#### Cutting a row out of a grid sheet
+
+`tools/slice_sheet.gd` does it for you. Give it the rectangle holding one row
+and it finds the poses inside, drops the rules and the 01/02/03 labels, makes
+the background transparent, and writes the row out as equal cells side by
+side:
+
+```powershell
+godot --headless --path . --script res://tools/slice_sheet.gd -- --in "sheet.png" --out "idle.png" --rect 2110,1026,640,152 --frames 3
+```
+
+`--rect` is `x,y,w,h` in pixels on the source sheet. It prints the sheet's
+size, the poses it found and the strip it wrote, so a rectangle that is off by
+a row is obvious at once — if it reports one enormous pose, the rectangle is
+catching the rules; if it reports four, it has caught a neighbouring row.
+Open the result and look at it before importing. Then hand that strip to **Add
+Art** like any other picture.
 
 ### A room for the dog to be in
 

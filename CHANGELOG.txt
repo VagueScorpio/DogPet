@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.33 - A sheet cutter, for the grids that Add Art cannot read
   v1.32 - The dog's age on the main screen
   v1.31 - Add Art: the import wizard writes the pet.json for you
   v1.30 - An outside optimisation pass: 228 lines out, same behaviour
@@ -35,6 +36,62 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.33 - A sheet cutter, for the grids that Add Art cannot read
+------------------------------------------------------------
+
+What
+  - tools/slice_sheet.gd: give it a sheet and the rectangle holding one row
+    of poses, and it writes that row out as a strip DogPet can use - equal
+    cells, side by side, on a transparent background, with the rules and the
+    01/02/03 labels gone.
+
+        godot --headless --path . --script res://tools/slice_sheet.gd -- \
+            --in sheet.png --out idle.png --rect 2110,1026,640,152 --frames 3
+
+    It prints the sheet size, the poses it found and the strip it wrote, so
+    a rectangle that is off by a row shows up as one enormous pose or as
+    four of them rather than as a silently wrong sprite.
+  - docs/IMPORT-GUIDE.md gains the section that explains when to reach for
+    it.
+  - tools/* is excluded from the export, so a .gd in there is not imported
+    into the shipped exe. tools/ held only a .ps1 until now, which Godot
+    ignores anyway.
+
+Why
+  - The owner's first real import found the limit of the pack format rather
+    than a bug in the wizard. DogPet reads one horizontal row of equal
+    cells; most "pose sheet" downloads are contact sheets - several sets of
+    poses, one row per age, on paper, with titles, rules and numbers drawn
+    over them. His was 2752 x 1536, which is about 2:1 and divides exactly,
+    so the wizard counted two frames of 1376 x 1536, each holding a dozen
+    poses at once. Nothing was wrong except that the picture was never a
+    strip.
+  - Saying "cut it up first" in the guide is correct and not much help
+    without something to cut it with.
+
+How
+  - Three passes over a mask of what is not paper, in this order, because
+    each one would be defeated by what the next removes. Thin bands
+    stretching across most of the row go first: on this sheet a rule passes
+    close enough to the dogs' ears to touch them, and once it touches, a
+    flood fill treats rule and dog as one shape. Then blobs that are too
+    small, or six times wider than they are tall, which is the labels and
+    whatever the rules left behind. Only then are the poses found, by
+    looking for columns holding an unbroken vertical run of eight pixels or
+    more - a total would count a rule crossing every column in the row.
+  - The background colour is the commonest colour in the rectangle rather
+    than the corner pixel, which on a sheet with a grid is as likely to be a
+    rule as it is paper.
+  - Each pose is trimmed to what it actually holds, then all of them are
+    written at one cell size, centred across and standing on the bottom
+    edge, so the dog does not jump about between frames.
+  - Proven on the sheet that prompted it: one row of three begging poses out
+    of a 5.6 MB grid became a 54 KB strip of three 107 x 152 cells, which
+    PackInstall took and PetPack loaded with no problems but the one it
+    should have - no credit line, because none was given.
 
 
 ------------------------------------------------------------
