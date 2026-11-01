@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.30 - An outside optimisation pass: 228 lines out, same behaviour
   v1.29 - A closed-catalogue edition, and what closing it actually buys
   v1.28 - The same app, specified without naming a single tool
   v1.27 - A single blueprint anyone could rebuild the app from
@@ -33,6 +34,70 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.30 - An outside optimisation pass: 228 lines out, same behaviour
+------------------------------------------------------------
+
+What
+  - 228 lines of code out of 7,354, with no change in behaviour. 760 checks
+    pass before and after. Thirteen commits, one per finding, each named
+    optimize(F-0NN) so any one of them can be reverted on its own.
+  - The big one: all eight test suites carried a byte-identical copy of the
+    counters, _ok, _begin, _close and the closing tally. They now extend
+    tests/suite.gd. 160 lines.
+  - Six unreferenced symbols deleted: AssetLibrary.credit_lines,
+    SceneView.prop_screen_position, Settings.starve_grace_seconds,
+    PetPack.sprite_path, PetAnimator.current_pose and
+    ZipSizes.EOCD_SIGNATURE. 47 lines.
+  - The scoreboard and the credits list now build their labels through
+    UiBits, which is what ui_bits.gd's own header said should happen when it
+    was written. 24 lines.
+  - One duration formatter with a compact flag, replacing UiBits.duration
+    and AppMenu._short, which were the same function with different unit
+    strings. One panel-frame builder replacing six hand-assembled copies.
+    PackLinks.web_url matches its scheme once instead of twice.
+  - redteam/* and .optimization/* are excluded from the export. This one is
+    not about size.
+
+Why
+  - The export filter covered tests/* but not redteam/*, which has no
+    .gdignore - so Godot imported its sixteen probe scripts and packed them
+    into the shipped exe, including the two that demonstrate code execution.
+    Worth finding on its own.
+  - Everything else was ordinary tidying, with the test harness the one
+    genuinely large duplication in the project.
+
+How
+  - Branch optimize/2026-10-31 off a clean tree, a check script re-run after
+    every single change, and a full read of all 63 in-scope files before
+    anything was touched. Dead code first, so nothing was refactored that
+    was about to be deleted.
+  - Every deletion was proven unreferenced across scripts, tests, scenes,
+    tools and assets first. The project has no dynamic dispatch anywhere -
+    no call(), no has_method(), no string-keyed lookup - so those reference
+    counts can be trusted rather than guessed at.
+  - The suites' printed output is a contract: build.ps1 decides whether a
+    release proceeds by grepping it. All eight were diffed against their
+    old output. The only differences are line numbers inside Godot's own
+    backtraces for the parse errors two suites provoke deliberately, which
+    move because lines above them went.
+  - Two fixes were applied, measured and reverted. Sharing the dialog
+    boilerplate came out four lines LONGER and turned named property
+    assignments into five positional arguments. Turning ActionPlan's match
+    statements into lookup tables saved two lines and read worse. Both were
+    green at 760/760 first; they worked, they just were not worth keeping.
+  - Three were skipped with reasons recorded, including a base class for
+    PetPack and ScenePack: real structural gain, zero lines, because what
+    comes out reappears as a new file with its own header comment.
+  - That last point is the honest finding about this code. It is already at
+    the point where an abstraction costs more lines than the duplication it
+    removes, because every new construct carries an explanatory comment by
+    convention - fifteen to twenty lines before any logic. A helper
+    replacing six copies netted three lines. Stripping those comments to
+    make the number look better was never on the table; they say WHY.
+  - The full write-up, the file-by-file ledger and the check scripts are in
+    .optimization/, which is excluded from git rather than committed.
 
 ------------------------------------------------------------
 v1.29 - A closed-catalogue edition, and what closing it actually buys
