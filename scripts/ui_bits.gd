@@ -11,11 +11,17 @@ extends RefCounted
 ## Static on purpose: a builder that needs no state should not need an
 ## instance either.
 
-## Plain text at a given size.
-static func heading(text: String, size: int) -> Label:
+## Plain text at a given size, and a colour if it wants one.
+##
+## The colour override is only applied when one is asked for, so a heading
+## with no colour is exactly the label it always was - the theme's own colour
+## rather than an explicit white.
+static func heading(text: String, size: int, colour: Color = Color.WHITE) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
+	if colour != Color.WHITE:
+		label.add_theme_color_override("font_color", colour)
 	return label
 
 
@@ -23,11 +29,14 @@ static func heading(text: String, size: int) -> Label:
 ##
 ## Wrapping is right for a paragraph and wrong for a table cell or a short
 ## row label, which will shrink to one character per line given the chance.
-static func dim(text: String, size: int, min_width: float = 0.0, wrap: bool = true) -> Label:
+static func dim(
+	text: String, size: int, min_width: float = 0.0, wrap: bool = true,
+	colour: Color = Color(1, 1, 1, 0.6)
+) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+	label.add_theme_color_override("font_color", colour)
 	if wrap:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if min_width > 0.0:

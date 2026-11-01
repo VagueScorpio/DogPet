@@ -124,14 +124,8 @@ func _entry_box() -> VBoxContainer:
 func _name_row(name: String, note: String, colour: Color) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var label := Label.new()
-	label.text = name
-	label.add_theme_font_size_override("font_size", 17)
-	row.add_child(label)
-	var tag := Label.new()
-	tag.text = note
-	tag.add_theme_font_size_override("font_size", 12)
-	tag.add_theme_color_override("font_color", colour)
+	row.add_child(UiBits.heading(name, 17))
+	var tag: Label = UiBits.heading(note, 12, colour)
 	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(tag)
 	return row
@@ -140,15 +134,6 @@ func _name_row(name: String, note: String, colour: Color) -> Control:
 func _detail(key: String, value: String) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var name := Label.new()
-	name.text = key
-	name.custom_minimum_size = Vector2(72, 0)
-	name.add_theme_font_size_override("font_size", 12)
-	name.add_theme_color_override("font_color", Color(1, 1, 1, 0.45))
-	row.add_child(name)
-	var detail := Label.new()
-	detail.text = value
-	detail.add_theme_font_size_override("font_size", 12)
-	detail.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
-	row.add_child(detail)
+	row.add_child(UiBits.dim(key, 12, 72, false, Color(1, 1, 1, 0.45)))
+	row.add_child(UiBits.dim(value, 12, 0.0, false, Color(1, 1, 1, 0.75)))
 	return row

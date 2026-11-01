@@ -32,18 +32,8 @@ static func build_into(parent: Control, _host: Node) -> void:
 	var extra: String = read_credits_file()
 	if extra.is_empty():
 		return
-	var heading := Label.new()
-	heading.text = "From assets/CREDITS.txt"
-	heading.add_theme_font_size_override("font_size", 13)
-	heading.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
-	parent.add_child(heading)
-
-	var body := Label.new()
-	body.text = extra
-	body.add_theme_font_size_override("font_size", 11)
-	body.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	parent.add_child(body)
+	parent.add_child(UiBits.heading("From assets/CREDITS.txt", 13, Color(1, 1, 1, 0.75)))
+	parent.add_child(UiBits.dim(extra, 11, 0.0, true, Color(1, 1, 1, 0.55)))
 
 
 ## Every installed pack that has something to credit, active pet first.
@@ -100,18 +90,10 @@ static func _entry_block(entry: Dictionary) -> Control:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 1)
 
-	var who := Label.new()
-	who.text = str(entry["who"])
-	who.add_theme_font_size_override("font_size", 12)
-	box.add_child(who)
+	box.add_child(UiBits.heading(str(entry["who"]), 12))
 
 	# Exactly as the author wrote it, never reworded.
-	var credit := Label.new()
-	credit.text = str(entry["credit"])
-	credit.add_theme_font_size_override("font_size", 11)
-	credit.add_theme_color_override("font_color", Color(1, 1, 1, 0.65))
-	credit.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(credit)
+	box.add_child(UiBits.dim(str(entry["credit"]), 11, 0.0, true, Color(1, 1, 1, 0.65)))
 
 	var links := HBoxContainer.new()
 	links.add_theme_constant_override("separation", 10)
