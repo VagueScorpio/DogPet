@@ -282,5 +282,3 @@ func describe() -> String:
 	for key in KEYS:
 		parts.append("%s %d" % [String(key), roundi(get_value(key))])
 	return ", ".join(parts)
-
-

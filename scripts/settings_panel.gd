@@ -306,5 +306,3 @@ func _section(title: String, blurb: String) -> VBoxContainer:
 		box.add_child(UiBits.dim(blurb, 11))
 	_sections.add_child(box)
 	return box
-
-

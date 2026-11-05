@@ -214,5 +214,3 @@ func _draw_props() -> void:
 				continue
 			where += _toy_offset
 		draw_texture_rect(texture, Rect2(where, drawn), false)
-
-
