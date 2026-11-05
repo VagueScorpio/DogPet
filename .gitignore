@@ -13,6 +13,13 @@ saves/*
 # Asset import backups made by the app
 assets/_backup/
 
+# Master art the app never reads: whole sheets that strips are cut out of
+# with tools/slice_sheet.gd. Kept out of assets/ so it is neither scanned
+# as a pack nor copied into the release zip, and out of git because it is
+# large. Only the folder marker is tracked.
+art-source/*
+!art-source/.gdignore
+
 # Temp files
 *.tmp
 *.bak

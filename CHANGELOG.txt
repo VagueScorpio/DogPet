@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.36 - art-source/, for the sheets the app cannot read
   v1.35 - A pack of your own art is not asked for a credit
   v1.34 - The sheet cutter stops cutting the dogs in half
   v1.33 - A sheet cutter, for the grids that Add Art cannot read
@@ -38,6 +39,38 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.36 - art-source/, for the sheets the app cannot read
+------------------------------------------------------------
+
+What
+  - A new folder, art-source/, for master art: whole sheets that strips are
+    cut out of with tools/slice_sheet.gd. It carries a .gdignore, so the
+    editor never imports it, and .gitignore keeps everything in it but that
+    marker out of the repo.
+  - The pose sheet that prompted the cutter moved there out of
+    assets/pets/, and the two-frame pet.json the first import wrote for it
+    is gone.
+  - CLAUDE.md section 3 describes the folder.
+
+Why
+  - A contact sheet in assets/pets/ is read as a pack. The sheet was being
+    offered in the pet picker as a dog that draws a quarter of a grid, it
+    was imported into the editor's cache, and tools/build.ps1 copies all of
+    assets/ into the release, so 5.6 MB of source art would have shipped
+    inside every zip for a file the app cannot use.
+  - Master art wants keeping. It just does not want keeping where the app
+    is looking for pets.
+
+How
+  - The same arrangement saves/ has used since v1.4: a .gdignore inside,
+    and a .gitignore pair that ignores the contents while tracking the
+    marker, so the folder exists in a fresh clone and stays empty.
+  - Nothing in the app knows about the folder. Paths does not name it,
+    AssetLibrary never scans it, and the export preset needs no new filter
+    because a .gdignore means there is nothing to exclude.
 
 
 ------------------------------------------------------------

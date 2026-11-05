@@ -46,8 +46,11 @@ DogPet/                     ← Godot project root (open this folder in Godot)
 ├── tests/                  ← headless test scripts
 ├── tools/build.ps1         ← export + zip script (phase 6)
 ├── assets/                 ← loose art (already provided) — contains .gdignore
+├── art-source/             ← master art the app never reads — contains .gdignore
 └── saves/                  ← dev saves — contains .gdignore
 ```
+
+`art-source/` *(v1.36)* holds whole sheets that strips are cut out of with `tools/slice_sheet.gd`: a contact sheet of poses is not something DogPet can read, and in `assets/pets/` it would be scanned as a broken pack and copied into every release zip. Its contents are git-ignored — only the `.gdignore` marker is tracked.
 
 `assets/` and `saves/` each contain an empty `.gdignore` file. **Keep those files.** They stop the Godot editor from importing these folders, so the art is never baked into the .pck and is always loaded at runtime from disk, exactly as it will be in the shipped app.
 
