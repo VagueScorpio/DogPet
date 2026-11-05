@@ -31,6 +31,11 @@ var kind: String = KIND_MODEL3D
 var dir: String = ""
 
 var credit: String = ""
+## Set by a pack saying it needs no credit, which is how a pack of your own
+## art says so. The rule below exists because art from elsewhere usually may
+## only be used while its credit stays visible; your own work is the case
+## that rule was not written for, and it should not be nagged about.
+var credit_not_required: bool = false
 var license: String = ""
 var license_url: String = ""
 var source_url: String = ""
@@ -82,6 +87,7 @@ static func from_dictionary(data: Dictionary, folder: String) -> PetPack:
 	pack.display_name = str(data.get("name", pack.id)).strip_edges()
 	pack.kind = str(data.get("kind", KIND_MODEL3D)).strip_edges()
 	pack.credit = str(data.get("credit", "")).strip_edges()
+	pack.credit_not_required = bool(data.get("credit_not_required", false))
 	pack.license = str(data.get("license", "")).strip_edges()
 	pack.license_url = str(data.get("license_url", "")).strip_edges()
 	pack.source_url = str(data.get("source_url", "")).strip_edges()
@@ -99,9 +105,10 @@ static func from_dictionary(data: Dictionary, folder: String) -> PetPack:
 				"kind \"%s\" is not one of %s or %s" % [pack.kind, KIND_MODEL3D, KIND_SPRITE2D]
 			)
 
-	if pack.credit.is_empty():
+	if pack.credit.is_empty() and not pack.credit_not_required:
 		# Not fatal, but credit is a licence requirement for some art, so
-		# it should never pass unnoticed.
+		# it should never pass unnoticed - unless the pack says it is the
+		# author's own work and wants no credit.
 		pack.problems.append("no credit line")
 
 	return pack

@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.35 - A pack of your own art is not asked for a credit
   v1.34 - The sheet cutter stops cutting the dogs in half
   v1.33 - A sheet cutter, for the grids that Add Art cannot read
   v1.32 - The dog's age on the main screen
@@ -37,6 +38,50 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.35 - A pack of your own art is not asked for a credit
+------------------------------------------------------------
+
+What
+  - A pet.json may set "credit_not_required": true. PetPack then stops
+    recording "no credit line" for it, and the import wizard stops warning
+    about it.
+  - The wizard offers it as a tick in the Where it came from section: "My
+    own art - no credit needed". Ticking it writes the field; leaving it
+    alone changes nothing, so every pack from anywhere else is asked for a
+    credit exactly as before.
+  - It waives that one complaint and nothing else. A pack with a missing
+    model or a sheet that does not divide is still a pack with problems.
+  - Five checks in tests/test_pets.gd and tests/test_builder.gd cover both
+    directions: the flag silences the complaint, its absence does not, the
+    manifest carries it only when it is true, and a broken pack that sets it
+    is still broken. 864 checks pass.
+
+Why
+  - The rule was written for art from elsewhere, which is usually licensed
+    on condition that its credit stays visible - the shipped pug among it.
+    The owner's own art is the case it never covered, and for that case the
+    app was nagging on every asset scan and on every install about a credit
+    that nobody is owed.
+  - The owner asked not to be credited for his own sprites. An empty credit
+    field was the honest way to record that and left the app complaining; a
+    placeholder line would have stopped the complaint by writing something
+    untrue. The pack can now say what is actually the case.
+
+How
+  - One condition in PetPack.from_dictionary and one in
+    PackInstall.warnings, plus a checkbox in ImportForm feeding
+    credit_not_required through the answers the way every other field goes.
+    PackBuilder writes the key only when it is true, so no pack carries a
+    "no credit needed" line by default.
+  - ScenePack needed nothing: it has never complained about a missing
+    credit, so rooms were never nagged in the first place.
+  - CLAUDE.md 5.1 now carries the rule, and the instruction behind it: the
+    owner's name, handle and git identity are never written into a credit
+    field, a CREDITS.txt or the README. That is a standing preference, not a
+    one-off edit.
 
 
 ------------------------------------------------------------

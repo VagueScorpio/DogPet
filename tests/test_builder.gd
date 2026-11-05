@@ -210,6 +210,20 @@ func _test_model_pack() -> void:
 	_ok("and nothing standing in its way either",
 		Install.check(Builder.Kind.PET_MODEL, answers).is_empty())
 
+	# Your own art is the case the credit rule was never written for.
+	answers.erase("credit")
+	answers["credit_not_required"] = true
+	_ok("a pack of your own art is not asked for a credit",
+		Install.warnings(Builder.Kind.PET_MODEL, answers).is_empty())
+	var mine: Dictionary = Builder.model_pet_manifest(answers)
+	_ok("and the pack says so in writing", bool(mine["credit_not_required"]))
+	_ok("with no empty credit left behind", not mine.has("credit"))
+	answers["credit_not_required"] = false
+	_ok("a pack that does not say so is still asked",
+		_says(Install.warnings(Builder.Kind.PET_MODEL, answers), "credit"))
+	_ok("and says nothing in writing either",
+		not Builder.model_pet_manifest(answers).has("credit_not_required"))
+
 
 func _test_room_pack() -> void:
 	_begin("A room is installed and loads back")

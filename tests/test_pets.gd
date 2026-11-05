@@ -116,6 +116,23 @@ func _test_pack_validation() -> void:
 	_ok("on its own it does not stop the dog showing", only_credit.is_usable())
 	_ok("though the pack is not strictly valid", not only_credit.is_valid())
 
+	_begin("A pack of your own art can say it wants no credit")
+	# The credit rule is there because art from elsewhere is often licensed
+	# on condition that its credit stays visible. Your own work is the case
+	# it was never written for, so a pack may say so and be left alone.
+	var mine: PetPack = Pack.from_dictionary({
+		"id": "mine", "kind": "model3d", "model": "m.glb", "credit_not_required": true,
+	}, "res://nowhere")
+	_ok("it is not reported", not mine.problems.has("no credit line"))
+	_ok("and the flag is read back", mine.credit_not_required)
+	# Only the credit complaint is waived. Everything else still applies.
+	_ok("a broken pack is still broken", mine.problems.has("the model file %s is missing"
+		% "res://nowhere/m.glb"))
+	var theirs: PetPack = Pack.from_dictionary({
+		"id": "theirs", "kind": "model3d", "model": "m.glb", "credit_not_required": false,
+	}, "res://nowhere")
+	_ok("a pack that does not say so is still asked", theirs.problems.has("no credit line"))
+
 
 # --- Making every dog the same size -------------------------------------
 

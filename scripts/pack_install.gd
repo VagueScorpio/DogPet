@@ -50,9 +50,15 @@ static func check(kind: int, answers: Dictionary) -> PackedStringArray:
 ## as one - some of the art DogPet ships with is licensed on condition that
 ## the credit stays visible. Saying so here, while the field is still on
 ## screen, is kinder than letting it be discovered later.
+##
+## Unless the pack is the owner's own art and says so, which is the case
+## that rule was never written for. Then there is nothing to say.
 static func warnings(kind: int, answers: Dictionary) -> PackedStringArray:
 	var notes: PackedStringArray = []
-	if str(answers.get("credit", "")).strip_edges().is_empty():
+	if (
+		str(answers.get("credit", "")).strip_edges().is_empty()
+		and not bool(answers.get("credit_not_required", false))
+	):
 		notes.append(
 			"No credit line. Some art may only be used while its credit stays visible,"
 			+ " so DogPet will list this pack as having a problem until one is given."

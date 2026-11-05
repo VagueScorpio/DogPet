@@ -66,7 +66,8 @@ nothing could see. (It warns you when it spots a `.gltf`.)
 |---|---|---|
 | **Call it** | The name shown in the pet or room picker in Settings. Suggested from the file name — `pixel_pug-walk.png` becomes "Pixel Pug Walk". | `"name"` |
 | **Folder** | The folder it lives in, inside `assets/pets/` or `assets/scenes/`. Follows what you type in **Call it** until you edit it yourself, then it stays put. Reduced to lower-case letters, digits, `_` and `-`; anything else becomes `_`. | `"id"` |
-| **Credit** | Who made it, and under what licence. **Not decoration** — a lot of free art may only be used while its credit stays visible. Shown in Settings → About. Leave it empty and the wizard warns you, and the app will list the pack as having a problem. | `"credit"` |
+| **My own art — no credit needed** | Tick it for work you made yourself. The wizard stops asking for a credit and the app stops listing the pack as having a problem. | `"credit_not_required"` |
+| **Credit** | Who made it, and under what licence. **Not decoration** — a lot of free art may only be used while its credit stays visible. Shown in Settings → About. Leave it empty, without ticking the box above, and the wizard warns you and the app lists the pack as having a problem. | `"credit"` |
 | **Licence** | "CC-BY 3.0", "CC0"… Optional. | `"license"` |
 | **Licence link** | Optional. Becomes a clickable link in About. | `"license_url"` |
 | **Found at** | Where you got it. Optional, also a link. | `"source_url"` |
@@ -195,7 +196,7 @@ Nothing is ever moved or changed in the folder you picked the files from.
 
 | Message | What to do |
 |---|---|
-| "No credit line…" | Type who made it. Without it, the app lists the pack as having a problem, and some licences are broken by leaving it out. |
+| "No credit line…" | Type who made it — or tick **My own art** if you made it, which is the one case that rule was not written for. Without either, the app lists the pack as having a problem, and some licences are broken by leaving a credit out. |
 | "A .gltf keeps its geometry and textures in separate files…" | Go back and pick those files too, or use a `.glb`. |
 
 ### Refusals — nothing is written until you fix them

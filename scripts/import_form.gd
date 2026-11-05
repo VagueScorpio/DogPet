@@ -67,6 +67,7 @@ var kind: int = Builder.Kind.UNKNOWN
 var _name: LineEdit = null
 var _folder: LineEdit = null
 var _folder_touched: bool = false
+var _own_work: CheckBox = null
 var _credit: LineEdit = null
 var _license: LineEdit = null
 var _license_url: LineEdit = null
@@ -124,6 +125,7 @@ func answers() -> Dictionary:
 		"id": Builder.clean_id(_folder.text),
 		"name": _name.text.strip_edges(),
 		"credit": _credit.text.strip_edges(),
+		"credit_not_required": _own_work.button_pressed,
 		"license": _license.text.strip_edges(),
 		"license_url": _license_url.text.strip_edges(),
 		"source_url": _source_url.text.strip_edges(),
@@ -287,6 +289,9 @@ func _build_credits(into: VBoxContainer) -> void:
 		"Credit is not decoration: a lot of free art may only be used while its"
 		+ " credit stays visible. Whatever is typed here is shown in Settings, About.", 11
 	))
+	# Your own work is the case the credit rule was not written for. Ticking
+	# this writes credit_not_required into the pack, and the app stops asking.
+	_own_work = _check(into, "My own art - no credit needed", false)
 	_credit = _line(into, "Credit", "", "Who made it, and under what licence.")
 	_license = _line(into, "Licence", "", "CC-BY 3.0, CC0, and so on. Optional.")
 	_license_url = _line(into, "Licence link", "", "Optional.")

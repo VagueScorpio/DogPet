@@ -294,6 +294,11 @@ static func _add_credits(data: Dictionary, answers: Dictionary) -> void:
 		var value: String = str(answers.get(key, "")).strip_edges()
 		if not value.is_empty():
 			data[key] = value
+	# Written only when it is true, and only then: a pack saying out loud
+	# that it wants no credit is a statement about its own art, not a
+	# default that every pack should carry.
+	if bool(answers.get("credit_not_required", false)):
+		data["credit_not_required"] = true
 
 
 # Two decimal places. A rotation nudged with a slider arrives as 28.999998,
