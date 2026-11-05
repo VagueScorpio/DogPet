@@ -80,5 +80,3 @@ func _load_icon() -> void:
 		return
 	_icon.texture = texture
 	_icon.show()
-
-
