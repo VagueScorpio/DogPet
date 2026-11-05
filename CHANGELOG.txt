@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.39 - A strip no graphics card will refuse, and a beagle
   v1.38 - The sheet reader: Add Art cuts up whatever you give it
   v1.37 - A fifth dog, drawn in the house
   v1.36 - art-source/, for the sheets the app cannot read
@@ -41,6 +42,76 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.39 - A strip no graphics card will refuse, and a beagle
+------------------------------------------------------------
+
+What
+  - SheetCutter now shrinks a strip's frames until the finished strip
+    fits inside ImageLimits.MAX_TEXTURE_SIDE, which is new and is 8192.
+    Nothing is refused for being big; it is made to fit.
+  - The one case shrinking cannot save - so many frames that fitting them
+    would leave each about a dozen pixels wide, past roughly 680 - is
+    refused by PackInstall.check instead, in words, while the pictures are
+    still on screen. Only a folder of numbered files can reach it.
+  - assets/pets/beagle/ joins the shipped art: a cartoon beagle by
+    Bevouliin, with idle, walk (21 frames) and play (18). 1.4 MB.
+  - CREDITS.txt, the README and CLAUDE.md section 13 carry its credit, and
+    all three say plainly that its download came with no licence file.
+  - tests/test_pets.gd walks five shipped packs rather than four, and
+    checks this one's frame counts and that every strip divides exactly.
+    tests/test_sheets.gd gains the guard: 105 checks. 981 in all.
+
+Why
+  - MAX_PIXELS has guarded memory since v1.20, and that is a different
+    limit from the one that actually bites here. A strip is as wide as all
+    its frames put together: the beagle's own run cycle is 21 frames of
+    300 pixels, which comes to 6300, and sixty frames would come to 18000.
+  - What makes it worth guarding is how it fails. A texture wider than the
+    driver takes is not refused with an error anybody sees. It comes back
+    blank, or black, or not at all, and the dog is simply not there - on
+    somebody else's machine, with art that looks perfect in the folder.
+  - 8192 rather than a figure out of a standard. This is a Windows desktop
+    app on the Compatibility renderer, where every GPU that can run Godot
+    4 at all reports at least 8192. The guaranteed minimums - 1024 for
+    desktop GL, 2048 for GL ES - are far below anything sold this century,
+    and holding art to them would mean shrinking the beagle for a machine
+    nobody has. At 8192 the beagle is untouched and a 60-frame run is not.
+  - Shrinking rather than refusing, because refusing is worse in both
+    directions, and because little is lost: the dog is drawn at
+    display_height_px, which is already smaller than art of that size.
+  - The beagle is the proof the whole v1.38 chain works on art nobody
+    prepared for it. Thirty-nine numbered PNGs in two folders went in -
+    run/rr_000..020 and jump/l_000..017, nothing else - and three strips
+    and a pet.json came out, with no frame count typed anywhere. The
+    folder names gave the states: run became walk, jump became play.
+
+How
+  - The fit is worked out after the trimming, on the sizes the cells
+    really came out at, so a strip that only looked too wide is left
+    alone. room_for(count) says how wide one frame may be; the frames are
+    scaled by the smaller of what the width and the height allow.
+  - Lanczos, because this is only ever a reduction and these are painted
+    frames. Pixel art never arrives here - a pixel sheet's cells are tens
+    of pixels, so sixty of them still fit easily.
+  - The shrinking is silent. It needs nothing from the owner, it cannot
+    lose a frame, and a warning about something the app has already
+    handled correctly is noise. PackInstall warns about what wants acting
+    on; this does not.
+  - The beagle's idle is one frame of the run cycle - rr_014, the only
+    pose with all four feet down. Nothing in the download stands still.
+  - Its pixel_art is false, chosen by the wizard's own rule: art drawn
+    taller than 96 pixels is not pixel art, and these frames are 203.
+  - No licence file came with the Bevouliin download, only a note pointing
+    back at the site. That is recorded rather than glossed: the credit
+    line is in the pack, and the three places a credit is listed all say
+    where the terms are and are not.
+  - Writing the guard's test turned up a GDScript trap worth remembering:
+    a PackedStringArray read back out of a Dictionary is a copy, so
+    appending to it appends to nothing. The test was building a 2000-frame
+    cut that had no frames in it, and passing for the wrong reason.
 
 
 ------------------------------------------------------------

@@ -102,8 +102,17 @@ static func _check_sprites(answers: Dictionary, problems: PackedStringArray) -> 
 			for source in PackedStringArray(cut.get("paths", PackedStringArray())):
 				if not FileAccess.file_exists(source):
 					problems.append("%s could not be found any more" % source.get_file())
-			if SheetCutter.frames_in(cut) < 1:
+			var frames: int = SheetCutter.frames_in(cut)
+			if frames < 1:
 				problems.append("the %s picture has no frames in it" % state)
+			elif SheetCutter.too_many_frames(frames):
+				# Only a folder of numbered files can get here. A strip of
+				# this many would have to be squeezed down to nothing to fit
+				# on a texture, so it is refused rather than made useless.
+				problems.append(
+					"the %s picture has %d frames; one strip holds about %d"
+					% [state, frames, ImageLimits.MAX_TEXTURE_SIDE / SheetCutter.MIN_FITTED_FRAME]
+				)
 			continue
 
 		if not FileAccess.file_exists(path):

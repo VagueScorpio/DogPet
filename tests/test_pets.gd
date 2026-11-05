@@ -41,7 +41,7 @@ func _test_real_packs() -> void:
 	_begin("The packs in assets/pets all load")
 	var root: String = ProjectSettings.globalize_path("res://").trim_suffix("/").path_join(ASSETS_PETS)
 
-	for id in ["pug_3d", "pawsome_3d", "pug_pixel", "begging_dog"]:
+	for id in ["pug_3d", "pawsome_3d", "pug_pixel", "begging_dog", "beagle"]:
 		var pack: PetPack = Pack.load_from_dir(root.path_join(id))
 		_ok("%s is usable" % id, pack.is_usable())
 		if not pack.is_usable():
@@ -53,6 +53,28 @@ func _test_real_packs() -> void:
 		_ok("%s settles the question of credit" % id,
 			not pack.credit.is_empty() or pack.credit_not_required)
 		_ok("%s kept its id" % id, pack.id == id)
+
+	_begin("The pack the sheet reader cut has the frames it found")
+	# Thirty-nine numbered files went in; these three strips came out, with
+	# nobody typing a frame count anywhere. If the reader ever miscounts,
+	# this is where it shows.
+	var cut: PetPack = Pack.load_from_dir(root.path_join("beagle"))
+	_ok("it loads with nothing wrong at all", cut.problems.is_empty())
+	_ok("the run cycle kept all twenty-one frames",
+		int(cut.sprite_animations["walk"]["frames"]) == 21)
+	_ok("the jump kept all eighteen", int(cut.sprite_animations["play"]["frames"]) == 18)
+	_ok("and the idle is the one standing frame",
+		int(cut.sprite_animations["idle"]["frames"]) == 1)
+	for state in ["idle", "walk", "play"]:
+		var strip: Dictionary = cut.sprite_animations[state]
+		# The strip has to divide exactly, or every frame after the first is
+		# drawn a few pixels out and the dog shudders on the spot.
+		_ok("the %s strip divides into its frames" % state,
+			int(strip["frame_width"]) * int(strip["frames"])
+			== ImageLimits.png_size_from_header(
+				root.path_join("beagle").path_join(str(strip["file"]))
+			).x)
+	_ok("it is not treated as pixel art", not cut.pixel_art)
 
 	_begin("The pack drawn for DogPet has its four states")
 	var mine: PetPack = Pack.load_from_dir(root.path_join("begging_dog"))

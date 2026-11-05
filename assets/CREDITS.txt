@@ -9,6 +9,14 @@ Pug (default 3D pet, pets/pug_3d/)
 Pawsome (pets/pawsome_3d/)
   Pawsome by Orlando Perez
 
+Beagle (pets/beagle/)
+  Beagle character by Bevouliin (http://bevouliin.com)
+  Downloaded as 39 numbered frames in two folders; the run and jump
+  cycles were joined into strips by DogPet's own sheet reader, and the
+  idle frame is one frame of the run.
+  The download carries no licence file - only a note pointing back at
+  the site - so the terms are whatever bevouliin.com states there.
+
 Pixel Pug, rooms, props and icons (pets/pug_pixel/, scenes/, ui/)
   Nasha's Cozy Pets Pack
   License: licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt

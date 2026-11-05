@@ -15,6 +15,7 @@ const Grid := preload("res://scripts/sheet_grid.gd")
 const Series := preload("res://scripts/frame_series.gd")
 const Plan := preload("res://scripts/sheet_plan.gd")
 const Cutter := preload("res://scripts/sheet_cutter.gd")
+const Likeness := preload("res://scripts/sheet_likeness.gd")
 const Builder := preload("res://scripts/pack_builder.gd")
 const Install := preload("res://scripts/pack_install.gd")
 
@@ -37,6 +38,7 @@ func _initialize() -> void:
 	_test_reading()
 	_test_touching()
 	_test_cutting()
+	_test_texture_guard()
 	_test_recount()
 	_test_states()
 	_test_installing()
@@ -307,6 +309,71 @@ func _test_cutting() -> void:
 		evened.get_width() / 3 == 10 + Cutter.PADDING * 2)
 
 
+# --- Not wider than a graphics card will take ----------------------------
+
+func _test_texture_guard() -> void:
+	_begin("How much room a frame gets, in a strip of so many")
+	_ok("a short strip is not squeezed at all",
+		Cutter.room_for(4) > 1000)
+	_ok("a long one gets less each", Cutter.room_for(64) < Cutter.room_for(4))
+	_ok("twenty-one frames of painted dog still fit", Cutter.room_for(21) >= 300)
+	_ok("a sheet row at the frame limit is comfortable",
+		not Cutter.too_many_frames(Likeness.MAX_FRAMES))
+	_ok("a thousand frames is not a strip", Cutter.too_many_frames(1000))
+
+	_begin("A strip too wide for a texture is shrunk until it fits")
+	# One picture, cut into enough cells that the frames side by side would
+	# come to more than any card is promised to take.
+	var cells: int = ImageLimits.MAX_TEXTURE_SIDE / 200 + 8
+	var wide: Image = _blank(cells * 200, 40)
+	wide.fill_rect(Rect2i(0, 30, wide.get_width(), 8), INK)
+	for cell in cells:
+		wide.fill_rect(Rect2i(cell * 200 + 20, 6, 60, 24), INK)
+	var path: String = _write("very_wide.png", wide)
+
+	var rects: Array[Rect2i] = []
+	var paths: PackedStringArray = []
+	for cell in cells:
+		rects.append(Rect2i(cell * 200, 0, 200, 40))
+		paths.append(path)
+	var cut: Dictionary = {
+		"paths": paths, "rects": rects, "key": false, "align": false,
+	}
+	_ok("the cells on their own would be too wide",
+		ImageLimits.is_too_wide(Vector2i(cells * 200, 40)))
+
+	var strip: Image = Cutter.render(cut)
+	_ok("the strip is still drawn", strip != null)
+	_ok("and it fits on a texture",
+		not ImageLimits.is_too_wide(Vector2i(strip.get_width(), strip.get_height())))
+	# Shrinking must not quietly lose a frame: a walk cycle with twenty of
+	# its twenty-one frames in it is a different animation.
+	_ok("with every frame still in it", strip.get_width() % cells == 0)
+	_ok("each one narrower than it was", strip.get_width() / cells < 200)
+	_ok("and still the shape it was", strip.get_height() < 40)
+
+	_begin("A strip nobody could fit is refused instead")
+	# Built as locals and then put in: a PackedStringArray read back out of a
+	# Dictionary is a copy, so appending to it appends to nothing.
+	var many: PackedStringArray = []
+	var frames: Array[Rect2i] = []
+	for _frame in 2000:
+		many.append(path)
+		frames.append(Rect2i(0, 0, 200, 40))
+	var absurd: Dictionary = {
+		"paths": many, "rects": frames, "key": false, "align": false,
+	}
+	_ok("the frames are counted", Cutter.frames_in(absurd) == 2000)
+	var said: String = Cutter.write(absurd, _scratch.path_join("absurd.png"))
+	_ok("writing says so rather than trying", said.contains("frames"))
+	_ok("and writes nothing", not FileAccess.file_exists(_scratch.path_join("absurd.png")))
+	# And the wizard hears it while the pictures are still on screen.
+	_ok("installing refuses it too", _says(Install.check(Builder.Kind.PET_SPRITE, {
+		"id": "too_many", "name": "Too Many",
+		"sheets": [{"cut": absurd, "state": "idle", "frames": 2000, "fps": 6.0}],
+	}), "frames"))
+
+
 # --- Correcting the engine -----------------------------------------------
 
 func _test_recount() -> void:
@@ -454,6 +521,16 @@ func _write(name: String, image: Image) -> String:
 	var path: String = _scratch.path_join(name)
 	image.save_png(path)
 	return path
+
+
+# Does any of these lines mention this? The messages are written for people,
+# so the tests ask what they are about rather than matching them word for
+# word and breaking on a comma.
+func _says(lines: PackedStringArray, word: String) -> bool:
+	for line in lines:
+		if line.to_lower().contains(word.to_lower()):
+			return true
+	return false
 
 
 func _clean() -> void:

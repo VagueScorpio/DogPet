@@ -183,6 +183,11 @@ via [Poly Pizza](https://poly.pizza/m/3nFZQW8yojl)
 **Pawsome** (`assets/pets/pawsome_3d/`)
 Pawsome by Orlando Perez
 
+**Beagle** (`assets/pets/beagle/`)
+Beagle character by [Bevouliin](http://bevouliin.com). The download carries no
+licence file — only a note pointing back at the site — so the terms are
+whatever bevouliin.com states there.
+
 **Pixel Pug, rooms, props and icons** (`assets/pets/pug_pixel/`, `assets/scenes/`, `assets/ui/`)
 Nasha's Cozy Pets Pack — license: `assets/licenses/Nashas_Cozy_Pets_Pack_LICENSE.txt`
 

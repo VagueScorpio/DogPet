@@ -1,0 +1,28 @@
+{
+  "animations": {
+    "idle": {
+      "file": "idle.png",
+      "fps": 1.0,
+      "frames": 1
+    },
+    "play": {
+      "file": "play.png",
+      "fps": 14.0,
+      "frames": 18
+    },
+    "walk": {
+      "file": "walk.png",
+      "fps": 14.0,
+      "frames": 21
+    }
+  },
+  "credit": "Beagle character by Bevouliin (http://bevouliin.com)",
+  "display_height_px": 170,
+  "faces": "right",
+  "format_version": 1,
+  "id": "beagle",
+  "kind": "sprite2d",
+  "name": "Beagle",
+  "pixel_art": false,
+  "source_url": "http://bevouliin.com"
+}

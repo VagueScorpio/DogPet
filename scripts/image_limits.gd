@@ -21,6 +21,24 @@ extends RefCounted
 ## more than any room or sprite sheet needs, and small enough not to matter.
 const MAX_PIXELS := 33554432
 
+## The longest side a picture this app builds may have.
+##
+## MAX_PIXELS is about memory. This is about the graphics card, which is a
+## different limit and a nastier one: a texture wider than the driver allows
+## is not refused with an error anybody sees. It comes back blank, or black,
+## or not at all, and the dog simply is not there.
+##
+## It bites on strips rather than on anything downloaded, because a strip is
+## as wide as all its frames put together: twenty-one hand-painted frames at
+## 300 pixels each come to 6300, and sixty would come to 18000.
+##
+## 8192 because this is a Windows desktop app on the Compatibility renderer,
+## where every GPU that can run Godot 4 at all reports at least that. The
+## figures the standards actually guarantee - 1024 for desktop GL, 2048 for
+## GL ES - are far below anything sold this century, and holding good art to
+## them would mean shrinking it for a machine nobody has.
+const MAX_TEXTURE_SIDE := 8192
+
 ## The first eight bytes of every PNG ever written.
 const PNG_SIGNATURE: Array[int] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
 
@@ -50,6 +68,15 @@ static func is_too_large(size: Vector2i) -> bool:
 	if size.x <= 0 or size.y <= 0:
 		return false
 	return size.x * size.y > MAX_PIXELS
+
+
+## True for a size with a side longer than a texture may be.
+##
+## Unlike is_too_large this is not a refusal: a strip that comes out too
+## wide is shrunk until it fits, because the alternative is art that looks
+## right in the folder and is invisible in the app.
+static func is_too_wide(size: Vector2i) -> bool:
+	return size.x > MAX_TEXTURE_SIDE or size.y > MAX_TEXTURE_SIDE
 
 
 ## A PNG's dimensions, read from its first 24 bytes. Zero when the file is
