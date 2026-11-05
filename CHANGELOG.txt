@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.34 - The sheet cutter stops cutting the dogs in half
   v1.33 - A sheet cutter, for the grids that Add Art cannot read
   v1.32 - The dog's age on the main screen
   v1.31 - Add Art: the import wizard writes the pet.json for you
@@ -36,6 +37,35 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.34 - The sheet cutter stops cutting the dogs in half
+------------------------------------------------------------
+
+What
+  - tools/slice_sheet.gd wipes a band of pixels as a rule only when it
+    covers 88 per cent of the row, rather than 60.
+
+Why
+  - Cutting a row of lying dogs out of the same sheet put a clean white line
+    straight through all three of them. A dog seen from the side is wide;
+    three of them side by side cover most of the row; and for the few lines
+    at their widest that came to more than 60 per cent, so the rule remover
+    took them for a rule and erased them.
+  - It had gone unnoticed because the first row cut was of dogs sitting up
+    and begging, which are tall and narrow, and never came close.
+
+How
+  - The bar is now set where only a rule can clear it. A rule on a contact
+    sheet reaches almost the whole way across; the widest slice through
+    three lying dogs reached about two thirds.
+  - Checked by re-cutting the row that was already right: same three poses,
+    same 92 x 140, so nothing that used to be removed is kept now.
+  - The guide already says to open the strip and look at it before importing
+    it. That is exactly how this was caught, and it stays the advice: the
+    tool is reading a picture it knows nothing about, and the only reliable
+    check is a pair of eyes.
 
 
 ------------------------------------------------------------

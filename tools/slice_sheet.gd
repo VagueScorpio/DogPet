@@ -28,7 +28,13 @@ const MIN_GAP := 14
 
 ## A band of pixels covering this much of the row, and no thicker than
 ## RULE_THICKNESS, is a rule drawn on the sheet rather than anything alive.
-const RULE_COVERAGE := 0.6
+##
+## Set at 0.6 to begin with, which quietly cut a white line through a row of
+## lying dogs: a dog seen from the side is wide, three of them side by side
+## cover most of the row, and for the few lines at their widest that came to
+## more than 60 per cent. A rule reaches almost the whole way across, so the
+## bar is set where only a rule can clear it.
+const RULE_COVERAGE := 0.88
 const RULE_THICKNESS := 6
 
 ## Blobs smaller than this fraction of the biggest one in a cell are the
