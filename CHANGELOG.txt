@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.38 - The sheet reader: Add Art cuts up whatever you give it
   v1.37 - A fifth dog, drawn in the house
   v1.36 - art-source/, for the sheets the app cannot read
   v1.35 - A pack of your own art is not asked for a credit
@@ -40,6 +41,101 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.38 - The sheet reader: Add Art cuts up whatever you give it
+------------------------------------------------------------
+
+What
+  - Add Art no longer asks you for one tidy strip per state. Hand it a
+    grid sheet, a page of loose sprites, three dogs drawn edge to edge, or
+    a folder of frames named run_000.png to run_019.png, and it works out
+    what is in there, cuts it up, and installs each piece as the strip
+    DogPet reads. It decides per row whether that row is one animal moving
+    - an animation - or several different things, which is one still
+    picture each.
+  - Eight new scripts, none with a node in it: sheet_paper.gd (what the
+    background is), sheet_scan.gd (what is drawn on it), sheet_grid.gd
+    (where the cells are), sheet_bands.gd (the rows, and the strips with
+    no lanes in them), sheet_likeness.gd (one animal or several),
+    frame_series.gd (which files belong together), sheet_plan.gd (the
+    front door) and sheet_cutter.gd (the pixels). None is over 275 lines.
+    tests/test_sheets.gd covers them: 90 checks.
+  - tools/read_sheet.gd is the same engine with the questions taken off.
+    --in a file or folder prints what it found, --out writes the strips it
+    would install, --grid shows the measurements behind the answer.
+  - The wizard's picture questions are now one row per piece found rather
+    than one per file, each labelled in words ("sheep.png, row 3 - 6
+    frames, one animation"). The frame count can still be corrected, and
+    correcting it re-cuts that piece into that many even frames.
+  - The strips go into the pack named for the job they do - idle.png,
+    walk.png - because they are drawn by this app rather than copied.
+  - CLAUDE.md gains section 5.8 describing all of it.
+
+Why
+  - Nothing anybody downloads is in the shape a pet.json wants. Every
+    sprite pack in the wild is a grid; every animation exported out of a
+    drawing program is one PNG per frame. Before this, both meant opening
+    a photo editor before DogPet could be told about them - which is
+    exactly the gap tools/slice_sheet.gd was written to paper over in
+    v1.33, one row at a time, from a command line.
+  - The one question that cannot be answered by measuring is whether a row
+    of pictures is one creature or several, and it is the question that
+    decides everything else. A row of walk frames and a row of different
+    monsters look identical to a grid detector. So it is answered on the
+    evidence: frames of an animation are mostly the same shape in nearly
+    the same place, because they are one animal moving.
+  - Tried against a folder of 74 real sprite files of every kind - RPG
+    character sheets, a palette reference sheet, a bunny sheet with holes
+    in its grid, hand-painted frames at 558 x 480, numbered runs of 18 and
+    21 files, and a 2048 x 3072 contact sheet.
+
+How
+  - The background is a colour covering a fifth of the picture, or two
+    shades of one colour covering half of it, which is how a transparency
+    checkerboard is caught. Counted as neighbourhoods rather than as exact
+    values: a background with the faintest gradient on it is spread over a
+    dozen buckets, and counting buckets found no background at all - which
+    is how a whole contact sheet was read as one picture. The two shades
+    also have to look like each other, or a blue box on a white page is
+    two colours covering everything between them and the box is the
+    background.
+  - A picture that is entirely one colour is a flat tile, not a
+    background, and keeps every pixel. Without that rule it keys itself
+    away to nothing and there is no picture left to install.
+  - The grid is found from the empty lanes. The pitch is the smallest step
+    between lanes, not the average: a blank cell leaves a double step,
+    never a half one, so three bunnies at the spacing of four are still a
+    four-cell row. Steps far below the rest are thrown out first, or two
+    sprites a pixel apart would make the sheet sixty-four cells wide.
+  - Two cells are judged alike by lining their outlines up - bottom edges
+    and middles together, which is how an animal stands whatever its cell
+    - and measuring the overlap against the two put together. Half or more
+    is one animal. Cells under a fifth the size of the biggest in their
+    row are dropped: the swatches down a palette sheet, the caption under
+    a pose. Bands far thinner than the rest are dropped for the same
+    reason, which is what stopped a palette sheet installing four-frame
+    animations of coloured dots.
+  - A strip whose frames touch has no lane to find, so it is cut by trying
+    every even division and keeping the one that makes each piece look
+    most like its neighbours - with a guard that the join has to be
+    thinner than the average column, or a plain wide backdrop is sliced
+    into four identical rectangles and called an animation.
+  - Frames cut from uneven places are trimmed, centred and stood on a
+    common baseline. Feet are the part that must not move between frames.
+  - A picture over two megapixels is measured at a reduced size and the
+    grid counted in cells, then the cell size worked back out of the full
+    width - exact, because a sheet eight cells across is eight cells
+    across at either size.
+  - tests/test_integration.gd drives the wizard the way a person does and
+    now checks the whole chain: a real four-figure strip in, a cut
+    walk.png out, read back by PetPack with no problems. Its fixtures were
+    flat rectangles of one colour, which the reader rightly had nothing to
+    say about, so they are drawn properly now - and that is worth knowing,
+    because the scenario had been stopping silently part way through
+    rather than failing. It runs to the end again: 70 checks became 91.
+    All ten suites pass; 966 checks.
 
 
 ------------------------------------------------------------

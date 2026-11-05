@@ -1,0 +1,462 @@
+extends "res://tests/suite.gd"
+## Headless tests for the sheet reader - the part of Add Art that looks at a
+## picture and works out whether it is one dog, a row of frames, or a grid
+## full of both.
+##
+##   godot --headless --path . --script res://tests/test_sheets.gd
+##
+## The grid and series tests are pure arithmetic over made-up numbers. The
+## rest draw real PNGs into a scratch folder and read them back through the
+## whole engine, because the judgement being tested - "these two cells are
+## the same animal moving" - is only worth anything on pixels.
+
+const Scan := preload("res://scripts/sheet_scan.gd")
+const Grid := preload("res://scripts/sheet_grid.gd")
+const Series := preload("res://scripts/frame_series.gd")
+const Plan := preload("res://scripts/sheet_plan.gd")
+const Cutter := preload("res://scripts/sheet_cutter.gd")
+const Builder := preload("res://scripts/pack_builder.gd")
+const Install := preload("res://scripts/pack_install.gd")
+
+const INK := Color(0.1, 0.2, 0.9, 1.0)
+const PAPER := Color(1.0, 1.0, 1.0, 1.0)
+
+var _scratch: String = ""
+
+
+func _initialize() -> void:
+	_open("DogPet sheet reader tests")
+
+	_scratch = ProjectSettings.globalize_path("user://test_sheets")
+	_clean()
+	DirAccess.make_dir_recursive_absolute(_scratch)
+
+	_test_series()
+	_test_grid_maths()
+	_test_paper()
+	_test_reading()
+	_test_touching()
+	_test_cutting()
+	_test_recount()
+	_test_states()
+	_test_installing()
+
+	_clean()
+	_report()
+
+
+# --- Numbered files ------------------------------------------------------
+
+func _test_series() -> void:
+	_begin("A numbered run of files is one animation")
+	var found: Dictionary = Series.group([
+		"art/run_000.png", "art/run_001.png", "art/run_002.png",
+	])
+	var series: Array = found["series"]
+	_ok("the run is found", series.size() == 1)
+	_ok("with all three frames", PackedStringArray(series[0]["paths"]).size() == 3)
+	_ok("named after the prefix", str(series[0]["name"]) == "run")
+	_ok("and nothing is left over", PackedStringArray(found["loose"]).is_empty())
+
+	_begin("What is not a numbered run")
+	# Windows adds "(2)" when a file of that name is already there. It is a
+	# copy, not frame two of anything.
+	var copies: Dictionary = Series.group(["art/sheet (2).png", "art/sheet (3).png"])
+	_ok("a bracketed copy number is not a frame number",
+		Array(copies["series"]).is_empty())
+	_ok("both files are left loose", PackedStringArray(copies["loose"]).size() == 2)
+
+	var lone: Dictionary = Series.group(["art/idle_000.png"])
+	_ok("one file on its own is not a run", Array(lone["series"]).is_empty())
+
+	var split: Dictionary = Series.group([
+		"a/f_000.png", "a/f_001.png", "a/f_050.png", "a/f_051.png",
+	])
+	_ok("a jump in the numbering starts a second run",
+		Array(split["series"]).size() == 2)
+
+	var apart: Dictionary = Series.group(["jump/x_000.png", "run/x_000.png"])
+	_ok("the same name in two folders is two things",
+		Array(apart["series"]).is_empty())
+
+	_begin("A prefix that says nothing hands over to the folder")
+	var weak: Dictionary = Series.group([
+		"art/jump/l_000.png", "art/jump/l_001.png", "art/jump/l_002.png",
+	])
+	_ok("the folder names the run", str(Array(weak["series"])[0]["name"]) == "jump")
+
+	_begin("Taking a number off the end of a name")
+	var parts: Dictionary = Series.split_number("walk_07.png")
+	_ok("the prefix is kept", str(parts["prefix"]) == "walk_")
+	_ok("the number is read", int(parts["number"]) == 7)
+	_ok("the padding is remembered", int(parts["digits"]) == 2)
+	_ok("a name with no number has none", Series.split_number("idle.png").is_empty())
+
+
+# --- The grid, as arithmetic ---------------------------------------------
+
+func _test_grid_maths() -> void:
+	_begin("Finding the spans that hold something")
+	var spans: Array[Vector2i] = Grid.runs(PackedInt32Array([0, 1, 1, 0, 0, 2, 2, 0]))
+	_ok("two spans are found", spans.size() == 2)
+	_ok("the first starts where it starts", spans[0] == Vector2i(1, 2))
+	_ok("the second too", spans[1] == Vector2i(5, 2))
+	_ok("a tally of nothing has no spans", Grid.runs(PackedInt32Array([0, 0])).is_empty())
+
+	_begin("Counting the cells a side is divided into")
+	_ok("one blob is one cell",
+		int(Grid.divisions(_tally(64, [Vector2i(20, 24)]))["count"]) == 1)
+
+	var four: Dictionary = Grid.divisions(_tally(64, [
+		Vector2i(4, 8), Vector2i(20, 8), Vector2i(36, 8), Vector2i(52, 8),
+	]))
+	_ok("four evenly spaced blobs are four cells", int(four["count"]) == 4)
+	_ok("and the cell is the width over the count", int(four["cell"]) == 16)
+	_ok("which is a regular grid", bool(four["regular"]))
+
+	# A sheet does not have to fill every slot. Three blobs at the spacing
+	# of four are still a four-cell row with a hole in it.
+	var gapped: Dictionary = Grid.divisions(_tally(64, [
+		Vector2i(4, 8), Vector2i(20, 8), Vector2i(52, 8),
+	]))
+	_ok("a blank cell does not change the count", int(gapped["count"]) == 4)
+	_ok("and it is still regular", bool(gapped["regular"]))
+
+	var ragged: Dictionary = Grid.divisions(_tally(64, [
+		Vector2i(1, 4), Vector2i(9, 20), Vector2i(50, 6),
+	]))
+	_ok("blobs at no particular spacing are not a grid", not bool(ragged["regular"]))
+	_ok("but they are still counted", int(ragged["count"]) == 3)
+
+
+# --- Paper ---------------------------------------------------------------
+
+func _test_paper() -> void:
+	_begin("Telling the paper from what is drawn on it")
+	var clear: Image = _blank(32, 32)
+	_fill(clear, Rect2i(8, 8, 16, 16), INK)
+	var on_nothing: Dictionary = Scan.of_image("clear.png", clear)
+	_ok("a picture with a transparent background has no paper",
+		not bool(on_nothing["keyed"]))
+	_close("and only the drawn part counts", float(on_nothing["coverage"]), 0.25, 0.01)
+
+	var page: Image = _page(32, 32)
+	_fill(page, Rect2i(8, 8, 16, 16), INK)
+	var on_paper: Dictionary = Scan.of_image("page.png", page)
+	_ok("a picture on white paper has paper", bool(on_paper["keyed"]))
+	_close("and the paper does not count as drawn",
+		float(on_paper["coverage"]), 0.25, 0.01)
+	_ok("the box is found where it was put",
+		Rect2i(on_paper["bounds"]) == Rect2i(8, 8, 16, 16))
+
+
+# --- What is in a picture ------------------------------------------------
+
+func _test_reading() -> void:
+	_begin("A row of the same shape is one animation")
+	var strip: String = _write("strip.png", _row(4, _shape_maker(0)))
+	var found: Dictionary = Plan.read(PackedStringArray([strip]))
+	var pieces: Array = found["pieces"]
+	_ok("it is read as one thing", pieces.size() == 1)
+	_ok("with four frames", int(pieces[0]["frames"]) == 4)
+	_ok("and it is an animation", bool(pieces[0]["animated"]))
+	_ok("each frame is one cell", Vector2i(pieces[0]["size"]) == Vector2i(16, 16))
+
+	_begin("A row of different things is that many pictures")
+	var mixed: Image = _blank(64, 16)
+	# Four shapes with nothing in common: a standing bar, a lying bar, a
+	# square and a ring. No two of them overlap once lined up.
+	_fill(mixed, Rect2i(6, 2, 4, 12), INK)
+	_fill(mixed, Rect2i(18, 7, 12, 3), INK)
+	_fill(mixed, Rect2i(36, 4, 9, 9), INK)
+	_fill(mixed, Rect2i(52, 3, 10, 10), INK)
+	_fill(mixed, Rect2i(54, 5, 6, 6), Color(0, 0, 0, 0))
+	var apart: Array = Dictionary(Plan.read(PackedStringArray([_write("mixed.png", mixed)])))\
+		["pieces"]
+	_ok("they are kept apart", apart.size() == 4)
+	_ok("and none of them is an animation", not bool(apart[0]["animated"]))
+
+	_begin("A grid is one animation per row")
+	var sheet: Image = _blank(48, 32)
+	for row in 2:
+		for column in 3:
+			_shape_maker(row).call(sheet, Vector2i(column * 16, row * 16))
+	var rows: Array = Dictionary(Plan.read(PackedStringArray([_write("grid.png", sheet)])))\
+		["pieces"]
+	_ok("two rows become two animations", rows.size() == 2)
+	_ok("the first has three frames", int(rows[0]["frames"]) == 3)
+	_ok("the second too", int(rows[1]["frames"]) == 3)
+	_ok("and the label says which row it was",
+		str(rows[1]["label"]).contains("row 2"))
+
+	_begin("One sprite on its own stays one picture")
+	var one: Image = _blank(20, 18)
+	_fill(one, Rect2i(4, 4, 12, 10), INK)
+	var single: Array = Dictionary(Plan.read(PackedStringArray([_write("one.png", one)])))\
+		["pieces"]
+	_ok("it is one piece", single.size() == 1)
+	_ok("of one frame", int(single[0]["frames"]) == 1)
+	_ok("and not an animation", not bool(single[0]["animated"]))
+
+	_begin("Numbered files are stitched into one animation")
+	var frames: PackedStringArray = []
+	for index in 3:
+		var frame: Image = _blank(16, 16)
+		_fill(frame, Rect2i(3 + index, 4, 9, 9), INK)
+		frames.append(_write("trot_%03d.png" % index, frame))
+	var run: Array = Dictionary(Plan.read(frames))["pieces"]
+	_ok("three files become one piece", run.size() == 1)
+	_ok("with three frames", int(run[0]["frames"]) == 3)
+	_ok("and it is an animation", bool(run[0]["animated"]))
+
+	_begin("Files that only look numbered are left alone")
+	var odd: PackedStringArray = []
+	for index in 2:
+		var frame: Image = _blank(16 + index * 8, 16)
+		_fill(frame, Rect2i(2, 4, 8, 9), INK)
+		odd.append(_write("odd_%03d.png" % index, frame))
+	var loose: Dictionary = Plan.read(odd)
+	_ok("different sizes are not one animation", Array(loose["pieces"]).size() == 2)
+	_ok("and it is said out loud", not PackedStringArray(loose["notes"]).is_empty())
+
+
+# --- Frames with no gap between them -------------------------------------
+
+func _test_touching() -> void:
+	_begin("A strip whose frames touch is still cut into frames")
+	# Every column holds something - the figures stand on a continuous
+	# floor - so there is no empty lane anywhere to find them by. The only
+	# evidence left is that cutting it in three makes three of the same.
+	var strip: Image = _blank(48, 16)
+	for cell in 3:
+		_fill(strip, Rect2i(cell * 16, 12, 16, 4), INK)
+		_fill(strip, Rect2i(cell * 16 + 1, 2, 6, 10), INK)
+	var pieces: Array = Dictionary(Plan.read(PackedStringArray([
+		_write("touching.png", strip),
+	])))["pieces"]
+	_ok("it is one piece", pieces.size() == 1)
+	_ok("cut into three frames", int(pieces[0]["frames"]) == 3)
+	_ok("and read as an animation", bool(pieces[0]["animated"]))
+
+	_begin("A single wide picture is not cut up")
+	var wide: Image = _blank(60, 16)
+	_fill(wide, Rect2i(2, 2, 56, 12), INK)
+	_fill(wide, Rect2i(40, 4, 8, 8), Color(0, 0, 0, 0))
+	var whole: Array = Dictionary(Plan.read(PackedStringArray([_write("wide.png", wide)])))\
+		["pieces"]
+	_ok("it stays one picture", whole.size() == 1 and int(whole[0]["frames"]) == 1)
+
+
+# --- Cutting -------------------------------------------------------------
+
+func _test_cutting() -> void:
+	_begin("Cutting a row out and writing it as a strip")
+	var sheet: Image = _page(48, 32)
+	for row in 2:
+		for column in 3:
+			_shape_maker(row).call(sheet, Vector2i(column * 16, row * 16))
+	var pieces: Array = Dictionary(Plan.read(PackedStringArray([
+		_write("paper_grid.png", sheet),
+	])))["pieces"]
+	_ok("the paper did not stop the rows being found", pieces.size() == 2)
+
+	var strip: Image = Cutter.render(pieces[0]["cut"])
+	_ok("the strip is drawn", strip != null)
+	_ok("three frames wide", strip.get_width() == strip.get_height() * 3)
+	# The whole point of keying: a shape cut off a white page arrives with
+	# the page gone, not as a shape in a white box.
+	_ok("the paper was keyed out", strip.get_pixel(0, 0).a == 0.0)
+
+	var out: String = _scratch.path_join("written.png")
+	_ok("it writes", Cutter.write(pieces[0]["cut"], out).is_empty())
+	_ok("and the file is there", FileAccess.file_exists(out))
+	_ok("the right way up",
+		ImageLimits.png_size_from_header(out) == Vector2i(strip.get_width(), strip.get_height()))
+
+	_begin("Loose files are stitched into one strip")
+	var frames: PackedStringArray = []
+	for index in 3:
+		var frame: Image = _blank(16, 16)
+		_fill(frame, Rect2i(2 + index, 3, 9, 9), INK)
+		frames.append(_write("hop_%03d.png" % index, frame))
+	var hop: Array = Dictionary(Plan.read(frames))["pieces"]
+	var joined: Image = Cutter.render(hop[0]["cut"])
+	_ok("the stitched strip is drawn", joined != null)
+	_ok("three cells wide", joined.get_width() == 48)
+	_ok("and one cell tall", joined.get_height() == 16)
+
+	_begin("Frames cut from uneven places come out equal anyway")
+	# What makes an animation sit still: frames taken from three differently
+	# sized patches are trimmed, centred and stood on a common baseline, so
+	# the dog does not jump about the screen between frames.
+	var ragged: Image = _blank(40, 20)
+	_fill(ragged, Rect2i(1, 6, 8, 12), INK)
+	_fill(ragged, Rect2i(12, 6, 10, 12), INK)
+	_fill(ragged, Rect2i(27, 6, 9, 12), INK)
+	var path: String = _write("ragged.png", ragged)
+	var evened: Image = Cutter.render({
+		"paths": PackedStringArray([path, path, path]),
+		"rects": [Rect2i(0, 0, 10, 20), Rect2i(10, 0, 14, 20), Rect2i(24, 0, 16, 20)],
+		"key": false, "align": true,
+	})
+	_ok("the strip is drawn", evened != null)
+	_ok("in three equal cells", evened.get_width() % 3 == 0)
+	# The widest patch held ten pixels of ink, so every cell is that wide
+	# plus the breathing room put round it.
+	_ok("each as wide as the widest frame needed",
+		evened.get_width() / 3 == 10 + Cutter.PADDING * 2)
+
+
+# --- Correcting the engine -----------------------------------------------
+
+func _test_recount() -> void:
+	_begin("A count the engine got wrong can be given again")
+	var strip: String = _write("recount.png", _row(4, _shape_maker(0)))
+	var piece: Dictionary = Array(Dictionary(Plan.read(PackedStringArray([strip])))\
+		["pieces"])[0]
+	_ok("it was read as four", int(piece["frames"]) == 4)
+
+	var halved: Dictionary = Plan.recount(piece, 2)
+	_ok("and can be told it is two", int(halved["frames"]) == 2)
+	_ok("each twice as wide", Vector2i(halved["size"]).x == 32)
+	_ok("the original is unchanged", int(piece["frames"]) == 4)
+	var redrawn: Image = Cutter.render(halved["cut"])
+	_ok("the new cut draws", redrawn != null and redrawn.get_width() == 64)
+
+	var one: Dictionary = Plan.recount(piece, 1)
+	_ok("one frame is a still picture", not bool(one["animated"]))
+
+	_begin("A run of numbered files cannot be recounted")
+	var frames: PackedStringArray = []
+	for index in 3:
+		var frame: Image = _blank(16, 16)
+		_fill(frame, Rect2i(3, 4, 9, 9), INK)
+		frames.append(_write("sit_%03d.png" % index, frame))
+	var run: Dictionary = Array(Dictionary(Plan.read(frames))["pieces"])[0]
+	_ok("there are as many frames as files",
+		int(Plan.recount(run, 7)["frames"]) == 3)
+
+
+# --- Reading a name ------------------------------------------------------
+
+func _test_states() -> void:
+	_begin("A file name says what the picture is for")
+	_ok("walk is the walk", Plan.state_for("my_dog_walk.png") == "walk")
+	_ok("running is walking as far as DogPet is concerned",
+		Plan.state_for("run/rr_000.png") == "walk")
+	_ok("sleeping is sleeping", Plan.state_for("Sleep Cycle.png") == "sleep")
+	_ok("restless beats rest", Plan.state_for("restless.png") == "restless")
+	# The rule that stopped a sheet of creatures asking to be fed, because
+	# there is an "eat" in the middle of the word.
+	_ok("a word in the middle of another word is not a word",
+		Plan.state_for("TL_Creatures.png") == "")
+	_ok("and a name that says nothing says nothing",
+		Plan.state_for("sheet5.png") == "")
+
+
+# --- All the way into a pack ---------------------------------------------
+
+func _test_installing() -> void:
+	_begin("A sheet becomes a pet pack the app can load")
+	var sheet: String = _write("dog_sheet.png", _row(4, _shape_maker(0)))
+	var still: Image = _blank(16, 16)
+	_fill(still, Rect2i(4, 4, 8, 8), INK)
+	var walk: Dictionary = Array(Dictionary(Plan.read(PackedStringArray([sheet])))\
+		["pieces"])[0]
+	var idle: Dictionary = Array(Dictionary(Plan.read(PackedStringArray([
+		_write("dog_still.png", still),
+	])))["pieces"])[0]
+
+	var answers: Dictionary = {
+		"id": "cut_dog", "name": "Cut Dog", "pixel_art": true,
+		"display_height_px": 160, "faces": "right", "credit": "Someone, CC-BY",
+		"sheets": [
+			{"cut": idle["cut"], "state": "idle", "frames": 1, "fps": 1.0},
+			{"cut": walk["cut"], "state": "walk", "frames": 4, "fps": 6.0},
+		],
+	}
+	_ok("nothing stands in the way of installing it",
+		Install.check(Builder.Kind.PET_SPRITE, answers).is_empty())
+
+	var target: String = _scratch.path_join("pets/cut_dog")
+	var plan: Dictionary = Install.plan(Builder.Kind.PET_SPRITE, answers, target)
+	_ok("the strips are made, not copied", Dictionary(plan["copies"]).is_empty())
+	_ok("one cut per state", Dictionary(plan["cuts"]).size() == 2)
+	_ok("named for the job it does", Dictionary(plan["cuts"]).has("walk.png"))
+	_ok("installing reports no problems", Install.write(plan).is_empty())
+	_ok("and the strip is on the disk", FileAccess.file_exists(target.path_join("walk.png")))
+
+	var pack: PetPack = PetPack.load_from_dir(target)
+	_ok("the pack loads with no problems", pack.problems.is_empty())
+	_ok("the walk kept its four frames",
+		int(pack.sprite_animations["walk"]["frames"]) == 4)
+	# Measured off the strip this engine drew, not off anything it was told.
+	_ok("and the frame width divides exactly",
+		int(pack.sprite_animations["walk"]["frame_width"]) * 4
+		== ImageLimits.png_size_from_header(target.path_join("walk.png")).x)
+	_ok("the pack is usable", pack.is_usable())
+
+	_begin("A cut whose pictures have gone is caught before installing")
+	DirAccess.remove_absolute(sheet)
+	_ok("the missing file is reported",
+		not Install.check(Builder.Kind.PET_SPRITE, answers).is_empty())
+
+
+# --- Drawing the test pictures -------------------------------------------
+
+# A tally with blobs in it, for the pure grid tests: the shape of what
+# SheetScan would have measured, without measuring anything.
+func _tally(length: int, blobs: Array[Vector2i]) -> PackedInt32Array:
+	var counts: PackedInt32Array = []
+	counts.resize(length)
+	for blob in blobs:
+		for index in range(blob.x, mini(length, blob.x + blob.y)):
+			counts[index] = 10
+	return counts
+
+
+func _blank(width: int, height: int) -> Image:
+	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	return image
+
+
+func _page(width: int, height: int) -> Image:
+	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
+	image.fill(PAPER)
+	return image
+
+
+func _fill(image: Image, area: Rect2i, colour: Color) -> void:
+	for y in range(area.position.y, area.end.y):
+		for x in range(area.position.x, area.end.x):
+			image.set_pixel(x, y, colour)
+
+
+# Two shapes that are plainly not each other, each drawn inside a 16 x 16
+# cell with a lane around it so the cells can be told apart.
+func _shape_maker(which: int) -> Callable:
+	if which == 0:
+		return func(image: Image, at: Vector2i) -> void:
+			_fill(image, Rect2i(at + Vector2i(3, 3), Vector2i(10, 10)), INK)
+	return func(image: Image, at: Vector2i) -> void:
+		_fill(image, Rect2i(at + Vector2i(5, 2), Vector2i(5, 12)), INK)
+
+
+func _row(cells: int, shape: Callable) -> Image:
+	var image: Image = _blank(cells * 16, 16)
+	for cell in cells:
+		shape.call(image, Vector2i(cell * 16, 0))
+	return image
+
+
+func _write(name: String, image: Image) -> String:
+	var path: String = _scratch.path_join(name)
+	image.save_png(path)
+	return path
+
+
+func _clean() -> void:
+	if DirAccess.dir_exists_absolute(_scratch):
+		PackArchive.empty_folder(_scratch)
+		DirAccess.remove_absolute(_scratch)

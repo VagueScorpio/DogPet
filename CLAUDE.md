@@ -231,12 +231,75 @@ If `assets/` is missing, damaged, or a pack fails to load, the app falls back to
 - **Add art (the import wizard)** *(v1.31, at the owner's request)*: the one entry point for installing anything, reached from **Assets → Add Art** and from this screen. It opens a native file dialog that accepts several files at once (`.glb`, `.gltf`, `.png`, `.zip`), works out what it has been handed, asks only what cannot be measured, then writes the manifest itself and copies the files into `assets/pets/<id>/` or `assets/scenes/<id>/`. **No owner should ever have to write a `pet.json` by hand.**
   - A `.zip` is already a pack, so it goes to the zip import below unchanged.
   - A model asks how big the dog is and which way it faces, dragged against a live preview of the model in a `SubViewport` — the one question no measurement can answer. Everything else is measured: the AABB normalising of 5.1 means the model's own scale never matters. A `.gltf` keeps its geometry and textures in files beside it, so those are chosen with it and copied under their own names; renaming them would break the model.
-  - Pictures ask a job per file — the state names of 5.1 for a pet, or backdrop / wall tile / floor tile / a thing in the room for a room. Frame counts are guessed from the sheet's width over its height and shown for correcting; a sheet whose width does not divide by its frames is refused while the number is still on screen. Props are placed in words (left / middle / right, back / mid / front, small / medium / large), never in fractions.
+  - Pictures for a room ask a job per file — backdrop / wall tile / floor tile / a thing in the room.
+  - Pictures for a pet go through **the sheet reader** (5.8) first, and the job is asked per *piece* it found rather than per file. The frame count it arrived at is shown for correcting, and correcting it re-cuts that piece into that many even frames. Props are placed in words (left / middle / right, back / mid / front, small / medium / large), never in fractions.
   - A room may have **no pictures at all**: the `generated` styles of 5.4 are offered as "drawn by DogPet", which makes a couple of props a whole room. Only the `walk` role gets `"scroll": true`.
   - Credit is asked for every time, with the reason given. A pack installed without one is warned about rather than blocked, because `PetPack` already treats a missing credit as a problem and the owner should hear that before it happens, not after. A **My own art — no credit needed** tick writes `credit_not_required` (5.1) and silences both the warning and the problem *(v1.35)*.
   - The pure halves are `PackBuilder.gd` (what the files could be, and the manifest) and `PackInstall.gd` (checking the answers, and what lands where), both free of nodes and tested by `tests/test_builder.gd`. The wizard itself is `ImportWizard.tscn` with `import_form.gd` and `import_preview.gd`, driven end to end by a scenario in `tests/test_integration.gd`.
 - **Import pack (.zip):** reached by handing the wizard a `.zip`. Read it with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<id>/`, where a room's `<id>` is its folder name rather than its role, so importing a second kitchen adds one rather than replacing the first. Ask before overwriting a folder that already exists. A replaced pack is backed up to `assets/_backup/<id>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
 - **Export pack (.zip):** pick a pet pack or scene role, then write a zip with `ZIPPacker` to a location chosen in a save dialog. Include the pack's credit line in a `CREDITS.txt` inside the zip.
+
+### 5.8 The sheet reader *(v1.38, at the owner's request)*
+
+Art arrives in shapes DogPet cannot read. A pet pack wants one horizontal row
+of equal cells per state; what people actually have is a grid sheet with eight
+rows on it, a palette sheet with swatches down the side, three dogs drawn edge
+to edge with no gap, or twenty files named `run_000.png` to `run_019.png`. The
+sheet reader turns any of those into the one shape the app reads, and decides
+on the way **whether a row is one animal moving or several different things** —
+which is the difference between one animation and that many still pictures.
+
+Eight scripts, none of which touches a node, so all of it is tested
+headlessly by `tests/test_sheets.gd`:
+
+- **`SheetPaper`** decides what the background is. A colour covering a fifth
+  of the picture, **or two shades of one colour covering half of it**, which
+  is how a transparency checkerboard is recognised. Counted as neighbourhoods
+  rather than as exact values, because a background with the faintest
+  gradient on it is spread over a dozen buckets.
+- **`SheetScan`** measures: which pixels are drawn on that paper, and how
+  much is drawn down each column and across each row. The only part that
+  looks at pixels one at a time. A picture bigger than two megapixels is
+  measured at a reduced size and the geometry counted in cells, so the answer
+  is the same either way. A picture that is entirely one colour is a flat
+  tile, not a background, and keeps every pixel.
+- **`SheetGrid`** is arithmetic over those two tallies: the empty lanes, the
+  pitch between them, how many cells each way, and which cells hold anything.
+  A sheet whose lanes do not line up is reported as irregular rather than
+  guessed at, because a wrong grid cuts every dog on it in half.
+- **`SheetBands`** turns that into rows of cells — from the grid where there
+  is one, from the bands of ink where there is not. It also cuts a strip
+  whose frames touch, by trying every even division and keeping the one that
+  makes every piece look like the others; only where the join is thinner than
+  the average column, so a plain wide backdrop is left whole.
+- **`SheetLikeness`** answers the question the whole engine turns on. Two
+  cells are compared with their outlines lined up bottom and centre — which
+  is how an animal stands whatever its cell — and the overlap measured
+  against the two together. A row whose neighbours overlap by half or more is
+  one animal in several poses. Cells far smaller than the biggest in their
+  row are dropped as swatches and captions.
+- **`FrameSeries`** groups file names into numbered runs. `sheet (2).png` is
+  Windows saying it already had a `sheet.png`, not frame two of anything.
+- **`SheetPlan`** is the front door: it puts those together and hands back
+  pieces, each one still picture or one strip, with the instructions for
+  cutting it out. **`SheetCutter`** carries those out: paper keyed, frames
+  trimmed and stood on a common baseline when they came from uneven places,
+  laid out side by side in equal cells.
+
+Nothing it decides is final. Every piece is shown to the owner with its frame
+count, which `SheetPlan.recount` will re-cut on demand.
+
+`tools/read_sheet.gd` is the same engine with the questions taken off:
+
+```
+godot --headless --path . --script res://tools/read_sheet.gd -- \
+    --in <file-or-folder> [--out <folder>] [--quiet] [--grid]
+```
+
+It prints what it found, writes the strips it would install with `--out`, and
+shows the measurements behind the answer with `--grid`. `tools/slice_sheet.gd`
+(v1.33) stays for the contact sheets this cannot read: a page of poses with
+titles and rules drawn over it, where a human has to say which rectangle.
 
 ## 6. The needs system (autoload `Needs.gd`)
 

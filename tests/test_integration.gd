@@ -410,7 +410,10 @@ func _import_wizard_installs() -> void:
 	await _settle()
 
 	var idle: String = _write_png(source.path_join("my dog.png"), 32, 32)
-	var walk: String = _write_png(source.path_join("walk.png"), 128, 32)
+	# A real strip, with four separate figures on it, because the wizard no
+	# longer divides a picture by its shape alone - the sheet reader looks
+	# at what is drawn on it and counts the frames it can see.
+	var walk: String = _write_strip(source.path_join("walk.png"), 4, 32)
 
 	var wizard: Node = main._import_wizard
 	wizard.open()
@@ -431,8 +434,10 @@ func _import_wizard_installs() -> void:
 	var form: RefCounted = wizard._form
 	_ok("the name came from the file", str(form.answers()["name"]) == "My Dog")
 	_ok("the folder name was cleaned", str(form.answers()["id"]) == "my_dog")
-	# The first picture is offered as idle; the strip is given a job by hand,
-	# and its four frames were counted from its width.
+	# The sheet reader found one piece in each picture, so there are two
+	# rows of questions. The strip is given its job by hand; its four frames
+	# were counted off the picture, not off its name.
+	_ok("the reader found one piece per picture", form._pictures.size() == 2)
 	form._pictures[1]["job"].select(PetPack.VALID_STATES.find("walk") + 1)
 	form._credit.text = "Someone, CC-BY"
 	var sheets: Array = form.answers()["sheets"]
@@ -444,8 +449,12 @@ func _import_wizard_installs() -> void:
 	_ok("it says it is done", wizard._step == 3)
 	var installed: String = art.path_join("pets/my_dog")
 	_ok("a pet.json was written", FileAccess.file_exists(installed.path_join("pet.json")))
-	_ok("the awkward file name was cleaned on the way in",
-		FileAccess.file_exists(installed.path_join("my_dog.png")))
+	# The strips are cut and drawn by the app rather than copied, and are
+	# named for the job they do, so the folder can be opened afterwards and
+	# understood without reading the manifest.
+	_ok("the strips are named for their job",
+		FileAccess.file_exists(installed.path_join("walk.png"))
+		and FileAccess.file_exists(installed.path_join("idle.png")))
 	_ok("the pack loads with no problems",
 		PetPack.load_from_dir(installed).problems.is_empty())
 	_ok("and the app can see it now", library.pet_ids().has("my_dog"))
@@ -524,6 +533,19 @@ func _room_ids(rooms: Array) -> PackedStringArray:
 func _write_png(path: String, width: int, height: int) -> String:
 	var image: Image = Image.create(width, height, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.8, 0.4, 0.2, 1.0))
+	image.save_png(path)
+	return path
+
+
+# A strip of so many figures side by side, with a lane between them, which
+# is what the sheet reader counts.
+func _write_strip(path: String, frames: int, cell: int) -> String:
+	var image: Image = Image.create(frames * cell, cell, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	for frame in frames:
+		for y in range(4, cell - 4):
+			for x in range(frame * cell + 6, frame * cell + cell - 6):
+				image.set_pixel(x, y, Color(0.8, 0.4, 0.2, 1.0))
 	image.save_png(path)
 	return path
 

@@ -28,7 +28,9 @@ const STEP_BLURBS: Dictionary = {
 }
 
 const KIND_BLURBS: Dictionary = {
-	Builder.Kind.PET_SPRITE: "Pictures of a dog: one still frame, or a strip of frames.",
+	Builder.Kind.PET_SPRITE:
+		"Pictures of a dog: a still frame, a strip, a grid sheet, or a folder"
+		+ " of numbered frames. DogPet cuts them up for you.",
 	Builder.Kind.ROOM: "A background, a pair of tiles, or things to stand in a room.",
 }
 
@@ -129,8 +131,10 @@ func _build_files() -> void:
 		"A 3D model (.glb or .gltf) becomes a dog.\n"
 		+ "Pictures (.png) become a dog drawn in frames, or a room.\n"
 		+ "A pack someone made (.zip) is installed as it is.\n\n"
-		+ "You can pick several files at once - hold Ctrl while clicking - which is"
-		+ " how a dog with a standing picture and a walking strip gets added in one go.", 12
+		+ "You can pick several files at once - hold Ctrl while clicking. A whole"
+		+ " sheet of poses is fine: DogPet finds the rows, works out which of them"
+		+ " are one animal moving, and cuts each one out as a strip of its own."
+		+ " Frames saved one to a file, named 000, 001, 002, are joined back up.", 12
 	))
 
 

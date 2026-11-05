@@ -93,6 +93,19 @@ static func _check_sprites(answers: Dictionary, problems: PackedStringArray) -> 
 			problems.append("two pictures are both set to %s; pick one each" % state)
 			continue
 		states.append(state)
+
+		# A sheet the reader cut out has no one file behind it - it may be a
+		# row of a grid, or twenty numbered files - so what is checked is
+		# that every picture it was cut from is still there.
+		var cut: Dictionary = sheet.get("cut", {})
+		if not cut.is_empty():
+			for source in PackedStringArray(cut.get("paths", PackedStringArray())):
+				if not FileAccess.file_exists(source):
+					problems.append("%s could not be found any more" % source.get_file())
+			if SheetCutter.frames_in(cut) < 1:
+				problems.append("the %s picture has no frames in it" % state)
+			continue
+
 		if not FileAccess.file_exists(path):
 			problems.append("%s could not be found any more" % path.get_file())
 			continue
@@ -141,6 +154,7 @@ static func _check_room(answers: Dictionary, problems: PackedStringArray) -> voi
 ## never refers to anything outside its own folder.
 static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 	var copies: Dictionary = {}
+	var cuts: Dictionary = {}
 	var local: Dictionary = answers.duplicate(true)
 
 	match kind:
@@ -156,9 +170,20 @@ static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 			var sheets: Array = []
 			for entry in answers.get("sheets", []):
 				var sheet: Dictionary = (entry as Dictionary).duplicate()
-				if str(sheet.get("state", "")).is_empty():
+				var state: String = str(sheet.get("state", ""))
+				if state.is_empty():
 					continue
-				sheet["file"] = _take(copies, str(sheet.get("path", "")), false)
+				var cut: Dictionary = sheet.get("cut", {})
+				if cut.is_empty():
+					sheet["file"] = _take(copies, str(sheet.get("path", "")), false)
+				else:
+					# Named for the job rather than for where it came from:
+					# a pack whose files are idle.png and walk.png can be
+					# opened afterwards and understood without the manifest.
+					sheet["file"] = "%s.png" % state
+					sheet["frames"] = SheetCutter.frames_in(cut)
+					cuts[sheet["file"]] = cut
+					sheet.erase("cut")
 				sheet.erase("path")
 				sheets.append(sheet)
 			local["sheets"] = sheets
@@ -179,6 +204,7 @@ static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 		"manifest_name": Builder.manifest_name(kind),
 		"manifest": Builder.manifest_for(kind, local),
 		"copies": copies,
+		"cuts": cuts,
 	}
 
 
@@ -198,6 +224,15 @@ static func write(plan_data: Dictionary) -> PackedStringArray:
 			continue
 		if DirAccess.copy_absolute(from, target.path_join(name)) != OK:
 			problems.append("could not copy %s into the pack" % name)
+
+	# The cut strips are made here rather than copied: the file going into
+	# the pack is one this app draws, out of whichever pictures the owner
+	# pointed at and whichever parts of them the sheet reader picked out.
+	var cuts: Dictionary = plan_data.get("cuts", {})
+	for name in cuts:
+		var trouble: String = SheetCutter.write(cuts[name], target.path_join(str(name)))
+		if not trouble.is_empty():
+			problems.append(trouble)
 
 	var manifest: String = Builder.manifest_text(plan_data["manifest"])
 	var file: FileAccess = FileAccess.open(

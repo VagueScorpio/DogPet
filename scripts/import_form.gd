@@ -45,6 +45,13 @@ const PROP_ROLE_LABELS: PackedStringArray = [
 	"Just scenery", "The food bowl", "The toy to chase", "The vet table",
 ]
 
+## The most pieces one trip through the wizard asks about. A tile sheet can
+## hold a hundred, and a form a hundred rows long is not a form.
+const MAX_PIECES := 24
+
+## Art drawn no taller than this is pixel art, and should keep its edges.
+const PIXEL_ART_HEIGHT := 96
+
 ## A room can be painted in code instead of made of pictures, which is how
 ## the shipped play and walk scenes are drawn. That makes a couple of props,
 ## or nothing at all, enough for a whole room.
@@ -86,6 +93,9 @@ var _tile_scale: SpinBox = null
 ## One entry per chosen picture: its path and the controls asking about it.
 var _pictures: Array[Dictionary] = []
 
+## What the sheet reader found in the chosen pictures, for a sprite pack.
+var _found: Array[Dictionary] = []
+
 var _model: String = ""
 var _extras: PackedStringArray = []
 
@@ -95,6 +105,7 @@ var _extras: PackedStringArray = []
 func build(into: VBoxContainer, which_kind: int, sources: Dictionary) -> void:
 	kind = which_kind
 	_pictures.clear()
+	_found.clear()
 	_model = ""
 	_extras = PackedStringArray()
 
@@ -204,35 +215,77 @@ func _build_model_questions(into: VBoxContainer) -> void:
 
 func _build_sprite_questions(into: VBoxContainer, images: PackedStringArray) -> void:
 	into.add_child(UiBits.heading("The pictures", 15))
+
+	# The sheet reader has already been over these: it has found the rows of
+	# a grid sheet, the runs of numbered files, and which of them hold one
+	# animal moving rather than several different ones. What is left to ask
+	# is what each piece is for.
+	var found: Dictionary = SheetPlan.read(images)
+	_found = found["pieces"]
 	into.add_child(UiBits.dim(
-		"Give each picture a job. A strip of several frames side by side is read"
-		+ " left to right; DogPet counts them for you and you can correct it.", 11
+		"DogPet has looked at %d file%s and found %d thing%s in %s. Give the ones you"
+		% [
+			images.size(), "" if images.size() == 1 else "s",
+			_found.size(), "" if _found.size() == 1 else "s",
+			"it" if images.size() == 1 else "them",
+		]
+		+ " want a job. Anything cut in the wrong place can be given a different"
+		+ " number of frames here.", 11
 	))
+	for note in PackedStringArray(found["notes"]):
+		into.add_child(UiBits.dim(note, 11, 0.0, true, Color(1.0, 0.85, 0.4)))
 
 	var states: PackedStringArray = ["Not used"]
 	for state in PetPack.VALID_STATES:
 		states.append(state.capitalize())
 
-	for index in images.size():
-		var path: String = images[index]
-		var size: Vector2i = ImageLimits.png_size_from_header(path)
-		var frames: int = Builder.guess_frames(size)
+	var taken: PackedStringArray = []
+	var tallest: int = 0
+	for index in mini(_found.size(), MAX_PIECES):
+		var piece: Dictionary = _found[index]
+		tallest = maxi(tallest, Vector2i(piece["size"]).y)
+		var frames: int = int(piece["frames"])
 
-		into.add_child(UiBits.dim("%s   (%d x %d)" % [path.get_file(), size.x, size.y], 12))
+		into.add_child(UiBits.dim(str(piece["label"]), 12))
 		var row: HBoxContainer = UiBits.row(into)
-		# The first picture is the one the dog stands around in, so it is
-		# offered as idle; the rest start unused until they are given a job.
-		var job: OptionButton = _picker(row, states, 1 if index == 0 else 0)
+		var job: OptionButton = _picker(row, states, _suggest(piece, index, states, taken))
 		row.add_child(UiBits.dim("frames", 11, 0.0, false))
+		# A run of numbered files has exactly as many frames as it has files,
+		# so there is nothing there to correct.
 		var count: SpinBox = _spin(row, frames, 1, 64, 1)
+		count.editable = PackedStringArray(piece["cut"]["paths"]).size() <= 1 or frames == 1
 		row.add_child(UiBits.dim("per second", 11, 0.0, false))
 		var fps: SpinBox = _spin(row, Builder.DEFAULT_FPS if frames > 1 else 1.0, 1, 30, 1)
-		_pictures.append({"path": path, "job": job, "frames": count, "fps": fps})
+		_pictures.append({"piece": index, "job": job, "frames": count, "fps": fps})
 
-	_pixel_art = _check(into, "Pixel art - keep the hard edges", true)
+	if _found.size() > MAX_PIECES:
+		into.add_child(UiBits.dim(
+			"There are %d more pieces in there. Install these, then add the rest."
+			% (_found.size() - MAX_PIECES), 11, 0.0, true, Color(1.0, 0.85, 0.4)
+		))
+
+	# Small art is pixel art, near enough: nobody paints a dog 48 pixels tall
+	# and wants it smoothed. It is a tick box, so a wrong guess costs a click.
+	_pixel_art = _check(into, "Pixel art - keep the hard edges", tallest <= PIXEL_ART_HEIGHT)
 	_display_px = _spin_row(into, "On screen", PetPack.DEFAULT_DISPLAY_HEIGHT_PX, 32, 480, 8,
 		"How tall the dog is drawn, in pixels.")
 	_faces = _choice(into, "The art faces", ["Right", "Left"], 0)
+
+
+# Which job to offer a piece. The engine's reading of its name comes first -
+# a file called walk.png is the walk - and the first piece left over is
+# offered as idle, which is the one a pet pack cannot do without.
+func _suggest(
+	piece: Dictionary, index: int, states: PackedStringArray, taken: PackedStringArray
+) -> int:
+	var wanted: String = str(piece["state"])
+	if not wanted.is_empty() and not taken.has(wanted):
+		taken.append(wanted)
+		return maxi(0, states.find(wanted.capitalize()))
+	if index == 0 and not taken.has("idle"):
+		taken.append("idle")
+		return maxi(0, states.find("Idle"))
+	return 0
 
 
 func _build_room_questions(into: VBoxContainer, images: PackedStringArray) -> void:
@@ -306,10 +359,16 @@ func _sheets() -> Array:
 		var job: OptionButton = picture["job"]
 		if job.selected <= 0:
 			continue
+		# The piece carries its own instructions for being cut out, so what
+		# goes into the pack is a strip made to measure rather than whatever
+		# file it happened to come from.
+		var piece: Dictionary = SheetPlan.recount(
+			_found[int(picture["piece"])], int((picture["frames"] as SpinBox).value)
+		)
 		sheets.append({
-			"path": str(picture["path"]),
+			"cut": piece["cut"],
 			"state": PetPack.VALID_STATES[job.selected - 1],
-			"frames": int((picture["frames"] as SpinBox).value),
+			"frames": int(piece["frames"]),
 			"fps": float((picture["fps"] as SpinBox).value),
 		})
 	return sheets
