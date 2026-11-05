@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.40 - The old frame guesser goes, and the guide catches up
   v1.39 - A strip no graphics card will refuse, and a beagle
   v1.38 - The sheet reader: Add Art cuts up whatever you give it
   v1.37 - A fifth dog, drawn in the house
@@ -45,6 +46,64 @@ TABLE OF CONTENTS
 
 
 ------------------------------------------------------------
+v1.40 - The old frame guesser goes, and the guide catches up
+------------------------------------------------------------
+
+What
+  - PackBuilder.guess_frames is deleted. It was the pre-v1.38 way of
+    counting frames - width divided by height, when it divided exactly -
+    and nothing has called it since the sheet reader landed. Its four
+    checks go with it; test_builder is 61, 988 in all.
+  - docs/IMPORT-GUIDE.md is rewritten where it described the old
+    behaviour. It had not been touched since v1.35 and still told the
+    owner that a grid sheet is "NOT supported" and has to be cut up by
+    hand before Add Art will take it, which has not been true since v1.38.
+  - The guide now has a table of what the reader does with each shape of
+    sheet, the one-animal-or-several judgement in plain English, the
+    recount affordance, and the read_sheet.gd command for looking at a
+    sheet without clicking through the wizard.
+  - tools/slice_sheet.gd stays, and the guide now says why rather than
+    just pointing at it.
+  - CLAUDE.md section 6.6 gains the --import note for a fresh clone.
+
+Why
+  - Two ways of counting frames is one too many. guess_frames was dead
+    production code kept alive only by its own tests, which is the worst
+    shape for a superseded path to be in: green, reachable by name, and
+    wrong. It is the function that read pet_poses_sprite_sheet.png as two
+    frames because 2752 is about twice 1536 and divides exactly.
+  - The guide was the live half of the same problem. Docs that tell the
+    owner to work around a feature are worse than no docs: the whole
+    point of v1.38 was that nobody should have to cut a sheet by hand,
+    and the guide was still giving the pre-v1.38 instructions for doing
+    exactly that.
+  - slice_sheet survives because the claim in CLAUDE.md section 5.8 was
+    checked rather than taken on trust. Pointed at the contact sheet it
+    was written for, the reader returns six slabs of roughly 880 x 650,
+    each holding twelve dogs, four age labels and a column of 01/02/03,
+    on cream paper it will not key out because the rules break the
+    background into pieces. The grid comes back IRREGULAR with 0 cells
+    used. None of it is installable, so the tool is not superseded: it
+    asks the one question no measurement answers, which rectangle.
+
+How
+  - The deletion also brings pack_builder.gd to 293 lines, back under the
+    ~300 the blueprint asks for. PackBuilder.sheet_problem, right beside
+    it, is still live from PackInstall and stays.
+  - The --import note is there because nine of the ten suites fail to
+    parse on a fresh clone, rather than failing a check. A --script run
+    reads global class names out of .godot/global_script_class_cache.cfg,
+    .godot/ is git-ignored, and --quit does not build the cache because
+    it runs the game rather than importing. --import does, and build.ps1
+    already calls it before the suites, so a release was never at risk -
+    only somebody following the command in section 6.6 by hand.
+  - No engine code changed. Every sheet_* script was already inside the
+    line limit (sheet_plan.gd is 269, not the 549 it passed through), the
+    new code is statically typed throughout, and all ten suites pass.
+
+
+------------------------------------------------------------
+
 v1.39 - A strip no graphics card will refuse, and a beagle
 ------------------------------------------------------------
 

@@ -90,7 +90,7 @@ One row per picture, showing its pixel size:
 | Field | Options | What it does |
 |---|---|---|
 | **job** | Not used · Idle · Happy · Sad · Eat · Play · Walk · Restless · Sleep | Which state this picture is for. The first picture is offered as **Idle**; the rest start at **Not used**. Any state you leave out falls back to Idle plus the procedural motion, so one picture is a complete dog. **Idle is required.** |
-| **frames** | 1–64 | How many frames are in the strip. Already counted for you from the sheet's proportions; correct it if the guess is wrong. |
+| **frames** | 1–64 | How many frames are in the strip. Already counted for you by the sheet reader, which cut the piece out in the first place; correct it and the piece is re-cut into that many even frames. |
 | **per second** | 1–30 | How fast the frames play. Defaults to 6 for a strip, 1 for a single frame. |
 
 | Question | Options | What it does |
@@ -99,38 +99,66 @@ One row per picture, showing its pixel size:
 | **On screen** | 32–480 px | How tall the dog is drawn, in pixels. With **Pixel art** on, the largest whole-number scale that fits under this is used. Written as `"display_height_px"`. |
 | **The art faces** | Right / Left | Which way the drawing already faces, so DogPet knows when to flip it. Written as `"faces"`. |
 
-#### How a sprite sheet has to be laid out
+#### What the wizard does with a sheet
 
-**One horizontal row. Equal-width cells. The full height of the image is one
-frame.** The width must divide exactly by the number of frames, or the wizard
-refuses it and says so.
+**You do not have to lay a sheet out by hand.** Hand Add Art whatever you
+have — a grid of poses, sprites dropped on a page at no particular spacing, a
+strip whose frames touch, or a folder of numbered files — and the sheet reader
+works out what is on it before it asks you anything.
 
+What it hands back is a list of **pieces**, each one either a single picture or
+one animation, with the frame count it arrived at:
+
+| What you give it | What it finds |
+|---|---|
+| A grid — several rows of poses | One piece per row, each row judged on its own |
+| Sprites scattered on a page | The bands of ink become rows; the gaps become cells |
+| A strip whose frames touch, no gaps | Every even division is tried; the one that makes each piece look like the others wins |
+| `run_000.png` … `run_019.png` | One animation of twenty frames, named after the prefix |
+| One dog on a transparent background | One picture, left whole |
+
+The judgement that matters is **one animal moving, or several different
+things** — a walk cycle and a row of six unrelated monsters look identical to
+anything that only counts cells. Neighbouring cells are lined up by their
+outlines and compared; a row whose neighbours overlap by half or more becomes
+one animation, and anything else becomes that many still pictures.
+
+Along the way it keys the background out (white paper, a flat colour, or the
+grey transparency checkerboard), drops the palette swatches and `01/02/03`
+captions that are far smaller than the real frames, and stands frames cut from
+uneven places on a common baseline so the animation does not jitter. A strip
+that would come out wider than a graphics card will take is shrunk until it
+fits rather than refused.
+
+> **Nothing it decides is final.** Every piece is listed with its frame count,
+> and correcting that number re-cuts the piece into that many even frames. If a
+> row of three came through as one picture, type 3. The one exception is a run
+> of numbered files: there are as many frames as there are files.
+
+To see what it makes of a sheet without clicking through the wizard, run it
+from the command line — `--grid` adds the measurements behind the answer, and
+`--out` writes the strips so you can look at them:
+
+```powershell
+godot --headless --path . --script res://tools/read_sheet.gd -- --in "sheet.png" --out "out" --grid
 ```
- one row, 4 frames of 43x32:        a grid - NOT supported:
- +----+----+----+----+              +----+----+----+
- | 1  | 2  | 3  | 4  |              | 1  | 2  | 3  |
- +----+----+----+----+              +----+----+----+
-                                    | 4  | 5  | 6  |
-                                    +----+----+----+
-```
 
-A grid sheet — several rows of poses, which is how most "pose sheet" downloads
-come — has to be **cut up first**, one row saved per animation, before the
-wizard can use it. Otherwise each "frame" is a slab of the grid with several
-poses in it.
+#### The one sheet it cannot read: a contact sheet
 
-> This is worth watching for. The `pet_poses_sprite_sheet.png` that came in
-> during testing is 2752 × 1536, so the wizard guessed 2 frames (the width is
-> about twice the height, and divides exactly) — but it is a grid, so each of
-> those two "frames" is a 1376 × 1536 block holding several poses at once. Cut
-> one pose row out as its own PNG and import that instead.
+A **contact sheet** — a page of poses with titles, grid rules and numbers
+*drawn over it* — defeats the reader, and is worth recognising because it is
+how a lot of "pose sheet" downloads come.
 
-#### Cutting a row out of a grid sheet
+> The `pet_poses_sprite_sheet.png` used to build `begging_dog` is the example.
+> The reader finds its rules rather than its dogs: it comes back with six big
+> slabs, each holding twelve dogs, four labels and a column of `01/02/03`, on
+> cream paper it will not key out because the rules break it up. None of that
+> is installable.
 
-`tools/slice_sheet.gd` does it for you. Give it the rectangle holding one row
-and it finds the poses inside, drops the rules and the 01/02/03 labels, makes
-the background transparent, and writes the row out as equal cells side by
-side:
+For those, `tools/slice_sheet.gd` still does the job, because it asks you the
+one thing no measurement can supply: **which rectangle**. Give it the rectangle
+holding one row and it finds the poses inside, erases the rules, drops the
+labels, makes the background transparent, and writes the row out as equal cells:
 
 ```powershell
 godot --headless --path . --script res://tools/slice_sheet.gd -- --in "sheet.png" --out "idle.png" --rect 2110,1026,640,152 --frames 3
@@ -207,7 +235,7 @@ Nothing is ever moved or changed in the folder you picked the files from.
 | "none of the pictures has been given a job yet" | Every row is still **Not used**. |
 | "one of the pictures has to be the idle one" | Idle is the state the dog spends most of its life in. |
 | "two pictures are both set to walk; pick one each" | One picture per state. |
-| "… is 2752 wide, which does not divide into 3 frames" | Wrong frame count, or a grid sheet that needs cutting. |
+| "… is 2752 wide, which does not divide into 3 frames" | The frame count does not go into the width. Correct it in **frames**, which re-cuts the piece evenly. Hand-written `pet.json` files hit this too. |
 | "… is 20000 x 20000, which is more than this app will load" | Over 33.5 million pixels. Shrink it. |
 | "the room needs to say which slot it fills" | Pick **Used for**. |
 | "the image picture has not been chosen" / "the wall picture…" | A picture background needs a backdrop; a tiled one needs **both** tiles. Or switch **Background** to one DogPet draws. |

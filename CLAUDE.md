@@ -393,6 +393,15 @@ Write `tests/test_needs.gd`, an `extends SceneTree` script that runs with:
 godot --headless --path . --script res://tests/test_needs.gd
 ```
 
+**On a fresh clone, run `godot --headless --path . --import` once first.** A
+`--script` run reads global class names (`PetPack`, `ImageLimits`, `SheetScan`
+and the rest) out of `.godot/global_script_class_cache.cfg`, which is not in
+git because `.godot/` is ignored. Without it nine of the ten suites fail to
+parse rather than fail a check, and so does `tools/read_sheet.gd`. `--quit`
+does not build the cache — it runs the game; only `--import` (or opening the
+editor) does. `tools/build.ps1` already imports before it runs the suites, so
+a release is never gated on a stale cache.
+
 It should print PASS/FAIL per check and exit with code 0 on success or 1 on failure. Cover:
 
 - drain rates for each setting

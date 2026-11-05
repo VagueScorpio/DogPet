@@ -79,13 +79,6 @@ func _test_names() -> void:
 
 
 func _test_frames() -> void:
-	_begin("Frame counts are guessed from the sheet")
-	_ok("a four-frame strip of squares is spotted", Builder.guess_frames(Vector2i(128, 32)) == 4)
-	_ok("a single square frame is one", Builder.guess_frames(Vector2i(32, 32)) == 1)
-	# 45 x 43 is the shipped idle sheet: almost square, so one frame.
-	_ok("an odd size falls back to one frame", Builder.guess_frames(Vector2i(45, 43)) == 1)
-	_ok("an unreadable size is one frame", Builder.guess_frames(Vector2i(0, 0)) == 1)
-
 	_begin("A sheet that does not divide evenly is refused")
 	_ok("a clean division is fine",
 		Builder.sheet_problem("walk.png", Vector2i(128, 32), 4).is_empty())

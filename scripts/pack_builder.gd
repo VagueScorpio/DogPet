@@ -121,20 +121,6 @@ static func safe_file_name(path: String) -> String:
 	return name if PackArchive.is_safe_entry(name) else "pack_" + name
 
 
-## How many frames a sprite sheet probably holds.
-##
-## Frames are square-ish far more often than not, so the width divided by the
-## height is the guess - but only when it divides exactly. Anything else is
-## one frame, which is always a safe answer and never a wrong-looking one.
-static func guess_frames(size: Vector2i) -> int:
-	if size.x <= 0 or size.y <= 0:
-		return 1
-	var guess: int = int(roundf(float(size.x) / float(size.y)))
-	if guess < 2 or size.x % guess != 0:
-		return 1
-	return guess
-
-
 ## What is wrong with this sheet, in plain English, or "" if nothing is.
 static func sheet_problem(path: String, size: Vector2i, frames: int) -> String:
 	if size.x <= 0 or size.y <= 0:
