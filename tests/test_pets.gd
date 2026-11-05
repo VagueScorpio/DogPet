@@ -38,17 +38,30 @@ func _initialize() -> void:
 # --- The packs that actually ship ----------------------------------------
 
 func _test_real_packs() -> void:
-	_begin("The three packs in assets/pets all load")
+	_begin("The packs in assets/pets all load")
 	var root: String = ProjectSettings.globalize_path("res://").trim_suffix("/").path_join(ASSETS_PETS)
 
-	for id in ["pug_3d", "pawsome_3d", "pug_pixel"]:
+	for id in ["pug_3d", "pawsome_3d", "pug_pixel", "begging_dog"]:
 		var pack: PetPack = Pack.load_from_dir(root.path_join(id))
 		_ok("%s is usable" % id, pack.is_usable())
 		if not pack.is_usable():
 			for problem in pack.problems:
 				print("          %s" % problem)
-		_ok("%s has a credit line" % id, not pack.credit.is_empty())
+		# Either it says who made it, or it says that nobody needs crediting.
+		# Art from elsewhere has no business taking the second way out, but
+		# the pack drawn for DogPet does.
+		_ok("%s settles the question of credit" % id,
+			not pack.credit.is_empty() or pack.credit_not_required)
 		_ok("%s kept its id" % id, pack.id == id)
+
+	_begin("The pack drawn for DogPet has its four states")
+	var mine: PetPack = Pack.load_from_dir(root.path_join("begging_dog"))
+	_ok("it loads with nothing wrong at all", mine.problems.is_empty())
+	for state in ["idle", "eat", "sad", "sleep"]:
+		_ok("it has art for %s" % state, mine.has_art_for(state))
+	_ok("and none for walk, which falls back to idle", not mine.has_art_for("walk"))
+	_ok("it is not asked for a credit", mine.credit_not_required)
+	_ok("and carries none", mine.credit.is_empty())
 
 	_begin("The default pug is a 3D model facing the camera")
 	var pug: PetPack = Pack.load_from_dir(root.path_join("pug_3d"))

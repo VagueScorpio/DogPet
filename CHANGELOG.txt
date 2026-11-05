@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.37 - A fifth dog, drawn in the house
   v1.36 - art-source/, for the sheets the app cannot read
   v1.35 - A pack of your own art is not asked for a credit
   v1.34 - The sheet cutter stops cutting the dogs in half
@@ -39,6 +40,46 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.37 - A fifth dog, drawn in the house
+------------------------------------------------------------
+
+What
+  - assets/pets/begging_dog/ joins the shipped art: a 2D pet with four
+    states - idle, eat and sad at three frames each, sleep at one - cut
+    from the owner's own pose sheet with tools/slice_sheet.gd. 273 KB.
+  - It sets credit_not_required, so it is credited nowhere: not in its
+    pet.json, not in assets/CREDITS.txt, not in the README. That is
+    deliberate and must stay that way.
+  - CLAUDE.md section 13 lists it with the others, and tests/test_pets.gd
+    now walks all four shipped packs rather than the three it was written
+    with. Its credit check asks that a pack settle the question - a credit
+    line, or credit_not_required - instead of demanding a line outright.
+    875 checks pass.
+
+Why
+  - It is the first pet that is neither a downloaded model nor a bought
+    pixel pack, and it is the proof that the whole chain works end to end:
+    a grid sheet nobody could use, cut into strips, installed through the
+    wizard's own installer, loaded by the app with no problems at all.
+  - Four states is more than any other 2D pet here has. The pug_pixel pack
+    has idle and walk; this one covers what the dog does while it is being
+    fed, while it is miserable and while it is asleep, which were falling
+    back to idle before.
+
+How
+  - Three rows out of the sheet, one cell out of a fourth. The sleeping row
+    is three different dogs across its three columns - the sheet varies the
+    coat by column - so that state takes the single frame whose dog matches
+    the other three states rather than animating a dog that changes colour.
+  - Installed through PackInstall rather than written by hand, so the
+    pet.json is exactly what Add Art would have produced, and read back
+    with PetPack.load_from_dir: four states, zero problems.
+  - No walk strip. Nothing on the sheet is a gait cycle, and inventing one
+    out of standing poses would look worse than the procedural trot the app
+    already falls back to.
 
 
 ------------------------------------------------------------

@@ -455,6 +455,7 @@ Stop at the end of each phase. Tell the owner exactly how to test it, and wait f
 - `CREDITS.txt`: credits for all included art.
 - `pets/pug_3d/`: **default pet.** Pug by Smirnoff Alexander, CC-BY 3.0, via Poly Pizza. A static .glb (2,706 vertices, one texture) with no rig and no animations. It faces about 29° off +Z, so `rotation_y_degrees` is −29. Tune if needed.
 - `pets/pawsome_3d/`: a static .glb with 8 flat-color materials and no texture, about a third the size of the pug before normalizing.
+- `pets/begging_dog/` *(v1.37)*: the owner's own art, cut from a pose sheet in `art-source/` with `tools/slice_sheet.gd`. Four states — `idle`, `eat`, `sad` (3 frames each) and `sleep` (1) — not pixel art, so `pixel_art` is false. It sets `credit_not_required` (5.1) and must never be given a credit line.
 - `pets/pug_pixel/`: from Nasha's Cozy Pets Pack. `walk.png` is a 4-frame strip (43×32 per frame, 6 fps). `idle.png` is a single 45×43 frame.
 - `scenes/home`, `scenes/eat`: tiled rooms (32×32 wall and floor tiles) plus props, all from the Cozy pack.
 - `scenes/play`: a generated yard plus toy props. `scenes/walk`: a generated scrolling park.

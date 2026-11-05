@@ -1,0 +1,32 @@
+{
+  "animations": {
+    "eat": {
+      "file": "eat.png",
+      "fps": 3.0,
+      "frames": 3
+    },
+    "idle": {
+      "file": "idle.png",
+      "fps": 3.0,
+      "frames": 3
+    },
+    "sad": {
+      "file": "sad.png",
+      "fps": 2.0,
+      "frames": 3
+    },
+    "sleep": {
+      "file": "sleep.png",
+      "fps": 1.0,
+      "frames": 1
+    }
+  },
+  "credit_not_required": true,
+  "display_height_px": 160,
+  "faces": "right",
+  "format_version": 1,
+  "id": "begging_dog",
+  "kind": "sprite2d",
+  "name": "Begging Dog",
+  "pixel_art": false
+}
