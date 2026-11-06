@@ -151,8 +151,10 @@ stage, youngest first, for a pack that draws the dog differently as it ages:
 }
 ```
 
-Each entry is an ordinary animation spec and is checked as one, so a stage may
-be a single picture **or** an animation of its own. States mix freely: a pack
+Each entry is an ordinary animation spec and is checked as one by
+`PetSpriteArt` *(v1.42)*, which reads the whole `animations` block and is the
+only thing that knows what one looks like, so a stage may be a single picture
+**or** an animation of its own. States mix freely: a pack
 may age its `idle` and not its `walk`, which is how most sheets come. At most
 `LifeStages.MAX_STAGES` (8) entries.
 
@@ -542,7 +544,11 @@ Save to `saves/settings.json` immediately on change.
 - **Autoloads:** `Paths`, `Log`, `Settings`, `Needs`, `AssetLibrary`, `Notifier`, `Tray`.
 - **Scenes:** `Main.tscn` (layout + scene switching), `PetView.tscn` (2D or 3D pet + `PetAnimator`), `NeedsBar.tscn`, `SettingsPanel.tscn`, `ImportWizard.tscn`, `AwayCard.tscn`, `Banner.tscn`.
 - Communicate with signals (`Needs.need_changed`, `Needs.threshold_crossed`, `AssetLibrary.pet_changed`, and so on). Don't reach across nodes with long `get_node` paths.
-- Keep each script focused and under about 300 lines. Comment the non-obvious parts in plain English; the owner is learning Godot from this code.
+- Keep each script focused. Comment the non-obvious parts in plain English; the owner is learning Godot from this code.
+- **On length** *(relaxed in v1.42, at the owner's request)*: this started as a hard "under about 300 lines", written when the app was three needs and a picture of a dog. It has outgrown that, and chasing the number was starting to cost more than it returned. **Length is now a smell, not a rule.** Aim small, stay as close to 300 as the work allows, and do not contort anything to get under it — several scripts are past it and that is accepted.
+  - What still matters is the thing the number was standing in for: **a script should do one job.** Split when it is doing two — when the name needs an "and" in it, when one half could be tested without the other, or when a change to one half keeps making you read the other. `PetSpriteArt` came out of `PetPack` on exactly that test, not because of a line count.
+  - A split is a **separate commit from a behaviour change**, so that a red test means one thing rather than two. Move the code, change nothing, watch the suites report the same numbers they did before.
+  - The pure-logic rule of 6.6 is untouched and is not negotiable: anything with real decisions in it stays free of nodes and autoloads so a `--script` run can test it.
 
 ## 10. Build and package (`tools/build.ps1`)
 

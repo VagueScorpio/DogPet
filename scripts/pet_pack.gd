@@ -238,16 +238,13 @@ func _read_sprite2d(data: Dictionary) -> void:
 		problems.append("no animations listed")
 		return
 
-	for raw_state in (clips as Dictionary).keys():
-		var state: String = str(raw_state)
-		if not VALID_STATES.has(state):
-			problems.append("\"%s\" is not a state DogPet knows" % state)
-			continue
-		var spec: Variant = (clips as Dictionary)[raw_state]
-		if not spec is Dictionary:
-			problems.append("the %s animation is not described properly" % state)
-			continue
-		_read_sprite_state(state, spec as Dictionary)
+	# The reading itself lives in PetSpriteArt, which is a good deal of
+	# checking for one block of JSON and has nothing to do with the rest of
+	# what a pack is.
+	var art: Dictionary = PetSpriteArt.read(dir, clips as Dictionary, VALID_STATES)
+	sprite_animations = art["animations"]
+	sprite_stages = art["stages"]
+	problems.append_array(PackedStringArray(art["problems"]))
 
 	if not sprite_animations.has("idle"):
 		problems.append("a sprite pack needs at least an idle animation")
@@ -255,53 +252,6 @@ func _read_sprite2d(data: Dictionary) -> void:
 	if display_height_px <= 0.0:
 		problems.append("display_height_px must be greater than 0")
 		display_height_px = DEFAULT_DISPLAY_HEIGHT_PX
-
-
-## One state's art: either a single drawing, or one per life stage.
-##
-## A state carrying a "stages" list is drawn differently as the dog ages.
-## Each entry is an ordinary animation spec, youngest first, so a stage may
-## itself be a single picture or a whole animation - which is exactly the
-## distinction the sheet reader makes when it cuts the art up.
-func _read_sprite_state(state: String, spec: Dictionary) -> void:
-	var staged: Variant = spec.get("stages", null)
-	if not staged is Array:
-		_read_one_sprite_animation(state, spec)
-		return
-
-	var list: Array = staged as Array
-	if list.is_empty():
-		problems.append("the %s animation lists no life stages" % state)
-		return
-	if list.size() > LifeStages.MAX_STAGES:
-		problems.append(
-			"the %s animation lists %d life stages, which is more than the %d this app"
-			% [state, list.size(), LifeStages.MAX_STAGES]
-			+ " can tell apart"
-		)
-		return
-
-	var read: Array[Dictionary] = []
-	for index in list.size():
-		if not list[index] is Dictionary:
-			problems.append(
-				"life stage %d of the %s animation is not described properly"
-				% [index + 1, state]
-			)
-			return
-		# Each stage is checked exactly as a lone animation would be, so a
-		# missing file or a sheet that does not divide is caught per stage
-		# and named by stage rather than blamed on the state as a whole.
-		var before: int = problems.size()
-		_read_one_sprite_animation(state, list[index] as Dictionary)
-		if problems.size() > before or not sprite_animations.has(state):
-			return
-		read.append(sprite_animations[state])
-
-	sprite_stages[state] = read
-	# What the rest of the app sees by default is the grown dog, so a pack
-	# that ages looks exactly like any other until something asks its age.
-	sprite_animations[state] = read[LifeStages.index_for_stage("Adult", read.size())]
 
 
 ## How many life stages this pack's art is drawn at, counted from the state
@@ -323,54 +273,6 @@ func sprite_for(state: String, age_days: float) -> Dictionary:
 		var list: Array = sprite_stages[state]
 		return list[LifeStages.index_for(age_days, list.size())]
 	return sprite_animations.get(state, {})
-
-
-func _read_one_sprite_animation(state: String, spec: Dictionary) -> void:
-	var file: String = str(spec.get("file", "")).strip_edges()
-	var frames: int = int(spec.get("frames", 1))
-	var fps: float = float(spec.get("fps", 1.0))
-
-	if file.is_empty():
-		problems.append("the %s animation names no file" % state)
-		return
-	if frames < 1:
-		problems.append("the %s animation needs at least one frame" % state)
-		return
-	if fps <= 0.0:
-		fps = 1.0
-
-	var path: String = dir.path_join(file)
-	if not FileAccess.file_exists(path):
-		problems.append("the %s image %s is missing" % [state, path])
-		return
-
-	# Measure the sheet now, so the frame size is known before anything is
-	# drawn and a sheet that does not divide evenly is caught here.
-	#
-	# Through ImageLimits rather than a reader of its own: the copy that used to
-	# live in this file checked neither the PNG signature nor the size, so a
-	# sheet far too big to show was listed as usable and only refused later, by
-	# PetLoader, after the pack had been offered to the owner.
-	var size: Vector2i = ImageLimits.png_size_from_header(path)
-	if size.x <= 0 or size.y <= 0:
-		problems.append("could not read the size of %s" % path)
-		return
-	if ImageLimits.is_too_large(size):
-		problems.append(ImageLimits.describe(path, size))
-		return
-	if size.x % frames != 0:
-		problems.append(
-			"%s is %d wide, which does not divide into %d frames" % [file, size.x, frames]
-		)
-		return
-
-	sprite_animations[state] = {
-		"file": file,
-		"frames": frames,
-		"fps": fps,
-		"frame_width": size.x / frames,
-		"frame_height": size.y,
-	}
 
 
 static func _broken(folder: String, reason: String) -> PetPack:
