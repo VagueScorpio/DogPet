@@ -374,17 +374,43 @@ func _build_room_questions(into: VBoxContainer, images: PackedStringArray) -> vo
 
 func _build_credits(into: VBoxContainer) -> void:
 	into.add_child(UiBits.heading("Where it came from", 15))
+	# Default is no credit *(v1.44, at the owner's request)*. Most of what
+	# goes in is their own art, which the credit rule was never written for,
+	# and being asked every time for a line they do not want written was
+	# costing more than it returned. The fields are still here for the pack
+	# that does come with a licence asking for one - they are just out of the
+	# way until the box is ticked.
 	into.add_child(UiBits.dim(
-		"Credit is not decoration: a lot of free art may only be used while its"
-		+ " credit stays visible. Whatever is typed here is shown in Settings, About.", 11
+		"Nothing is needed here for your own art. Tick the box if this pack came"
+		+ " with a licence that asks for a credit - what you type is then shown"
+		+ " in Settings, About.", 11
 	))
-	# Your own work is the case the credit rule was not written for. Ticking
-	# this writes credit_not_required into the pack, and the app stops asking.
-	_own_work = _check(into, "My own art - no credit needed", false)
-	_credit = _line(into, "Credit", "", "Who made it, and under what licence.")
-	_license = _line(into, "Licence", "", "CC-BY 3.0, CC0, and so on. Optional.")
-	_license_url = _line(into, "Licence link", "", "Optional.")
-	_source_url = _line(into, "Found at", "", "Optional.")
+	_own_work = _check(into, "My own art - no credit needed", true)
+	var needs: CheckBox = _check(into, "This art came with a licence that wants crediting", false)
+
+	# The four fields live in a box of their own so they can be put away
+	# wholesale rather than greyed out one at a time.
+	var fields := VBoxContainer.new()
+	fields.visible = false
+	into.add_child(fields)
+	_credit = _line(fields, "Credit", "", "Who made it, and under what licence.")
+	_license = _line(fields, "Licence", "", "CC-BY 3.0, CC0, and so on. Optional.")
+	_license_url = _line(fields, "Licence link", "", "Optional.")
+	_source_url = _line(fields, "Found at", "", "Optional.")
+
+	# The two are opposites, so each turns the other off and the answer is
+	# never "my own art, and here is who to credit for it".
+	needs.toggled.connect(func(pressed: bool) -> void:
+		fields.visible = pressed
+		if pressed:
+			_own_work.button_pressed = false
+		changed.emit()
+	)
+	_own_work.toggled.connect(func(pressed: bool) -> void:
+		if pressed:
+			needs.button_pressed = false
+			fields.visible = false
+	)
 
 
 # --- Reading the answers back --------------------------------------------

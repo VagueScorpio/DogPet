@@ -488,6 +488,32 @@ func _import_wizard_installs() -> void:
 	_ok("and it still installs as many frames as it has files",
 		run_sheets.size() == 1 and int(run_sheets[0]["frames"]) == 6)
 
+	# v1.44, at the owner's request: the wizard no longer asks for a credit
+	# by default. Most of what goes in is their own art, and being asked
+	# every time for a line they do not want written cost more than it
+	# returned. The fields are still there for a pack whose licence does ask.
+	_begin("The wizard does not ask for a credit unless told to")
+	wizard.open()
+	wizard._on_files_chosen(PackedStringArray([idle]))
+	wizard._go_next()
+	await _settle()
+	var credits: RefCounted = wizard._form
+	_ok("no credit is needed by default",
+		bool(credits.answers()["credit_not_required"]))
+	_ok("so nothing is warned about",
+		Install.warnings(1, credits.answers()).is_empty())
+
+	# And the way back, for the pack that does come with a licence.
+	credits._own_work.button_pressed = false
+	credits._credit.text = "Someone, CC-BY 3.0"
+	var given: Dictionary = credits.answers()
+	_ok("a credit typed in is still carried",
+		str(given["credit"]) == "Someone, CC-BY 3.0"
+		and not bool(given["credit_not_required"]))
+	_ok("and it reaches the manifest",
+		str(Dictionary(PackBuilder.sprite_pet_manifest(given)).get("credit", ""))
+		== "Someone, CC-BY 3.0")
+
 	# The same picture, installed as a room instead - with a background
 	# DogPet draws itself, so the one small picture is just a thing standing
 	# in the room rather than the backdrop.

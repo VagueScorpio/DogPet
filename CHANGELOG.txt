@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.44 - The import wizard stops asking for a credit
   v1.43 - A second audit: the dog that was keyed out as the background
   v1.42 - The stage reading moves out, and the line limit becomes advice
   v1.41 - A dog that grows up, and a reader that can tell
@@ -47,6 +48,51 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.44 - The import wizard stops asking for a credit
+------------------------------------------------------------
+
+What
+  - scripts/import_form.gd: "My own art - no credit needed" now starts
+    TICKED, so an ordinary import writes credit_not_required and nothing is
+    said about credits at all - no warning in the wizard, no "no credit
+    line" problem on the pack afterwards.
+  - A second tick, "This art came with a licence that wants crediting",
+    unfolds the four fields that used to be always on screen: credit,
+    licence, licence link, found at. The two ticks are opposites and turn
+    each other off, so the answer is never "my own art, and here is who to
+    credit for it".
+  - With neither ticked the old warning still appears, because that state
+    means the question has not been answered rather than answered "no".
+
+Why
+  - At the owner's request, 2026-11-05: default to no credit, offer the
+    fields in case there is a licensing issue, and otherwise proceed
+    without acknowledgement. They will flag the packs that need one.
+  - Most of what goes into this app is the owner's own art - begging_dog,
+    and now aged_kaly and panda_1 - which the credit rule was never written
+    for. v1.35 added the tick for exactly that case but left it unticked,
+    so every import still opened by asking for a line they did not want
+    written. Asking by default was costing more than it returned.
+
+How
+  - Four checks added to tests/test_integration.gd, driving the real
+    wizard: no credit needed by default, nothing warned about, a typed
+    credit still carried, and it still reaches the manifest. Suite 1104 ->
+    1108 checks, 0 failures.
+  - PackInstall.warnings and PetPack are UNCHANGED. Both already read
+    credit_not_required; the only thing that moved is what the wizard puts
+    in it. That is why no other suite shifted by a single check.
+  - What this does not touch: Settings -> About still shows every credit
+    line a pack does carry, exactly as written. The shipped Pug is CC-BY
+    3.0 and its credit stays visible. This changes what the wizard asks
+    for, not what the app displays, and no existing credit was removed.
+  - assets/pets/aged_kaly and assets/pets/panda_1, imported by the owner
+    through the wizard during the v1.43 verification, were given
+    credit_not_required by hand to match. Both now read back valid with no
+    problems, like begging_dog. They are the owner's own art and must never
+    be given a credit line.
 
 ------------------------------------------------------------
 v1.43 - A second audit: the dog that was keyed out as the background
