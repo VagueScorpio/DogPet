@@ -190,12 +190,37 @@ static func integer_scale(frame_height: int, wanted_height_px: float) -> int:
 	return maxi(1, int(floor(wanted_height_px / float(frame_height))))
 
 
+## What to multiply this pack's art by so a dog this tall on the sheet comes
+## out display_height_px tall on screen. *(v1.46)*
+##
+## Pixel art keeps to whole numbers, because a pixel scaled by 1.5 is two
+## pixels and a bit and the grid goes ragged. Art bigger than the box it has
+## to fit in is divided by a whole number instead of multiplied by one, which
+## is still a clean grid; before this it was simply drawn at 1x, so a painted
+## dog 480 pixels tall filled - and overflowed - a window asking for 160.
+##
+## Everything else scales by whatever fraction fits. There is no grid to
+## keep, and the alternative is a dog three times the size it asked to be.
+static func art_scale(art_height: int, wanted_height_px: float, pixel: bool) -> float:
+	if art_height <= 0 or wanted_height_px <= 0.0:
+		return 1.0
+	if not pixel:
+		return wanted_height_px / float(art_height)
+	if float(art_height) <= wanted_height_px:
+		return float(integer_scale(art_height, wanted_height_px))
+	return 1.0 / float(maxi(1, int(round(float(art_height) / wanted_height_px))))
+
+
 ## The height of the tallest frame in the pack.
 ##
 ## One scale is chosen for the whole pack from this, rather than one per
 ## animation. The pixel pug's idle frames are 43px tall and its walk frames
 ## are 32px, so scaling each to fit on its own would make the dog visibly
 ## change size the moment it started walking.
+##
+## This measures the frames; what the app actually scales by is the art
+## inside them, which SpriteAnchor measures and PetView asks for. The two
+## agree for a pack whose frames are cut tight.
 func tallest_frame_height() -> int:
 	var tallest: int = 0
 	for state in sprite_animations.keys():

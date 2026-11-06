@@ -15,6 +15,7 @@ const Grid := preload("res://scripts/sheet_grid.gd")
 const Series := preload("res://scripts/frame_series.gd")
 const Plan := preload("res://scripts/sheet_plan.gd")
 const Cutter := preload("res://scripts/sheet_cutter.gd")
+const Key := preload("res://scripts/sheet_key.gd")
 const Likeness := preload("res://scripts/sheet_likeness.gd")
 const Builder := preload("res://scripts/pack_builder.gd")
 const Install := preload("res://scripts/pack_install.gd")
@@ -38,6 +39,8 @@ func _initialize() -> void:
 	_test_reading()
 	_test_touching()
 	_test_cutting()
+	_test_keying()
+	_test_registering()
 	_test_texture_guard()
 	_test_recount()
 	_test_states()
@@ -391,8 +394,10 @@ func _test_cutting() -> void:
 	_ok("the strip is drawn", strip != null)
 	_ok("three frames wide", strip.get_width() == strip.get_height() * 3)
 	# The whole point of keying: a shape cut off a white page arrives with
-	# the page gone, not as a shape in a white box.
-	_ok("the paper was keyed out", strip.get_pixel(0, 0).a == 0.0)
+	# the page gone, not as a shape in a white box. Asked of the whole strip
+	# rather than of one corner, because the strip is now cut tight to the
+	# art and its corner is drawn on.
+	_ok("the paper did not come with it", not _holds_paper(strip))
 
 	var out: String = _scratch.path_join("written.png")
 	_ok("it writes", Cutter.write(pieces[0]["cut"], out).is_empty())
@@ -409,8 +414,11 @@ func _test_cutting() -> void:
 	var hop: Array = Dictionary(Plan.read(frames))["pieces"]
 	var joined: Image = Cutter.render(hop[0]["cut"])
 	_ok("the stitched strip is drawn", joined != null)
-	_ok("three cells wide", joined.get_width() == 48)
-	_ok("and one cell tall", joined.get_height() == 16)
+	# Nine pixels of drawing in a sixteen pixel file: what is installed is
+	# the nine, three times over. The empty border the artist left is not
+	# part of the dog and only pushes it off its mark on screen. *(v1.46)*
+	_ok("three cells wide", joined.get_width() == 27)
+	_ok("and one cell tall", joined.get_height() == 9)
 
 	_begin("Frames cut from uneven places come out equal anyway")
 	# What makes an animation sit still: frames taken from three differently
@@ -432,6 +440,80 @@ func _test_cutting() -> void:
 	# plus the breathing room put round it.
 	_ok("each as wide as the widest frame needed",
 		evened.get_width() / 3 == 10 + Cutter.PADDING * 2)
+
+
+# --- Taking the page off, and only the page ------------------------------
+
+func _test_keying() -> void:
+	_begin("A dog the colour of its own page keeps its body")
+	# What went wrong with the owner's first aged sheet: the puppy was drawn
+	# in the same dark colour as the ground it stood on, every pixel of that
+	# colour was cleared wherever it sat, and what was installed was an
+	# outline with nothing inside it.
+	var sheet: Image = Image.create(40, 40, false, Image.FORMAT_RGBA8)
+	sheet.fill(PAPER)
+	_fill(sheet, Rect2i(10, 10, 20, 20), INK)          # the outline
+	_fill(sheet, Rect2i(13, 13, 14, 14), PAPER)        # a body the page's colour
+	var cleared: int = Key.clear_page(sheet, [PAPER])
+	_ok("the page went", sheet.get_pixel(0, 0).a == 0.0)
+	_ok("the outline stayed", sheet.get_pixel(11, 20).a == 1.0)
+	_ok("and so did the body inside it", sheet.get_pixel(20, 20).a == 1.0)
+	_ok("and what went was exactly the page round it", cleared == 40 * 40 - 20 * 20)
+
+	_begin("A page the art divides in two is still all page")
+	var split: Image = Image.create(40, 40, false, Image.FORMAT_RGBA8)
+	split.fill(PAPER)
+	_fill(split, Rect2i(0, 18, 40, 4), INK)            # a bar right across it
+	Key.clear_page(split, [PAPER])
+	_ok("above the bar", split.get_pixel(20, 4).a == 0.0)
+	_ok("and below it", split.get_pixel(20, 34).a == 0.0)
+	_ok("the bar itself is untouched", split.get_pixel(20, 20).a == 1.0)
+
+	_begin("Nothing to key is not an error")
+	var clear: Image = _blank(16, 16)
+	_fill(clear, Rect2i(4, 4, 8, 8), INK)
+	_ok("an empty list of colours clears nothing", Key.clear_page(clear, []) == 0)
+	_ok("and the art is all still there", clear.get_pixel(5, 5).a == 1.0)
+
+
+# --- Every frame in the same place ---------------------------------------
+
+func _test_registering() -> void:
+	_begin("Frames are stood in one place whatever they were cut from")
+	# A grid of even cells with the animal drawn in a different corner of
+	# each one: the owner's raccoon sheet, in miniature. These used to be
+	# installed exactly as they were found, so the dog floated above the
+	# floor on one frame and hung off the side on the next.
+	var sheet: Image = Image.create(90, 30, false, Image.FORMAT_RGBA8)
+	sheet.fill(PAPER)
+	_fill(sheet, Rect2i(2, 2, 10, 10), INK)            # high and left
+	_fill(sheet, Rect2i(44, 16, 10, 12), INK)          # low and right
+	_fill(sheet, Rect2i(64, 8, 10, 11), INK)           # somewhere in between
+	var drawn: String = _write("wandering.png", sheet)
+	var strip: Image = Cutter.render({
+		"paths": PackedStringArray([drawn, drawn, drawn]),
+		"rects": [Rect2i(0, 0, 30, 30), Rect2i(30, 0, 30, 30), Rect2i(60, 0, 30, 30)],
+		"key": true,
+	})
+	_ok("the strip is drawn", strip != null)
+	_ok("in three equal cells", strip.get_width() % 3 == 0)
+
+	var cell: int = strip.get_width() / 3
+	var feet: PackedInt32Array = []
+	var middles: PackedInt32Array = []
+	for index in 3:
+		var frame: Image = strip.get_region(Rect2i(index * cell, 0, cell, strip.get_height()))
+		var box: Rect2i = frame.get_used_rect()
+		feet.append(box.end.y)
+		middles.append(box.position.x + box.size.x / 2)
+	_ok("every frame stands on the same line", feet[0] == feet[1] and feet[1] == feet[2])
+	_ok("and is centred the same way",
+		absi(middles[0] - middles[1]) <= 1 and absi(middles[1] - middles[2]) <= 1)
+	# The tallest drawing was twelve pixels, so that plus the padding is as
+	# tall as the strip needs to be - not the thirty pixel cells it was cut
+	# out of.
+	_ok("and the strip is as tall as the art, not the cells",
+		strip.get_height() == 12 + Cutter.PADDING * 2)
 
 
 # --- Not wider than a graphics card will take ----------------------------
@@ -513,7 +595,9 @@ func _test_recount() -> void:
 	_ok("each twice as wide", Vector2i(halved["size"]).x == 32)
 	_ok("the original is unchanged", int(piece["frames"]) == 4)
 	var redrawn: Image = Cutter.render(halved["cut"])
-	_ok("the new cut draws", redrawn != null and redrawn.get_width() == 64)
+	_ok("the new cut draws", redrawn != null)
+	_ok("in two equal cells", redrawn.get_width() % 2 == 0)
+	_ok("tight around what is drawn on it", redrawn.get_width() < 64)
 
 	var one: Dictionary = Plan.recount(piece, 1)
 	_ok("one frame is a still picture", not bool(one["animated"]))
@@ -587,6 +671,54 @@ func _test_installing() -> void:
 		int(pack.sprite_animations["walk"]["frame_width"]) * 4
 		== ImageLimits.png_size_from_header(target.path_join("walk.png")).x)
 	_ok("the pack is usable", pack.is_usable())
+
+	_begin("What the installer writes is registered, not just what render drew")
+	# The owner's complaint, end to end: three poses drawn anywhere in their
+	# cells, put through the real installer, and read back off the disk the
+	# way the app reads it. Every frame has to stand on the same line and sit
+	# in the middle of its cell, or the dog moves about the screen. *(v1.46)*
+	var wander: Image = Image.create(90, 30, false, Image.FORMAT_RGBA8)
+	wander.fill(PAPER)
+	_fill(wander, Rect2i(2, 2, 10, 10), INK)
+	_fill(wander, Rect2i(44, 16, 10, 12), INK)
+	_fill(wander, Rect2i(64, 8, 10, 11), INK)
+	var drawn: String = _write("wander_sheet.png", wander)
+	var steady: Dictionary = {
+		"id": "steady_dog", "name": "Steady Dog", "pixel_art": true,
+		"display_height_px": 160, "faces": "right", "credit_not_required": true,
+		"sheets": [{
+			"cut": {
+				"paths": PackedStringArray([drawn, drawn, drawn]),
+				"rects": [
+					Rect2i(0, 0, 30, 30), Rect2i(30, 0, 30, 30), Rect2i(60, 0, 30, 30),
+				],
+				"key": true,
+			},
+			"state": "idle", "frames": 3, "fps": 4.0,
+		}],
+	}
+	var home: String = _scratch.path_join("pets/steady_dog")
+	_ok("it installs", Install.write(
+		Install.plan(Builder.Kind.PET_SPRITE, steady, home)
+	).is_empty())
+
+	var installed: PetPack = PetPack.load_from_dir(home)
+	_ok("and loads", installed.problems.is_empty())
+	var written: Image = Image.load_from_file(home.path_join("idle.png"))
+	var cell: int = int(installed.sprite_animations["idle"]["frame_width"])
+	var feet: PackedInt32Array = []
+	var middles: PackedInt32Array = []
+	for index in 3:
+		var box: Rect2i = written.get_region(
+			Rect2i(index * cell, 0, cell, written.get_height())
+		).get_used_rect()
+		feet.append(box.end.y)
+		middles.append(box.position.x + box.size.x / 2)
+	_ok("every frame on the disk stands on the same line",
+		feet[0] == feet[1] and feet[1] == feet[2])
+	_ok("and is centred in its cell",
+		absi(middles[0] - middles[1]) <= 1 and absi(middles[1] - middles[2]) <= 1)
+	_ok("with the page gone", not _holds_paper(written))
 
 	_begin("A cut whose pictures have gone is caught before installing")
 	DirAccess.remove_absolute(sheet)
@@ -662,3 +794,14 @@ func _clean() -> void:
 	if DirAccess.dir_exists_absolute(_scratch):
 		PackArchive.empty_folder(_scratch)
 		DirAccess.remove_absolute(_scratch)
+
+
+# Is any of the page still in this picture? Opaque and close to the paper
+# colour means the keying missed it.
+func _holds_paper(image: Image) -> bool:
+	for y in image.get_height():
+		for x in image.get_width():
+			var pixel: Color = image.get_pixel(x, y)
+			if pixel.a > 0.0 and SheetPaper.apart(pixel, PAPER) <= 0.05:
+				return true
+	return false

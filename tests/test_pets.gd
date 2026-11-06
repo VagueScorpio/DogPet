@@ -17,6 +17,7 @@ const Motion := preload("res://scripts/pet_motion.gd")
 const Pose := preload("res://scripts/pet_pose.gd")
 const Model := preload("res://scripts/needs_model.gd")
 const Limits := preload("res://scripts/image_limits.gd")
+const Anchor := preload("res://scripts/sprite_anchor.gd")
 
 const ASSETS_PETS := "assets/pets"
 
@@ -28,6 +29,7 @@ func _initialize() -> void:
 	_test_pack_validation()
 	_test_fit_transform()
 	_test_sprite_scaling()
+	_test_anchor()
 	_test_mood()
 	_test_motion()
 	_test_image_limits()
@@ -266,6 +268,77 @@ func _test_sprite_scaling() -> void:
 	var by_walk_alone: int = Pack.integer_scale(32, 160.0)
 	_ok("the two would disagree", by_tallest != by_walk_alone)
 	_ok("so the tallest frame decides", by_tallest == 3)
+
+	_begin("Painted art is scaled to the height it asked for")
+	# What the owner's raccoon ran into: 480 pixels of painted dog in a box
+	# asking for 160 was drawn at 1x, three times the size of the window's
+	# idea of a dog, and most of it off the top of the screen. *(v1.46)*
+	_close("480px art in a 160px box is drawn at a third",
+		Pack.art_scale(480, 160.0, false), 1.0 / 3.0)
+	_close("and small art is grown to fit",
+		Pack.art_scale(80, 160.0, false), 2.0)
+	_close("a zero height does not divide by zero",
+		Pack.art_scale(0, 160.0, false), 1.0)
+
+	_begin("Pixel art keeps to whole numbers in both directions")
+	_close("43px art in a 160px box still triples",
+		Pack.art_scale(43, 160.0, true), 3.0)
+	# Halved rather than left at 1x: a whole-number division keeps the grid
+	# square, where 160/320 would not.
+	_close("320px art in the same box is halved",
+		Pack.art_scale(320, 160.0, true), 0.5)
+	_close("and 500px art is quartered",
+		Pack.art_scale(500, 160.0, true), 1.0 / 3.0)
+
+
+# --- Where the art sits inside its frames --------------------------------
+
+func _test_anchor() -> void:
+	_begin("The art's own box is measured, not the frame's")
+	# Three frames with the drawing in a different place in each: the box
+	# that matters covers all three, so what the app stands on the floor is
+	# the art rather than the empty cell around it.
+	var strip: Image = Image.create(90, 30, false, Image.FORMAT_RGBA8)
+	strip.fill(Color(0, 0, 0, 0))
+	strip.fill_rect(Rect2i(4, 6, 10, 10), Color(1, 0, 0, 1))
+	strip.fill_rect(Rect2i(40, 12, 10, 10), Color(1, 0, 0, 1))
+	strip.fill_rect(Rect2i(68, 6, 12, 16), Color(1, 0, 0, 1))
+	var box: Rect2i = Anchor.of_strip(strip, 3)
+	_ok("it starts at the leftmost thing drawn", box.position.x == 4)
+	_ok("and at the highest", box.position.y == 6)
+	_ok("it reaches the lowest", box.end.y == 22)
+	_ok("and the rightmost, in frame terms", box.end.x == 20)
+
+	_begin("A strip with nothing on it falls back to the frame")
+	var empty: Image = Image.create(60, 20, false, Image.FORMAT_RGBA8)
+	empty.fill(Color(0, 0, 0, 0))
+	var whole: Rect2i = Anchor.of_strip(empty, 3)
+	_ok("which is the whole cell", whole == Rect2i(0, 0, 20, 20))
+	_ok("and no image at all is an empty box",
+		Anchor.of_strip(null, 3) == Rect2i(0, 0, 0, 0))
+
+	_begin("Every pack the app ships stands on its own feet")
+	# The check that would have caught the raccoon: measured against the
+	# frame, not an opinion about how it should look.
+	for id in DirAccess.get_directories_at(ASSETS_PETS):
+		var pack: PetPack = Pack.load_from_dir(ASSETS_PETS.path_join(id))
+		if pack.kind != Pack.KIND_SPRITE2D or not pack.is_valid():
+			continue
+		for state in pack.sprite_animations:
+			var spec: Dictionary = pack.sprite_animations[state]
+			var sheet: Image = Image.load_from_file(
+				pack.dir.path_join(str(spec["file"]))
+			)
+			if sheet == null:
+				continue
+			var art: Rect2i = Anchor.of_strip(sheet, int(spec["frames"]))
+			var height: int = sheet.get_height()
+			# A tenth of the frame of slack: art is allowed a little
+			# breathing room, not a hundred pixels of empty floor.
+			_ok("%s %s is drawn near the bottom of its frame" % [id, state],
+				height - art.end.y <= maxi(2, height / 10))
+			_ok("%s %s has something drawn in it" % [id, state],
+				art.size.x > 0 and art.size.y > 0)
 
 
 # --- How the dog feels --------------------------------------------------

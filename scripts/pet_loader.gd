@@ -110,7 +110,15 @@ static func find_animation_player(root: Node) -> AnimationPlayer:
 ## the grown dog, which is what a pack with one drawing per state has
 ## anyway; PetView passes the dog's real age and rebuilds when it changes
 ## stage, which is rare enough to cost nothing.
-static func build_sprite_frames(pack: PetPack, age_days: float = -1.0) -> SpriteFrames:
+##
+## "anchors" is filled in as a side-effect, state -> the box the art
+## occupies within one frame (see SpriteAnchor). It is measured here because
+## this is where the images are already open; measuring it again later would
+## mean reading every sheet off the disk a second time. Pass nothing when
+## only the frames are wanted.
+static func build_sprite_frames(
+	pack: PetPack, age_days: float = -1.0, anchors: Dictionary = {}
+) -> SpriteFrames:
 	var frames := SpriteFrames.new()
 	# SpriteFrames always starts with a "default" animation we do not want.
 	frames.remove_animation("default")
@@ -122,14 +130,16 @@ static func build_sprite_frames(pack: PetPack, age_days: float = -1.0) -> Sprite
 		)
 		if spec.is_empty():
 			continue
-		var texture: ImageTexture = load_texture(pack.dir.path_join(str(spec["file"])))
-		if texture == null:
+		var image: Image = load_image(pack.dir.path_join(str(spec["file"])))
+		if image == null:
 			Log.warn("Could not read %s for the %s animation." % [spec["file"], state])
 			continue
+		var texture: ImageTexture = ImageTexture.create_from_image(image)
 
 		var count: int = int(spec["frames"])
 		var frame_width: int = int(spec["frame_width"])
 		var frame_height: int = int(spec["frame_height"])
+		anchors[state] = SpriteAnchor.of_strip(image, count)
 
 		frames.add_animation(state)
 		frames.set_animation_speed(state, float(spec["fps"]))
@@ -143,17 +153,48 @@ static func build_sprite_frames(pack: PetPack, age_days: float = -1.0) -> Sprite
 	return frames
 
 
+## Measure where the art sits in a pack's sheets, without building anything
+## to draw with. state -> the box within one frame.
+##
+## Only wanted for a pack whose art ages: the scale has to come from the
+## grown dog, or a puppy drawn half the size of the adult beside it would be
+## blown up to the same height and never grow at all. Everything else gets
+## its boxes from build_sprite_frames, which is already holding the images.
+static func measure_art(pack: PetPack, age_days: float = -1.0) -> Dictionary:
+	var boxes: Dictionary = {}
+	for state in pack.sprite_animations.keys():
+		var spec: Dictionary = (
+			pack.sprite_animations[state] if age_days < 0.0
+			else pack.sprite_for(state, age_days)
+		)
+		if spec.is_empty():
+			continue
+		var image: Image = load_image(pack.dir.path_join(str(spec["file"])))
+		if image == null:
+			continue
+		boxes[state] = SpriteAnchor.of_strip(image, int(spec["frames"]))
+	return boxes
+
+
 ## Read a PNG off the disk into a texture. Image.load_from_file works on a
 ## real path; load() would not, because assets/ is never imported.
 ##
 ## The file's header is read before any of it is decoded, so a picture far
 ## too big to show is refused rather than allocated. See ImageLimits.
 static func load_texture(path: String) -> ImageTexture:
+	var image: Image = load_image(path)
+	return null if image == null else ImageTexture.create_from_image(image)
+
+
+## The same read, stopping at the Image. Split out because the sprite
+## builder needs the pixels as well as the texture - it measures where the
+## art sits inside its frames - and reading the file twice to get both would
+## be silly.
+static func load_image(path: String) -> Image:
 	if path.begins_with("res://"):
 		var imported: Variant = load(path)
 		if imported is Texture2D:
-			# Already a texture; wrap its image so callers get one type back.
-			return ImageTexture.create_from_image((imported as Texture2D).get_image())
+			return (imported as Texture2D).get_image()
 		return null
 
 	var header_size: Vector2i = ImageLimits.png_size_from_header(path)
@@ -170,7 +211,7 @@ static func load_texture(path: String) -> ImageTexture:
 	if ImageLimits.is_too_large(image.get_size()):
 		Log.warn(ImageLimits.describe(path, image.get_size()))
 		return null
-	return ImageTexture.create_from_image(image)
+	return image
 
 
 # --- Loading the model itself -------------------------------------------

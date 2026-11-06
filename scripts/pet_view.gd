@@ -36,7 +36,15 @@ var _pack: PetPack = null
 var _model: Node3D = null
 var _clips: AnimationPlayer = null
 var _spot: Vector2 = DEFAULT_SPOT
-var _sprite_scale: int = 1
+var _sprite_scale: float = 1.0
+## state -> the box the art occupies inside one frame, from SpriteAnchor.
+## What is drawn is what gets stood on the floor and centred on the spot,
+## not the frame it happens to sit in.
+var _anchors: Dictionary = {}
+## The grown dog's art height, and which pack it was measured on. Kept so a
+## pack that ages keeps one scale for life and the dog actually grows.
+var _art_height: int = 0
+var _art_height_of: String = ""
 ## Which of the pack's life-stage drawings is on screen. Kept so the sheets
 ## are only rebuilt when the dog actually changes stage, rather than on
 ## every tick of its age.
@@ -149,20 +157,28 @@ func _on_aged(age_days: float, _stage: String) -> void:
 
 func _show_sprite(pack: PetPack) -> void:
 	_stage_shown = LifeStages.index_for(Needs.life.age_days, pack.stage_count())
-	var frames: SpriteFrames = PetLoader.build_sprite_frames(pack, Needs.life.age_days)
+	_anchors = {}
+	var frames: SpriteFrames = PetLoader.build_sprite_frames(
+		pack, Needs.life.age_days, _anchors
+	)
 	if frames.get_animation_names().is_empty():
 		Log.error("The pet \"%s\" has no usable frames." % pack.id)
 		return
 	_sprite.sprite_frames = frames
-	# One scale for the whole pack, from its tallest frame, so the dog does
-	# not change size between standing still and walking.
-	_sprite_scale = PetPack.integer_scale(pack.tallest_frame_height(), pack.display_height_px)
+	# One scale for the whole pack, from the tallest thing drawn in it, so
+	# the dog does not change size between standing still and walking.
+	#
+	# Measured off the art rather than off the frames: a pack whose frames
+	# carry a hundred pixels of empty margin is not a bigger dog, and
+	# scaling by the frame made it one. *(v1.46)*
+	var art_height: int = _tallest_art_height(pack)
+	_sprite_scale = PetPack.art_scale(art_height, pack.display_height_px, pack.pixel_art)
 	_sprite.scale = Vector2(_sprite_scale, _sprite_scale)
 	_sprite.texture_filter = (
 		CanvasItem.TEXTURE_FILTER_NEAREST if pack.pixel_art
 		else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 	)
-	_body_height_px = pack.tallest_frame_height() * _sprite_scale
+	_body_height_px = maxf(art_height * _sprite_scale, 1.0)
 	_play_sprite_animation(_state_art_name())
 	_sprite.show()
 
@@ -184,11 +200,49 @@ func _play_sprite_animation(name: String) -> void:
 	_sprite.animation = name
 	# Frames differ in size between animations, so the offset that puts the
 	# dog's feet on the ground has to be set again each time.
-	var texture: Texture2D = _sprite.sprite_frames.get_frame_texture(name, 0)
-	if texture != null:
-		var frame: Vector2 = texture.get_size()
-		_sprite.offset = Vector2(-frame.x * 0.5, -frame.y)
+	#
+	# The offset is worked out from the art's own box, so the bottom of what
+	# is drawn sits on the floor and the middle of what is drawn sits on the
+	# spot - whatever empty margin the frame has around it.
+	var box: Rect2i = _art_box(name)
+	if box.size.x > 0 and box.size.y > 0:
+		_sprite.offset = -Vector2(
+			box.position.x + box.size.x * 0.5, box.position.y + box.size.y
+		)
 	_sprite.play()
+
+
+# Where the art sits inside this animation's frames. Falls back to the whole
+# frame, which is what a pack cut tight amounts to anyway.
+func _art_box(name: String) -> Rect2i:
+	if _anchors.has(name):
+		return _anchors[name]
+	var texture: Texture2D = _sprite.sprite_frames.get_frame_texture(name, 0)
+	if texture == null:
+		return Rect2i()
+	return Rect2i(Vector2i.ZERO, Vector2i(texture.get_size()))
+
+
+# The tallest thing drawn anywhere in the pack, measured on the grown dog.
+#
+# The grown dog rather than today's drawing, because a pack that ages draws
+# a small puppy and a big adult on purpose. Scaling each stage to fill the
+# same height would hold the puppy up to the adult's size and the dog would
+# never visibly grow. Measured once per pack: for a pack that does not age
+# the drawings on screen are the grown dog's already, so nothing is read
+# twice. Falls back to the frame heights if the art could not be measured.
+func _tallest_art_height(pack: PetPack) -> int:
+	if _art_height_of == pack.id and _art_height > 0:
+		return _art_height
+	var boxes: Dictionary = (
+		_anchors if pack.stage_count() <= 1 else PetLoader.measure_art(pack)
+	)
+	var tallest: int = 0
+	for state in boxes:
+		tallest = maxi(tallest, Rect2i(boxes[state]).size.y)
+	_art_height = tallest if tallest > 0 else pack.tallest_frame_height()
+	_art_height_of = pack.id
+	return _art_height
 
 
 # --- Applying a pose -----------------------------------------------------

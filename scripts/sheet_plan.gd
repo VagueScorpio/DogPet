@@ -142,7 +142,7 @@ static func recount(piece: Dictionary, frames: int) -> Dictionary:
 	changed["animated"] = frames > 1
 	changed["size"] = parts[0].size
 	changed["cut"] = {
-		"paths": again, "rects": parts, "key": cut["key"], "align": false,
+		"paths": again, "rects": parts, "key": cut["key"],
 	}
 	return changed
 
@@ -335,12 +335,6 @@ static func _piece(
 		paths.append(str(scan["path"]))
 		widest = maxi(widest, rect.size.x)
 		tallest = maxi(tallest, rect.size.y)
-	# Cells of one size are already registered to each other, so they are
-	# left where they are; anything cut out of a loose sheet is not, and has
-	# to be stood on a common baseline or the animation jitters.
-	var even: bool = true
-	for rect in rects:
-		even = even and rect.size == rects[0].size
 	return {
 		"label": label,
 		"name": PackArchive.clean_id(name),
@@ -357,7 +351,6 @@ static func _piece(
 			"paths": paths,
 			"rects": rects,
 			"key": bool(scan["keyed"]),
-			"align": not even,
 		},
 	}
 

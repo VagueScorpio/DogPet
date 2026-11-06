@@ -9,9 +9,21 @@ extends RefCounted
 ## same thing with one cell in it.
 ##
 ## Two jobs beyond copying pixels. The paper gets keyed out, so a dog cut off
-## a white page is not installed as a dog in a white box. And frames cut from
-## uneven places get stood on a common baseline, centred, because frames that
-## are not registered to each other make the animation jitter on the spot.
+## a white page is not installed as a dog in a white box - through SheetKey,
+## which clears what the border can reach rather than every pixel of that
+## colour, so a dog the colour of its own page survives. And every frame is
+## stood on a common baseline, centred, because frames that are not
+## registered to each other do not land in the same place on the pet screen.
+##
+## Registering used to be done only for frames cut out of uneven patches, on
+## the reasoning that cells of one size off a grid are already registered to
+## each other. They are not. A grid is a convenience for the artist, not a
+## promise about where in each cell the animal was drawn: the owner's six
+## raccoons sat anywhere from 22 to 126 pixels off the bottom of their cells
+## and up to 114 off the side, and what was installed floated above the floor
+## and hung off the edge of the window. So the page is taken off, what is
+## actually drawn is measured, and every frame is laid out the same way -
+## whatever it was cut from. *(v1.46)*
 
 ## Breathing room around each frame, in pixels, when frames are being lined
 ## up rather than left in the cells they came from.
@@ -30,7 +42,6 @@ static func render(cut: Dictionary) -> Image:
 		return null
 
 	var opened: Dictionary = {}
-	var papers: Dictionary = {}
 	var frames: Array[Image] = []
 	for index in paths.size():
 		var path: String = paths[index]
@@ -39,20 +50,21 @@ static func render(cut: Dictionary) -> Image:
 			if loaded == null:
 				return null
 			loaded.convert(Image.FORMAT_RGBA8)
+			# Keyed once, on the whole sheet, before anything is cut out of
+			# it. The page is a connected thing and the sheet's own border is
+			# where it starts; a cell cut tight around a dog may have no page
+			# at its edge at all, and a fill started there would find the dog
+			# instead.
+			if bool(cut.get("key", false)):
+				SheetKey.clear_page(loaded, SheetPaper.of_image(loaded))
 			opened[path] = loaded
-			papers[path] = SheetPaper.of_image(loaded) if bool(cut.get("key", false)) else []
 		var source: Image = opened[path]
 		var area: Rect2i = _inside(rects[index], source)
 		if area.size.x <= 0 or area.size.y <= 0:
 			return null
-		var frame: Image = source.get_region(area)
-		if not PackedColorArray(papers[path]).is_empty():
-			_key_out(frame, papers[path])
-		frames.append(frame)
+		frames.append(source.get_region(area))
 
-	if bool(cut.get("align", false)):
-		frames = _trimmed(frames)
-	return _lay_out(_fitted(frames))
+	return _lay_out(_fitted(_trimmed(frames)))
 
 
 ## Render a cut and save it. Returns "" when it worked, or what went wrong.
@@ -101,45 +113,22 @@ static func _inside(rect: Rect2i, image: Image) -> Rect2i:
 	return rect.intersection(Rect2i(0, 0, image.get_width(), image.get_height()))
 
 
-# Everything the colour of the paper becomes transparent. Done by hand on
-# the raw bytes rather than through set_pixel, because a sheet is a lot of
-# pixels and this is the same comparison a few hundred thousand times.
-static func _key_out(image: Image, paper: Array) -> void:
-	var data: PackedByteArray = image.get_data()
-	var limit: int = SheetPaper.byte_limit()
-	var pixels: int = image.get_width() * image.get_height()
-	var changed: bool = false
-	for index in pixels:
-		var at: int = index * 4
-		if data[at + 3] < SheetPaper.CLEAR_ALPHA:
-			continue
-		for sheet in paper:
-			var colour: Color = sheet
-			if (
-				absi(data[at] - colour.r8)
-				+ absi(data[at + 1] - colour.g8)
-				+ absi(data[at + 2] - colour.b8)
-			) > limit:
-				continue
-			data[at + 3] = 0
-			changed = true
-			break
-	if changed:
-		# Rebuilt rather than written through: Image.get_data hands back a
-		# copy, so the edits have to be put back for them to count.
-		var keyed: Image = Image.create_from_data(
-			image.get_width(), image.get_height(), false, Image.FORMAT_RGBA8, data
-		)
-		image.copy_from(keyed)
-
-
 # Each frame cut down to what is actually drawn on it. The sizes still
 # differ afterwards; _lay_out is what makes them equal.
+#
+# A frame with nothing on it becomes a single clear pixel rather than being
+# kept at its full size, so one empty cell in a row cannot decide how big
+# every other cell has to be.
 static func _trimmed(frames: Array[Image]) -> Array[Image]:
 	var cut: Array[Image] = []
 	for frame in frames:
 		var box: Rect2i = frame.get_used_rect()
-		cut.append(frame if box.size.x <= 0 or box.size.y <= 0 else frame.get_region(box))
+		if box.size.x <= 0 or box.size.y <= 0:
+			var empty: Image = Image.create(1, 1, false, Image.FORMAT_RGBA8)
+			empty.fill(Color(0, 0, 0, 0))
+			cut.append(empty)
+			continue
+		cut.append(frame.get_region(box))
 	return cut
 
 
@@ -194,8 +183,9 @@ static func _lay_out(frames: Array[Image]) -> Image:
 		cell.y = maxi(cell.y, frame.get_height())
 	if cell.x <= 0 or cell.y <= 0:
 		return null
-	# Padding only where the frames were trimmed to different sizes; cells
-	# taken whole out of a grid already carry their own spacing.
+	# A little breathing room, unless every frame came out exactly the same
+	# size, in which case the strip is already as tight as it can be and
+	# padding would only move the dog away from its own edges.
 	var even: bool = true
 	for frame in frames:
 		even = even and frame.get_width() == cell.x and frame.get_height() == cell.y

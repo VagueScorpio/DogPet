@@ -172,6 +172,23 @@ actually changes — a handful of times in a dog's life, costing one image read.
 - For `model3d`, the pet layer is a `SubViewportContainer` with a `SubViewport` set to `transparent_bg = true`. The viewport holds the model, a `Camera3D` at a slight 3/4 overhead angle, a `DirectionalLight3D`, and soft ambient light. This lets a 3D dog stand in front of any 2D background.
 - Draw a soft dark ellipse "blob shadow" under the pet for both kinds. It sells the dog as standing on the floor.
 - The pet's on-screen spot can be moved per scene (see `pet_spot` in 5.4) and is tweened when it changes.
+- **What stands on the spot is the drawing, not the frame around it**
+  *(v1.46)*. `SpriteAnchor` measures the box the art occupies inside a
+  strip's frames — one box for the whole animation, since the difference
+  between frames *is* the animation — and `PetView` puts the bottom of that
+  box on the floor and its middle on the spot. A pack with a hundred pixels
+  of empty margin is not a dog standing in mid-air, and before this it was
+  drawn as one. This is the half of the rule that rescues art already
+  installed and art somebody wrote a `pet.json` for by hand; `SheetCutter`
+  (5.8) is the half that stops it arriving that way.
+- **The same box sets the size.** `PetPack.art_scale` scales painted art by
+  whatever fraction makes it `display_height_px` tall. Only `pixel_art`
+  keeps to whole numbers, and art too big for the box is divided by a whole
+  number rather than left alone. The old rule floored at 1x, so a painted
+  dog 480 pixels tall in a box asking for 160 was drawn at full size and
+  overflowed the window. For a pack whose art ages, the scale is measured
+  once on the **grown dog** and kept for life, or every stage would be
+  blown up to the same height and the dog would never visibly grow.
 
 ### 5.3 Procedural animation (works on any pet, including static meshes)
 
@@ -281,7 +298,7 @@ sheet reader turns any of those into the one shape the app reads, and decides
 on the way **whether a row is one animal moving or several different things** —
 which is the difference between one animation and that many still pictures.
 
-Eight scripts, none of which touches a node, so all of it is tested
+Nine scripts, none of which touches a node, so all of it is tested
 headlessly by `tests/test_sheets.gd`:
 
 - **`SheetPaper`** decides what the background is. A colour covering a fifth
@@ -306,6 +323,20 @@ headlessly by `tests/test_sheets.gd`:
     legitimately reaches the edge: feet on the bottom row, a tail running off
     the side. A subject that really does cover the border on all four sides
     returns no paper, nothing is keyed, and the art survives.
+- **`SheetKey`** *(v1.46)* takes the page off, and only the page. Keying by
+  colour alone has one failure that ruins a pack outright: **a dog the
+  colour of its own page is erased with it.** The owner's aged sheet was a
+  black-and-tan puppy on a dark navy ground, and what was installed was an
+  outline with nothing in it — 38,071 pixels cleared, 7,262 left. No
+  sharpening of the colour test could have helped, because the dog and the
+  page really are that colour; what separates them is *where they are*. So
+  the clearing starts at the border and spreads inwards through paper, and
+  stops at the first pixel that is not paper. What it gives up is the gap
+  between a dog's legs, which stays page-coloured when the outline closes
+  round it — the same bargain a magic wand makes, and the right way round.
+  This is RT-14 carried to its conclusion: v1.43 stopped the *dog* being
+  chosen as the paper, and this stops the dog being keyed when the paper is
+  chosen correctly.
 - **`SheetScan`** measures: which pixels are drawn on that paper, and how
   much is drawn down each column and across each row. The only part that
   looks at pixels one at a time. A picture bigger than two megapixels is
@@ -340,8 +371,19 @@ headlessly by `tests/test_sheets.gd`:
   to how many frames a piece could hold — the width of what it covers — read
   by both the form's frames box and `recount`'s refusal, since a cap in one
   and a check in the other have to agree. **`SheetCutter`** carries the cuts
-  out: paper keyed, frames trimmed and stood on a common baseline when they
-  came from uneven places, laid out side by side in equal cells.
+  out: paper keyed (once, on the whole sheet, before anything is cut out of
+  it), then **every** frame trimmed to what is drawn on it and stood on a
+  common baseline, centred, laid out side by side in equal cells.
+  - *Every* frame, whatever it was cut from *(v1.46)*. Cells of one size
+    off a grid used to be left exactly where they were found, on the
+    reasoning that they were already registered to each other. **A grid is
+    a convenience for the artist, not a promise about where in it the
+    animal was drawn.** The owner's six raccoons sat anywhere from 22 to
+    126 pixels off the bottom of their cells and up to 114 off the side,
+    and what was installed floated above the floor and hung off the edge of
+    the window. The cost of the rule is that a hop drawn into the cells is
+    flattened, which is no loss here: the hops are the animator's job
+    (5.3), and the art's job is to stand still in one place.
 
 A strip is as wide as all its frames put together, so `SheetCutter` shrinks
 its frames until the finished strip fits inside `ImageLimits.MAX_TEXTURE_SIDE`
@@ -411,6 +453,22 @@ It prints what it found, writes the strips it would install with `--out`, and
 shows the measurements behind the answer with `--grid`. `tools/slice_sheet.gd`
 (v1.33) stays for the contact sheets this cannot read: a page of poses with
 titles and rules drawn over it, where a human has to say which rectangle.
+
+`tools/refit_pack.gd` *(v1.46)* repairs a pack **already installed** by an
+older DogPet, in place:
+
+```
+godot --headless --path . --script res://tools/refit_pack.gd -- \
+    --pack assets/pets/<id> [--unkey] [--dry]
+```
+
+It re-registers every frame through `SheetCutter`, so a pack installed
+before v1.46 lands where a new one would. `--unkey` additionally puts back
+the pixels the old global keying cleared from inside the art — only the
+alpha was ever thrown away, the colours are all still there — and is only
+for a pack damaged that way; on a healthy pack it would fill in holes the
+artist meant to be holes. Originals go to `assets/_backup/<id>-<timestamp>/`
+first. `aged_kaly` and `panda_1` were both repaired with it.
 
 ## 6. The needs system (autoload `Needs.gd`)
 
@@ -643,8 +701,8 @@ Stop at the end of each phase. Tell the owner exactly how to test it, and wait f
 - `pets/pug_3d/`: **default pet.** Pug by Smirnoff Alexander, CC-BY 3.0, via Poly Pizza. A static .glb (2,706 vertices, one texture) with no rig and no animations. It faces about 29° off +Z, so `rotation_y_degrees` is −29. Tune if needed.
 - `pets/pawsome_3d/`: a static .glb with 8 flat-color materials and no texture, about a third the size of the pug before normalizing.
 - `pets/begging_dog/` *(v1.37)*: the owner's own art, cut from a pose sheet in `art-source/` with `tools/slice_sheet.gd`. Four states — `idle`, `eat`, `sad` (3 frames each) and `sleep` (1) — not pixel art, so `pixel_art` is false. It sets `credit_not_required` (5.1) and must never be given a credit line.
-- `pets/aged_kaly/` *(v1.45)*: the owner's own art, and the first pack to use the life stages of 5.1 — one `idle` drawn at four ages, installed as a `stages` list by the wizard with nobody typing a number into it. The sheet reader found the progression on its own: the drawing grows from 207×219 at puppy through 301 and 324 to 333×219 at senior, with the ink going 16% → 29% → 46% → 48%, which is exactly the size signal `SheetStages` looks for. Not pixel art. Sets `credit_not_required` (5.1) and must never be given a credit line.
-- `pets/panda_1/` *(v1.45)*: the owner's own art. One `idle` of 6 frames at 558×480, installed through the wizard in one pass. Not pixel art. Sets `credit_not_required` (5.1) and must never be given a credit line.
+- `pets/aged_kaly/` *(v1.45)*: the owner's own art, and the first pack to use the life stages of 5.1 — one `idle` drawn at four ages, installed as a `stages` list by the wizard with nobody typing a number into it. The sheet reader found the progression on its own: the drawing grows from 207×219 at puppy through 301 and 324 to 333×219 at senior, with the ink going 16% → 29% → 46% → 48%, which is exactly the size signal `SheetStages` looks for. Repaired in v1.46 with `tools/refit_pack.gd --unkey`: it was installed by a version that keyed out every pixel of the page's colour, and the puppy is drawn in the colour of its page, so it arrived as an outline with nothing inside it. Not pixel art. Sets `credit_not_required` (5.1) and must never be given a credit line.
+- `pets/panda_1/` *(v1.45)*: the owner's own art. One `idle` of 6 frames, installed through the wizard in one pass. The six poses were drawn anywhere in their 558×480 cells, so v1.46 re-registered them with `tools/refit_pack.gd` and the strip is now 2790×457 — every frame standing on one line. Not pixel art. Sets `credit_not_required` (5.1) and must never be given a credit line.
 - `pets/beagle/` *(v1.39)*: a cartoon beagle by Bevouliin, and the first pack installed entirely by the sheet reader (5.8) — 39 numbered frames in two folders went in, and `idle` (1), `walk` (21) and `play` (18) came out, with a `pet.json` nobody typed a number into. Not pixel art. Its download carries no licence file, only a note pointing at bevouliin.com, and `CREDITS.txt` says so.
 - `pets/pug_pixel/`: from Nasha's Cozy Pets Pack. `walk.png` is a 4-frame strip (43×32 per frame, 6 fps). `idle.png` is a single 45×43 frame.
 - `scenes/home`, `scenes/eat`: tiled rooms (32×32 wall and floor tiles) plus props, all from the Cozy pack.

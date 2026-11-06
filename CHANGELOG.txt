@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.46 - Every imported dog lands in the same place
   v1.45 - Two more dogs, both drawn in the house
   v1.44 - The import wizard stops asking for a credit
   v1.43 - A second audit: the dog that was keyed out as the background
@@ -49,6 +50,106 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.46 - Every imported dog lands in the same place
+------------------------------------------------------------
+
+What
+  - scripts/sheet_key.gd (new): the page is taken off a sheet by filling
+    inwards from its border, so only paper the edge can reach is cleared.
+    A dog drawn in the colour of its own page keeps its body.
+  - scripts/sheet_cutter.gd: every frame is now trimmed to what is drawn on
+    it and stood in one place - on the bottom of its cell, centred across
+    it - whatever it was cut from. It used to do that only for frames cut
+    out of uneven patches, and leave cells off a grid exactly as it found
+    them. The keying moved to SheetKey and now runs once on the whole sheet
+    before anything is cut out of it.
+  - scripts/sprite_anchor.gd (new): where the art sits inside a strip's
+    frames, measured across the whole animation.
+  - scripts/pet_view.gd: the dog is scaled and placed by that box rather
+    than by the frame around it. What stands on the floor and sits on the
+    spot is the drawing, not its margins.
+  - scripts/pet_pack.gd: PetPack.art_scale. Painted art is scaled by
+    whatever fraction makes it display_height_px tall; pixel art still
+    keeps to whole numbers, and art too big for its box is now divided by
+    one instead of being left at 1x.
+  - scripts/pet_loader.gd: load_image and measure_art, so the boxes are
+    measured while the sheets are already open.
+  - tools/refit_pack.gd (new): repairs a pack installed by an older
+    DogPet - --unkey puts back the pixels cleared from inside the art, and
+    the frames are re-registered. Originals are copied to assets/_backup/
+    first.
+  - assets/pets/aged_kaly and assets/pets/panda_1 repaired with it.
+  - The "align" flag is gone from SheetPlan's cuts: there is one behaviour
+    now, so there was nothing left for it to say.
+
+Why
+  - The owner installed two sprite sheets and neither was usable. Reported
+    2026-11-05: one "was not in the correct place in the app, and was
+    completely transparent"; the other, a raccoon, "was way off the pet
+    screen and was not properly centered". They asked for the import engine
+    to be refined so that everything installed lands in the same place on
+    the pet screen.
+  - Both were reproduced before anything was changed, and they turned out
+    to be two separate faults.
+  - The transparent one is aged_kaly. It is a black-and-tan puppy drawn on
+    a dark navy ground, and SheetPaper was right about the colour: the page
+    IS that colour. Clearing every pixel of it took the dog as well -
+    38,071 pixels cleared against 7,262 left, which is an outline with
+    nothing inside it. No improvement to the colour test could have saved
+    it, because the dog and the page really are the same colour. What
+    separates them is position, not colour: the page is what the border can
+    reach. That is RT-14 (v1.43) carried through to its conclusion - that
+    fix stopped the DOG being chosen as the paper; this one stops the dog
+    being keyed when the PAPER is chosen correctly.
+  - The raccoon is panda_1: six poses in even 558 x 480 cells, drawn
+    anywhere in them - 22 to 126 pixels off the bottom, up to 114 off the
+    side. Two things then went wrong at once. The cutter left the cells
+    alone, on the old reasoning that even cells are already registered to
+    each other; a grid is a convenience for the artist, not a promise about
+    where in it the animal was drawn. And PetView scaled by the frame with
+    integer_scale, which floors at 1, so 480 pixels of painted dog in a box
+    asking for 160 was drawn at full size: 558 x 480 in a 500 x 620 view,
+    starting at x = -29. Off the screen, as reported.
+  - Fixed at both ends on purpose. The cutter fixes what gets installed
+    from now on; the anchor and the scale fix what is on screen, which also
+    rescues packs already installed and packs somebody wrote a pet.json for
+    by hand. Neither alone would have been enough: registering only at
+    import leaves the owner's raccoon broken, and anchoring only at display
+    leaves each pose wandering within the shared box.
+
+How
+  - SheetKey fills spans rather than single pixels, and only the first
+    pixel of each run on the neighbouring row is pushed, which is what
+    keeps a two-megapixel sheet to a sensible number of steps in GDScript.
+    A page the art divides in two is still all page, because every pixel of
+    the border is a starting point.
+  - What it gives up: the gap a dog leaves between its legs stays
+    page-coloured when the outline closes round it. That is the bargain the
+    magic wand in any paint program makes, and it is the right way round.
+  - A pack whose art ages keeps one scale for life, measured on the grown
+    dog (PetLoader.measure_art). Scaling each stage to fill the same height
+    would have held the puppy up to the adult's size and the dog would
+    never visibly grow - aged_kaly now draws its puppy at 85px against the
+    adult's 160.
+  - The repair of the two packs: aged_kaly got 7,128 / 14,444 / 7,251 /
+    3,262 pixels back across its four stages, and its frames trimmed
+    (207x219 -> 207x116 at puppy). panda_1 went 3348x480 -> 2790x457, every
+    frame standing on one line. Originals are in assets/_backup/.
+  - Tests: test_sheets 123 -> 148 checks - a dog the colour of its page
+    keeps its body, a page the art divides is still all page, frames from a
+    wandering grid come out registered, and the same thing proved again
+    through the real installer by reading the written PNG back off the
+    disk. test_pets 143 -> 177 - art_scale in both directions for painted
+    and pixel art, SpriteAnchor, and every shipped sprite pack measured
+    against its own frames. All eleven suites pass: 1163 checks, 0 failures.
+  - Three existing checks in test_sheets changed on purpose, because the
+    strips are now cut tight to the art: a stitched strip of three 9-pixel
+    drawings in 16-pixel files is 27 x 9, not 48 x 16.
+  - The app was run headlessly with each sprite pack as the active pet -
+    aged_kaly, beagle, pug_pixel, begging_dog, panda_1 - and the 3D pug,
+    with no errors or warnings.
 
 ------------------------------------------------------------
 v1.45 - Two more dogs, both drawn in the house
