@@ -1,0 +1,17 @@
+{
+  "animations": {
+    "idle": {
+      "file": "idle.png",
+      "fps": 6.0,
+      "frames": 6
+    }
+  },
+  "credit_not_required": true,
+  "display_height_px": 160,
+  "faces": "right",
+  "format_version": 1,
+  "id": "panda_1",
+  "kind": "sprite2d",
+  "name": "Panda 1",
+  "pixel_art": false
+}

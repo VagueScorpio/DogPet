@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.45 - Two more dogs, both drawn in the house
   v1.44 - The import wizard stops asking for a credit
   v1.43 - A second audit: the dog that was keyed out as the background
   v1.42 - The stage reading moves out, and the line limit becomes advice
@@ -48,6 +49,43 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.45 - Two more dogs, both drawn in the house
+------------------------------------------------------------
+
+What
+  - assets/pets/aged_kaly/: the owner's own art, and the first pack in the
+    repo to use the life stages of 5.1. One "idle" drawn at four ages -
+    idle_puppy, idle_juvenile, idle_adult, idle_senior - written as a
+    "stages" list by the import wizard.
+  - assets/pets/panda_1/: the owner's own art. One "idle" of 6 frames at
+    558 x 480.
+  - Both set credit_not_required and must never be given a credit line.
+    Neither appears in assets/CREDITS.txt, which is for art from elsewhere.
+  - Seven pet packs now ship: aged_kaly, beagle, begging_dog, panda_1,
+    pawsome_3d, pug_3d, pug_pixel.
+
+Why
+  - The owner imported both through Add Art while checking the v1.43 audit
+    fixes in the running app, and asked for them to be committed.
+
+How
+  - Both were installed by the wizard itself rather than assembled by
+    hand - no pet.json was typed. aged_kaly is the interesting one: the
+    sheet reader found the life cycle on its own, with no help. The drawing
+    grows from 207x219 at puppy through 301 and 324 to 333x219 at senior,
+    and the ink goes 16% -> 29% -> 46% -> 48%, which is exactly the size
+    signal SheetStages looks for (_first_is_smallest and GROWTH). It named
+    the four stages and wrote them youngest first.
+  - PetPack reads both back valid with no problems and stage_count 4 for
+    aged_kaly, matching begging_dog.
+  - They were imported on v1.43, so they are also the first real art to go
+    through the RT-14 paper fix in the app rather than in a harness.
+    panda_1's strip comes out 25.4% drawn - the panda, not the hole it
+    would have left on v1.42.
+  - +1.2 MB to the repo and to the shipped zip, since tools/build.ps1
+    copies assets/ in loose.
 
 ------------------------------------------------------------
 v1.44 - The import wizard stops asking for a credit

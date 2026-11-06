@@ -1,0 +1,36 @@
+{
+  "animations": {
+    "idle": {
+      "stages": [
+        {
+          "file": "idle_puppy.png",
+          "fps": 1.0,
+          "frames": 1
+        },
+        {
+          "file": "idle_juvenile.png",
+          "fps": 1.0,
+          "frames": 1
+        },
+        {
+          "file": "idle_adult.png",
+          "fps": 1.0,
+          "frames": 1
+        },
+        {
+          "file": "idle_senior.png",
+          "fps": 1.0,
+          "frames": 1
+        }
+      ]
+    }
+  },
+  "credit_not_required": true,
+  "display_height_px": 160,
+  "faces": "right",
+  "format_version": 1,
+  "id": "aged_kaly",
+  "kind": "sprite2d",
+  "name": "Aged Kaly",
+  "pixel_art": false
+}
