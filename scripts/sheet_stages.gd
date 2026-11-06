@@ -137,6 +137,10 @@ static func _colour_of(image: Image, rect: Rect2i) -> Vector2:
 		return Vector2.ZERO
 	var data: PackedByteArray = image.get_data()
 	var width: int = image.get_width()
+	# Four bytes a pixel is an assumption, and one that was read off the end
+	# of the buffer when it did not hold. Cheaper to ask than to be wrong.
+	if data.size() < width * image.get_height() * 4:
+		return Vector2.ZERO
 	var step: int = maxi(1, int(sqrt(
 		float(area.size.x * area.size.y) / float(COLOUR_SAMPLES)
 	)))

@@ -183,9 +183,19 @@ func _read_background(raw: Variant) -> void:
 			_fall_back_background("background type \"%s\" is not one it knows" % type)
 
 
+# Is this file, named by the manifest, both inside the pack and really there?
+#
+# A name that leaves the pack is treated as missing. A scene.json out of
+# somebody else's zip may say "../../x.png", and a pack that reaches outside
+# itself is broken the same way whether the file is there or not.
+func _has(file: String) -> bool:
+	var path: String = PackArchive.inside(dir, file)
+	return not path.is_empty() and FileAccess.file_exists(path)
+
+
 func _read_image_background(data: Dictionary) -> void:
 	var file: String = str(data.get("file", "")).strip_edges()
-	if file.is_empty() or not FileAccess.file_exists(dir.path_join(file)):
+	if not _has(file):
 		_fall_back_background("the background picture %s is missing" % file)
 		return
 	background = {"type": BG_IMAGE, "file": file}
@@ -195,7 +205,7 @@ func _read_tiled_background(data: Dictionary) -> void:
 	var wall: String = str(data.get("wall", "")).strip_edges()
 	var floor_file: String = str(data.get("floor", "")).strip_edges()
 	for file in [wall, floor_file]:
-		if file.is_empty() or not FileAccess.file_exists(dir.path_join(file)):
+		if not _has(file):
 			_fall_back_background("the tile image %s is missing" % file)
 			return
 	background = {
@@ -255,7 +265,9 @@ func _read_generated_background(data: Dictionary) -> void:
 func _tile_scale_for(asked: int, files: Array) -> int:
 	var scale: int = asked
 	for file in files:
-		var size: Vector2i = ImageLimits.png_size_from_header(dir.path_join(str(file)))
+		var size: Vector2i = ImageLimits.png_size_from_header(
+			PackArchive.inside(dir, str(file))
+		)
 		if size.x <= 0 or size.y <= 0:
 			continue
 		var smallest: int = mini(size.x, size.y)
@@ -306,7 +318,7 @@ func _read_props(raw: Variant) -> void:
 		if file.is_empty():
 			continue
 		# A missing picture costs that one prop and nothing else.
-		if not FileAccess.file_exists(dir.path_join(file)):
+		if not _has(file):
 			problems.append("the prop %s is missing; skipping it" % file)
 			continue
 		props.append({

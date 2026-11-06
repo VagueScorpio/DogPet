@@ -144,7 +144,7 @@ func is_builtin() -> bool:
 
 
 func model_path() -> String:
-	return dir.path_join(model_file)
+	return PackArchive.inside(dir, model_file)
 
 
 ## The clip inside the .glb for this state, or "" to use procedural motion.
@@ -220,6 +220,8 @@ func _read_model3d(data: Dictionary) -> void:
 
 	if model_file.is_empty():
 		problems.append("no \"model\" file named")
+	elif model_path().is_empty():
+		problems.append("the model %s is outside the pack" % model_file)
 	elif not FileAccess.file_exists(model_path()):
 		problems.append("the model file %s is missing" % model_path())
 

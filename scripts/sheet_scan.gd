@@ -46,11 +46,18 @@ static func open(path: String) -> Dictionary:
 	return {"scan": of_image(path, image), "image": image}
 
 
-## The same, for an image already in hand. The tests use this; so does the
-## wizard, which has the picture open for its preview already.
+## The same, for an image already in hand. The tests come in this way; the
+## app comes in through open() above.
 static func of_image(path: String, image: Image) -> Dictionary:
 	if image.get_width() <= 0 or image.get_height() <= 0:
 		return _nothing(path, "%s is empty" % path.get_file())
+	# Converted here as well as in the reduced copy below, because the caller
+	# keeps this image and SheetStages reads it four bytes to a pixel. An
+	# RGB8 one has three, which read off the end of the buffer and then
+	# judged the sheet on whatever came back. open() already converts; this
+	# is the other door in.
+	if image.get_format() != Image.FORMAT_RGBA8:
+		image.convert(Image.FORMAT_RGBA8)
 	var full := Vector2i(image.get_width(), image.get_height())
 
 	var small: Image = image.duplicate()

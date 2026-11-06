@@ -224,7 +224,10 @@ func _build_sprite_questions(into: VBoxContainer, images: PackedStringArray) -> 
 	# a grid sheet, the runs of numbered files, and which of them hold one
 	# animal moving rather than several different ones. What is left to ask
 	# is what each piece is for.
-	var found: Dictionary = SheetPlan.read(images)
+	# Only as many as there are rows for, below: reading the rest is work
+	# nobody sees, and four hundred pictures took thirteen seconds of it with
+	# the window dead. SheetPlan says in its notes how many were left over.
+	var found: Dictionary = SheetPlan.read(images, MAX_PIECES)
 	_found = found["pieces"]
 	into.add_child(UiBits.dim(
 		"DogPet has looked at %d file%s and found %d thing%s in %s. Give the ones you"
@@ -253,14 +256,29 @@ func _build_sprite_questions(into: VBoxContainer, images: PackedStringArray) -> 
 		into.add_child(UiBits.dim(str(piece["label"]), 12))
 		var row: HBoxContainer = UiBits.row(into)
 		var job: OptionButton = _picker(row, states, _suggest(piece, index, states, taken))
-		row.add_child(UiBits.dim("frames", 11, 0.0, false))
+
 		# A run of numbered files has exactly as many frames as it has files,
-		# so there is nothing there to correct.
-		var count: SpinBox = _spin(row, frames, 1, 64, 1)
-		count.editable = PackedStringArray(piece["cut"]["paths"]).size() <= 1 or frames == 1
+		# so there is nothing there to correct. Said in words rather than put
+		# in a box that cannot be typed in: the box had to clamp its own
+		# ceiling and showed 64 beside a label reading "200 numbered files".
+		var fixed: bool = (
+			PackedStringArray(piece["cut"]["paths"]).size() > 1 and frames > 1
+		)
+		var count: SpinBox = null
+		if fixed:
+			row.add_child(UiBits.dim("%d frames" % frames, 11, 0.0, false))
+		else:
+			row.add_child(UiBits.dim("frames", 11, 0.0, false))
+			# The ceiling is the piece's own width, not a flat 64: asking a
+			# 30-pixel picture for 64 frames installed a pack whose art was
+			# never written.
+			count = _spin(row, frames, 1, maxi(frames, SheetPlan.most_frames(piece)), 1)
+
 		row.add_child(UiBits.dim("per second", 11, 0.0, false))
 		var fps: SpinBox = _spin(row, Builder.DEFAULT_FPS if frames > 1 else 1.0, 1, 30, 1)
-		_pictures.append({"piece": index, "job": job, "frames": count, "fps": fps})
+		_pictures.append({
+			"piece": index, "job": job, "frames": count, "fixed": frames, "fps": fps,
+		})
 
 	if _found.size() > MAX_PIECES:
 		into.add_child(UiBits.dim(
@@ -379,10 +397,13 @@ func _sheets() -> Array:
 			continue
 		# The piece carries its own instructions for being cut out, so what
 		# goes into the pack is a strip made to measure rather than whatever
-		# file it happened to come from.
-		var piece: Dictionary = SheetPlan.recount(
-			_found[int(picture["piece"])], int((picture["frames"] as SpinBox).value)
+		# file it happened to come from. A piece with no box beside it is a
+		# numbered run, whose frame count is simply how many files it has.
+		var box: Variant = picture["frames"]
+		var wanted: int = (
+			int((box as SpinBox).value) if box != null else int(picture["fixed"])
 		)
+		var piece: Dictionary = SheetPlan.recount(_found[int(picture["piece"])], wanted)
 		sheets.append({
 			"cut": piece["cut"],
 			"state": PetPack.VALID_STATES[job.selected - 1],

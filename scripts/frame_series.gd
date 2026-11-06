@@ -24,6 +24,14 @@ const MAX_GAP := 4
 ## jump, whatever the l stands for.
 const WEAK_PREFIX := 3
 
+## The most digits a frame counter can have.
+##
+## Past this it is not a counter - it is a date, a hash, or a number too big
+## for int() to read without an engine error, which then saturates to
+## INT64_MAX and glues unrelated files into one run. Twelve digits is a
+## trillion frames, so nothing real is refused.
+const MAX_DIGITS := 12
+
 
 ## Group paths into numbered runs. Returns
 ## {"series": Array[Dictionary], "loose": PackedStringArray}, where each
@@ -88,6 +96,8 @@ static func split_number(file_name: String) -> Dictionary:
 	# "sheet (2).png" is Windows saying it already had a sheet.png, not
 	# frame two of an animation. A number in brackets is never a counter.
 	if first > 0 and base[first - 1] == "(" and base.substr(last + 1).begins_with(")"):
+		return {}
+	if digits.length() > MAX_DIGITS:
 		return {}
 	return {
 		"prefix": base.substr(0, first),

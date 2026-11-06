@@ -82,14 +82,18 @@ func button_icon_path(action: String) -> String:
 func _path(file: String) -> String:
 	if file.is_empty():
 		return ""
-	return dir.path_join(file)
+	return PackArchive.inside(dir, file)
 
 
 func _checked(file: String, what: String) -> String:
 	var cleaned: String = file.strip_edges()
 	if cleaned.is_empty():
 		return ""
-	if not FileAccess.file_exists(dir.path_join(cleaned)):
+	# Through PackArchive like every other manifest-named file: a ui.json may
+	# be edited by hand, and a name that leaves the folder is no more usable
+	# than one that is missing.
+	var path: String = PackArchive.inside(dir, cleaned)
+	if path.is_empty() or not FileAccess.file_exists(path):
 		problems.append("the %s (%s) is missing" % [what, cleaned])
 		return ""
 	return cleaned

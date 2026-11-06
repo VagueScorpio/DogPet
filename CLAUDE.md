@@ -265,6 +265,8 @@ If `assets/` is missing, damaged, or a pack fails to load, the app falls back to
   - Credit is asked for every time, with the reason given. A pack installed without one is warned about rather than blocked, because `PetPack` already treats a missing credit as a problem and the owner should hear that before it happens, not after. A **My own art — no credit needed** tick writes `credit_not_required` (5.1) and silences both the warning and the problem *(v1.35)*.
   - The pure halves are `PackBuilder.gd` (what the files could be, and the manifest) and `PackInstall.gd` (checking the answers, and what lands where), both free of nodes and tested by `tests/test_builder.gd`. The wizard itself is `ImportWizard.tscn` with `import_form.gd` and `import_preview.gd`, driven end to end by a scenario in `tests/test_integration.gd`.
 - **Import pack (.zip):** reached by handing the wizard a `.zip`. Read it with `ZIPReader`. It must contain a `pet.json` (pet pack) or a `scene.json` (scene pack) at its root or in one top-level folder. Validate the JSON, then extract to `assets/pets/<id>/` or `assets/scenes/<id>/`, where a room's `<id>` is its folder name rather than its role, so importing a second kitchen adds one rather than replacing the first. Ask before overwriting a folder that already exists. A replaced pack is backed up to `assets/_backup/<id>-<timestamp>/` first. Reject paths containing `..` or absolute paths (zip-slip).
+  - **A manifest is checked the same way its zip's entries are** *(v1.43, from the second audit)*. Rejecting the entries is only half the rule: a zip with impeccable entries can still carry a `pet.json` naming `../../secret.png`, and that was accepted and the pack called usable. `PackArchive.inside(folder, file)` sits beside `is_safe_entry` and is what every manifest-named file goes through — the sprite states and each of their life stages, the `model`, a room's background, tiles and props, and the UI icons — so a pack cannot be *read* in a way it could not have been *installed*. Subfolders inside a pack are allowed, because that is organising rather than leaving.
+  - **A pack is installed or it is not** *(v1.43)*. `PackInstall.write` used to record that a strip could not be made and then write the manifest anyway, leaving a folder in `assets/` that the pet picker listed as broken for ever over something the owner did nothing wrong to cause. On any problem it now empties and removes the target and says nothing was installed. Safe because the wizard takes the backup before calling it.
 - **Export pack (.zip):** pick a pet pack or scene role, then write a zip with `ZIPPacker` to a location chosen in a save dialog. Include the pack's credit line in a `CREDITS.txt` inside the zip.
 
 ### 5.8 The sheet reader *(v1.38, at the owner's request)*
@@ -281,10 +283,27 @@ Eight scripts, none of which touches a node, so all of it is tested
 headlessly by `tests/test_sheets.gd`:
 
 - **`SheetPaper`** decides what the background is. A colour covering a fifth
-  of the picture, **or two shades of one colour covering half of it**, which
-  is how a transparency checkerboard is recognised. Counted as neighbourhoods
-  rather than as exact values, because a background with the faintest
-  gradient on it is spread over a dozen buckets.
+  of the picture **and at least half of its outer ring**, or two shades of one
+  colour covering half the picture between them, which is how a transparency
+  checkerboard is recognised. Counted as neighbourhoods rather than as exact
+  values, because a background with the faintest gradient on it is spread over
+  a dozen buckets.
+  - The ring is the part that matters *(v1.43, from the second audit)*. The
+    original rule was share alone, and it had this in it: a sheet cropped
+    tight has more dog on it than page, so the **dog** was the commonest
+    colour and was declared the paper — keyed out on the way into the pack,
+    with the white page kept in its place, and three frames read as one
+    picture because the leftover ink was one blob with holes in it. The only
+    difference between that sheet and one that worked was how much margin the
+    artist left. **A background is what the edge of the page is made of**,
+    which is true of every sheet anybody will hand this app and false of every
+    dog, because a dog is drawn in the middle of its cell. So the candidates
+    are tried in order of how common they are and the first one that is also
+    what the border is made of wins — which in that case is the page, sitting
+    second on count. Half the ring rather than all of it, because art
+    legitimately reaches the edge: feet on the bottom row, a tail running off
+    the side. A subject that really does cover the border on all four sides
+    returns no paper, nothing is keyed, and the art survives.
 - **`SheetScan`** measures: which pixels are drawn on that paper, and how
   much is drawn down each column and across each row. The only part that
   looks at pixels one at a time. A picture bigger than two megapixels is
@@ -310,9 +329,17 @@ headlessly by `tests/test_sheets.gd`:
   Windows saying it already had a `sheet.png`, not frame two of anything.
 - **`SheetPlan`** is the front door: it puts those together and hands back
   pieces, each one still picture or one strip, with the instructions for
-  cutting it out. **`SheetCutter`** carries those out: paper keyed, frames
-  trimmed and stood on a common baseline when they came from uneven places,
-  laid out side by side in equal cells.
+  cutting it out. `read` takes a **ceiling** on how many pieces are worth
+  finding *(v1.43)*, which the wizard sets to the number of rows it has and
+  `tools/read_sheet.gd` leaves off: the pictures are read on the UI thread, so
+  four hundred of them took thirteen seconds with the window dead to find 400
+  pieces, 24 of which were shown. It says in its notes how many files it left,
+  because a quiet optimisation is a quiet bug. `most_frames` is the one answer
+  to how many frames a piece could hold — the width of what it covers — read
+  by both the form's frames box and `recount`'s refusal, since a cap in one
+  and a check in the other have to agree. **`SheetCutter`** carries the cuts
+  out: paper keyed, frames trimmed and stood on a common baseline when they
+  came from uneven places, laid out side by side in equal cells.
 
 A strip is as wide as all its frames put together, so `SheetCutter` shrinks
 its frames until the finished strip fits inside `ImageLimits.MAX_TEXTURE_SIDE`

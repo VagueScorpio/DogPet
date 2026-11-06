@@ -151,6 +151,131 @@ func _test_paper() -> void:
 	_ok("the box is found where it was put",
 		Rect2i(on_paper["bounds"]) == Rect2i(8, 8, 16, 16))
 
+	# RT-14. The commonest colour is not always the paper. A sheet cropped
+	# tight has more dog on it than page, and taking the dog for the
+	# background keyed the dog out and installed the hole it left - three
+	# frames read as one picture of a white rectangle. What tells them apart
+	# is the border: the page reaches the edge of the sheet and the dog does
+	# not.
+	var cropped: Image = _page(120, 40)
+	for index in 3:
+		_fill(cropped, Rect2i(index * 40 + 3, 4, 34, 33), INK)
+	var inverted: Dictionary = Scan.of_image("cropped.png", cropped)
+	_ok("a sheet whose subject outnumbers its paper still finds the paper",
+		SheetPaper.apart(Color(inverted["background"]), Color.WHITE) <= 0.05)
+	_ok("and the subject is what counts as drawn, not the page",
+		float(inverted["coverage"]) > 0.5)
+	var cut: Dictionary = Plan.read(PackedStringArray([
+		_write("cropped.png", cropped),
+	]))
+	var pieces: Array = cut["pieces"]
+	_ok("and its frames are found rather than read as one picture",
+		pieces.size() == 1 and int((pieces[0] as Dictionary)["frames"]) == 3)
+
+	# The other half of the same rule: a colour that reaches the border but
+	# covers little of the sheet is a drawn frame around it, not the paper.
+	var framed: Image = _blank(40, 40)
+	_fill(framed, Rect2i(0, 0, 40, 2), INK)
+	_fill(framed, Rect2i(0, 38, 40, 2), INK)
+	_fill(framed, Rect2i(8, 8, 24, 24), Color(0.9, 0.9, 0.9, 1.0))
+	var ruled: Dictionary = Scan.of_image("framed.png", framed)
+	_ok("a drawn border is not mistaken for the paper",
+		SheetPaper.apart(Color(ruled["background"]), INK) > 0.05)
+
+	_test_ceiling()
+
+
+# RT-15. The wizard reads the chosen pictures on the UI thread, so reading
+# more of them than it has rows to show is a frozen window for nothing: four
+# hundred 256x256 files took thirteen seconds to find 400 pieces, 24 of which
+# were offered. read() now stops at a ceiling, and says that it did.
+func _test_ceiling() -> void:
+	_begin("Reading stops at the ceiling it was given")
+	# Named with letters, not numbers: a numbered run is one piece by design,
+	# and nine separate pictures is what this is about.
+	var chosen: PackedStringArray = []
+	for index in 9:
+		var one: Image = _blank(16, 16)
+		_fill(one, Rect2i(3, 3, 10, 10), INK)
+		chosen.append(_write("pose_%c.png" % (97 + index), one))
+
+	var everything: Dictionary = Plan.read(chosen)
+	_ok("no ceiling reads every file", (everything["pieces"] as Array).size() == 9)
+	_ok("and says nothing about stopping",
+		not _says(everything["notes"], "stopped"))
+
+	var capped: Dictionary = Plan.read(chosen, 4)
+	_ok("a ceiling of four stops at four", (capped["pieces"] as Array).size() == 4)
+	_ok("and says how many files were left", _says(capped["notes"], "stopped"))
+	_ok("and names the number left over", _says(capped["notes"], "5 files"))
+
+	var none: Dictionary = Plan.read(chosen, 0)
+	_ok("a ceiling of zero is no ceiling", (none["pieces"] as Array).size() == 9)
+
+	_test_bad_arguments()
+
+	# A sheet is cut whole or not at all, so one file may still come back
+	# with more pieces than the ceiling. The form has its own note for that.
+	var sheet: Image = _blank(6 * 16, 16)
+	for cell in 6:
+		_fill(sheet, Rect2i(cell * 16 + 3, 3, 10, 10), INK if cell % 2 == 0 else PAPER)
+	var whole: Dictionary = Plan.read(PackedStringArray([
+		_write("one_sheet.png", sheet),
+	]), 2)
+	_ok("one sheet is never cut off half way",
+		(whole["pieces"] as Array).size() >= 1)
+
+
+# RT-20, RT-21 and RT-22. The engine's public arithmetic, asked questions
+# nobody sensible would ask it. None of these is reachable from the wizard;
+# they are closed because the suites call these functions directly and an
+# engine error in the log is a thing somebody will one day have to explain.
+func _test_bad_arguments() -> void:
+	_begin("Nonsense arguments get sensible answers, not engine errors")
+
+	# RT-21. These used to print "Division by zero" and "answered true to a
+	# nonsense question" respectively.
+	_ok("nothing divides into no parts",
+		Grid.even_parts(Rect2i(0, 0, 64, 32), 0).is_empty())
+	_ok("nor into a negative number of them",
+		Grid.even_parts(Rect2i(0, 0, 64, 32), -3).is_empty())
+	_ok("a count that does divide still works",
+		Grid.even_parts(Rect2i(0, 0, 64, 32), 4).size() == 4)
+	var tally: PackedInt32Array = [4, 4, 4, 4, 4, 4, 4, 4]
+	_ok("one piece has no join to look at", not Grid.dips_at_joins(tally, 1))
+	_ok("and no pieces has none either", not Grid.dips_at_joins(tally, 0))
+
+	# RT-22. A twenty-digit number is a date or a hash, not a frame counter,
+	# and int() could not read it without an engine error - after which it
+	# saturated and glued unrelated files into one run.
+	_ok("a twenty-digit number is not a frame counter",
+		FrameSeries.split_number("run_99999999999999999999.png").is_empty())
+	_ok("but twelve digits still are",
+		int(FrameSeries.split_number("run_000000000007.png").get("number", -1)) == 7)
+	_ok("and so does an ordinary counter",
+		int(FrameSeries.split_number("run_007.png").get("number", -1)) == 7)
+
+	# RT-20. SheetStages reads the image four bytes to a pixel. An RGB8 one
+	# has three, which read off the end of the buffer and judged the sheet
+	# on whatever came back.
+	var rgb: Image = Image.create(48, 32, false, Image.FORMAT_RGB8)
+	rgb.fill(PAPER)
+	for index in 3:
+		for y in range(6, 26):
+			for x in range(index * 16 + 3, index * 16 + 13):
+				rgb.set_pixel(x, y, INK)
+	var scanned: Dictionary = Scan.of_image("rgb.png", rgb)
+	_ok("a scan of an RGB8 picture still finds the ink",
+		float(scanned["coverage"]) > 0.1)
+	var rects: Array[Rect2i] = [
+		Rect2i(0, 0, 16, 32), Rect2i(16, 0, 16, 32), Rect2i(32, 0, 16, 32),
+	]
+	var judged: Dictionary = SheetStages.of_cells(scanned, rgb, rects, rects)
+	_ok("and asking about its life stages reads nothing off the end",
+		judged.has("is_stages"))
+	_ok("three identical drawings are not a life cycle",
+		not bool(judged["is_stages"]))
+
 
 # --- What is in a picture ------------------------------------------------
 

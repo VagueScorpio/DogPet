@@ -33,12 +33,22 @@ const STATE_WORDS: Dictionary = {
 ## Returns {"pieces", "notes"}. Each piece is one thing that could be
 ## installed: see _piece for the shape. The notes are anything worth saying
 ## out loud - a file that could not be read, a sheet too busy to cut.
-static func read(paths: PackedStringArray) -> Dictionary:
+##
+## "ceiling" is how many pieces are worth finding; zero or less is no limit.
+## The wizard passes the number of rows it has room for, because reading four
+## hundred pictures to find pieces nobody will be shown took thirteen seconds
+## with the window dead. tools/read_sheet.gd passes nothing, and so still
+## reports everything in a sheet, which is the whole point of it.
+static func read(paths: PackedStringArray, ceiling: int = 0) -> Dictionary:
 	var pieces: Array[Dictionary] = []
 	var notes: PackedStringArray = []
+	var skipped: int = 0
 
 	var grouped: Dictionary = FrameSeries.group(paths)
 	for entry in grouped["series"]:
+		if _enough(pieces, ceiling):
+			skipped += 1
+			continue
 		var series: Dictionary = entry
 		var files: PackedStringArray = series["paths"]
 		var scan: Dictionary = SheetScan.read(files[0])
@@ -58,6 +68,12 @@ static func read(paths: PackedStringArray) -> Dictionary:
 		pieces.append(_series_piece(series, scan))
 
 	for path in PackedStringArray(grouped["loose"]):
+		# Checked between files rather than inside one: a sheet is cut whole
+		# or not at all, so a single grid may still come back with more pieces
+		# than the ceiling. The form has its own note for that case.
+		if _enough(pieces, ceiling):
+			skipped += 1
+			continue
 		var opened: Dictionary = SheetScan.open(path)
 		var scan: Dictionary = opened["scan"]
 		if not str(scan["problem"]).is_empty():
@@ -68,7 +84,23 @@ static func read(paths: PackedStringArray) -> Dictionary:
 			continue
 		pieces.append_array(_pieces_in(scan, opened["image"], notes))
 
+	# Said out loud rather than done quietly: an owner whose last fifty files
+	# were never looked at should hear so, not wonder where they went.
+	if skipped > 0:
+		notes.append(
+			"DogPet stopped after %d thing%s. Install these, then add the other %d file%s."
+			% [
+				pieces.size(), "" if pieces.size() == 1 else "s",
+				skipped, "" if skipped == 1 else "s",
+			]
+		)
 	return {"pieces": pieces, "notes": notes}
+
+
+## Has this reading found everything it was asked for? A ceiling of zero or
+## less is no ceiling, which is what tools/read_sheet.gd and the tests want.
+static func _enough(pieces: Array[Dictionary], ceiling: int) -> bool:
+	return ceiling > 0 and pieces.size() >= ceiling
 
 
 ## The same piece, cut into a different number of frames.
@@ -84,11 +116,18 @@ static func recount(piece: Dictionary, frames: int) -> Dictionary:
 	var cut: Dictionary = piece["cut"]
 	var paths: PackedStringArray = cut["paths"]
 	var rects: Array = cut["rects"]
-	if paths.is_empty() or frames < 1 or frames == int(piece["frames"]):
+	if paths.is_empty() or rects.is_empty() or frames < 1:
+		return piece
+	if frames == int(piece["frames"]):
 		return piece
 	for path in paths:
 		if path != paths[0]:
 			return piece
+	# Asking for more frames than the piece is wide gives frames nothing
+	# pixels wide, which SheetCutter cannot render and the installer then
+	# blamed on the source pictures.
+	if frames > most_frames(piece):
+		return piece
 
 	var whole: Rect2i = rects[0]
 	for rect in rects:
@@ -106,6 +145,25 @@ static func recount(piece: Dictionary, frames: int) -> Dictionary:
 		"paths": again, "rects": parts, "key": cut["key"], "align": false,
 	}
 	return changed
+
+
+## The most frames this piece could be cut into: the width of what it covers,
+## since a frame cannot be narrower than a pixel.
+##
+## Public because the import form needs the same number for its frames box. A
+## cap there and a check in recount have to agree, so there is one of them.
+static func most_frames(piece: Dictionary) -> int:
+	var cut: Dictionary = piece.get("cut", {})
+	var paths: PackedStringArray = cut.get("paths", PackedStringArray())
+	var rects: Array = cut.get("rects", [])
+	# A run of numbered files has exactly as many frames as it has files, and
+	# no arithmetic changes that.
+	if rects.is_empty() or paths.size() > 1:
+		return maxi(1, int(piece.get("frames", 1)))
+	var whole: Rect2i = rects[0]
+	for rect in rects:
+		whole = whole.merge(rect)
+	return clampi(whole.size.x, 1, SheetLikeness.MAX_FRAMES)
 
 
 ## Which DogPet state a name is asking for, or "" when it says nothing.

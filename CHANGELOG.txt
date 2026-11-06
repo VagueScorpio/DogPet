@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.43 - A second audit: the dog that was keyed out as the background
   v1.42 - The stage reading moves out, and the line limit becomes advice
   v1.41 - A dog that grows up, and a reader that can tell
   v1.40 - The old frame guesser goes, and the guide catches up
@@ -46,6 +47,89 @@ TABLE OF CONTENTS
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
 
+
+------------------------------------------------------------
+v1.43 - A second audit: the dog that was keyed out as the background
+------------------------------------------------------------
+
+What
+  - A second outside red-team audit, this one pointed only at the import
+    engine - the sheet reader, the installer and the wizard, which did not
+    exist at the time of the first audit. Ten findings, all ten fixed.
+    redteam/01-findings-import-engine.md has them;
+    redteam/99-master-report-import-engine.md has the engagement.
+  - RT-14 (Critical). scripts/sheet_paper.gd took the commonest colour on a
+    sheet for its background. A sheet cropped tight has more dog on it than
+    page, so the DOG was declared the paper: keyed out on the way into the
+    pack, with the white page kept in its place, and three frames read as
+    one picture because the leftover ink was one blob with holes in it. The
+    paper is now the colour that also covers at least half the picture's
+    outer ring, with the candidates tried in order of how common they are.
+    A background is what the edge of the page is made of; a dog is drawn in
+    the middle of its cell.
+  - RT-15 (High). The wizard read every chosen picture on the UI thread and
+    then showed the first 24. Four hundred 256x256 files took 12.9 seconds
+    with the window painted "Not responding". SheetPlan.read now takes a
+    ceiling, which the form sets to the number of rows it has: 0.82 s, and
+    it says in its notes how many files it left alone.
+  - RT-16. A cut strip is named for its job (idle.png) and a copied file
+    keeps its own name, and the two were de-duplicated in separate
+    dictionaries. A chosen file called idle.png and a cut strip given the
+    idle job both got idle.png, the copy was written first and the cut
+    overwrote it, and the walk animation silently became the idle strip.
+    One list of taken names now, with the cut names claiming theirs first.
+  - RT-17. The frames box ran 1 to 64 whatever the piece was, so a 30-pixel
+    picture asked for 64 frames produced 63 frames nothing pixels wide,
+    which could not be rendered - and PackInstall.write wrote the manifest
+    anyway, leaving a folder in assets/pets/ that the picker listed as
+    broken for ever. SheetPlan.most_frames is now the one answer to how
+    many frames a piece could hold, read by both the box's ceiling and
+    recount's refusal, and write() installs a pack or removes the folder.
+  - RT-18. Zip-slip was closed in v1.21, but that guards a zip's entries. A
+    zip with impeccable entries could still carry a pet.json naming
+    "../../secret.png", and it was accepted and called usable. New
+    PackArchive.inside() sits beside is_safe_entry so the import and the
+    read share one rule, and is used by the sprite states and their life
+    stages, the model, the scene background and props, and the UI icons.
+  - RT-19. The life stage was the one name in the installer that skipped
+    the sanitising. A stage of "../../x" wrote the strip outside the pack
+    while the manifest still named it inside.
+  - RT-20 to RT-23, the small ones: SheetScan.of_image now converts the
+    image it was handed (SheetStages read it four bytes to a pixel, and an
+    RGB8 one has three); even_parts(rect, 0) no longer prints "Division by
+    zero"; a 20-digit frame number is not a frame counter; and a numbered
+    run says "21 frames" in words instead of showing a box capped at 64.
+
+Why
+  - Nine of the ten findings are one mistake in different clothes: the
+    engine decides what it is looking at by counting, and then never checks
+    the answer against anything else. Every fix adds the cheap second
+    reading, in the one place that owns the question. RT-14 is the clearest
+    case - the border test is a few thousand extra pixel reads and it was
+    the difference between installing the dog and installing the hole.
+  - RT-14 had to be fixed first and alone. Everything in the reader reads
+    SheetPaper's one answer, so a change there moves the reading of every
+    sheet with paper on it.
+
+How
+  - 51 permanent regression guards added, and the suite stands at 1104
+    checks / 0 failures, up from 1053. 14 of the new checks were run
+    against the code as it was before each fix and confirmed to fail - a
+    guard that cannot fail is not a guard.
+      test_sheets      105 -> 127   RT-14, RT-15, RT-20, RT-21, RT-22
+      test_pets        137 -> 143   RT-18
+      test_builder      61 ->  74   RT-16, RT-17, RT-19
+      test_scenes       96 -> 101   RT-18
+      test_integration  91 ->  96   RT-17, RT-23, through the real wizard
+  - Behaviour change, put on the record: PackInstall.write used to leave a
+    half-written pack in assets/ and report the problems. It now removes
+    the folder and says nothing was installed. The backup the wizard takes
+    beforehand is untouched, so nothing can be lost by it.
+  - The six harnesses are in redteam/tests/probe_p1 to probe_p6. They write
+    only into Godot's own user data folder; assets/ and saves/ were never
+    touched. Every one of them has been re-run and none of them breaks now.
+  - The three shipped sprite packs (pug_pixel, beagle, begging_dog) were
+    re-read after the SheetPaper change and are unaffected.
 
 ------------------------------------------------------------
 v1.42 - The stage reading moves out, and the line limit becomes advice

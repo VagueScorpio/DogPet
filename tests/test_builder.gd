@@ -253,6 +253,125 @@ func _test_room_pack() -> void:
 	_ok("the prop points at the renamed copy",
 		str(Dictionary(clash["manifest"])["props"][0]["file"]) == "wall_2.png")
 
+	_test_cut_names()
+	_test_frame_ceiling()
+	_test_all_or_nothing()
+
+
+# RT-16. A cut strip is named for its job and a copied file keeps its own
+# name, and the two used to be de-duplicated separately: a chosen file called
+# idle.png took idle.png, and the cut strip given the idle job then overwrote
+# it, leaving two states pointing at one picture with different frame counts.
+func _test_cut_names() -> void:
+	_begin("A cut strip and a copied file never claim one name")
+	var strip: String = _write_png("three.png", 96, 32)
+	var already: String = _write_png("idle.png", 32, 32)
+	var plan: Dictionary = Install.plan(Builder.Kind.PET_SPRITE, {
+		"id": "names", "name": "Names", "credit_not_required": true,
+		"pixel_art": true, "display_height_px": 160, "faces": "right",
+		"sheets": [
+			{
+				"cut": {
+					"paths": PackedStringArray([strip, strip, strip]),
+					"rects": [
+						Rect2i(0, 0, 32, 32), Rect2i(32, 0, 32, 32),
+						Rect2i(64, 0, 32, 32),
+					] as Array[Rect2i],
+					"key": false, "align": false,
+				},
+				"state": "idle", "stage": "", "frames": 3, "fps": 6.0,
+			},
+			{"path": already, "state": "walk", "stage": "", "frames": 1, "fps": 1.0},
+		],
+	}, _scratch.path_join("pets/names"))
+
+	var animations: Dictionary = Dictionary(plan["manifest"])["animations"]
+	_ok("the cut strip keeps the name that means something",
+		str(Dictionary(animations["idle"])["file"]) == "idle.png")
+	_ok("the copied file moves out of its way",
+		str(Dictionary(animations["walk"])["file"]) == "idle_2.png")
+	_ok("so the two states are on two different files",
+		str(Dictionary(animations["idle"])["file"])
+		!= str(Dictionary(animations["walk"])["file"]))
+
+	# RT-19. The stage was the one name in the installer that skipped the
+	# sanitising. A stage of "../../x" wrote the strip outside the pack while
+	# the manifest still named it inside.
+	var escaping: Dictionary = Install.plan(Builder.Kind.PET_SPRITE, {
+		"id": "safe", "name": "Safe", "credit_not_required": true,
+		"pixel_art": true, "display_height_px": 160, "faces": "right",
+		"sheets": [{
+			"cut": {
+				"paths": PackedStringArray([already]),
+				"rects": [Rect2i(0, 0, 32, 32)] as Array[Rect2i],
+				"key": false, "align": false,
+			},
+			"state": "idle", "stage": "../../escaped", "frames": 1, "fps": 1.0,
+		}],
+	}, _scratch.path_join("pets/safe"))
+	var named: String = Dictionary(escaping["cuts"]).keys()[0]
+	_ok("a stage name cannot climb out of the pack folder",
+		not named.contains("..") and not named.contains("/"))
+	_ok("and the state is still on the front of it", named.begins_with("idle_"))
+
+
+# RT-17. The frames box allowed 1 to 64 whatever the piece was, so a 30-pixel
+# picture asked for 64 frames produced sixty-three frames nothing pixels wide,
+# which SheetCutter could not render.
+func _test_frame_ceiling() -> void:
+	_begin("A piece cannot be cut into more frames than it is wide")
+	var piece: Dictionary = {
+		"label": "x", "name": "x", "frames": 1, "animated": false,
+		"size": Vector2i(30, 30), "state": "", "stage": "",
+		"stage_index": -1, "stage_count": 0,
+		"cut": {
+			"paths": PackedStringArray(["a.png"]),
+			"rects": [Rect2i(0, 0, 30, 30)] as Array[Rect2i],
+			"key": false, "align": false,
+		},
+	}
+	_ok("the ceiling is the piece's own width", SheetPlan.most_frames(piece) == 30)
+	var asked: Dictionary = SheetPlan.recount(piece, 64)
+	_ok("asking for more leaves the piece alone", int(asked["frames"]) == 1)
+	_ok("and no frame comes out zero pixels wide",
+		Vector2i(asked["size"]).x == 30)
+	var fewer: Dictionary = SheetPlan.recount(piece, 3)
+	_ok("a count that does fit is still honoured", int(fewer["frames"]) == 3)
+
+	var run: Dictionary = piece.duplicate(true)
+	run["frames"] = 200
+	run["cut"]["paths"] = PackedStringArray(["a.png", "b.png"])
+	_ok("a numbered run is as many frames as it has files",
+		SheetPlan.most_frames(run) == 200)
+
+
+# RT-17. write() used to record that a strip could not be made and then write
+# the manifest anyway, leaving a folder in assets/ that the pet picker lists
+# as broken for ever.
+func _test_all_or_nothing() -> void:
+	_begin("A pack is installed or it is not")
+	var gone: String = _write_png("vanishes.png", 32, 32)
+	var target: String = _scratch.path_join("pets/doomed")
+	var plan: Dictionary = Install.plan(Builder.Kind.PET_SPRITE, {
+		"id": "doomed", "name": "Doomed", "credit_not_required": true,
+		"pixel_art": true, "display_height_px": 160, "faces": "right",
+		"sheets": [{
+			"cut": {
+				"paths": PackedStringArray([gone]),
+				"rects": [Rect2i(0, 0, 32, 32)] as Array[Rect2i],
+				"key": false, "align": false,
+			},
+			"state": "idle", "stage": "", "frames": 1, "fps": 1.0,
+		}],
+	}, target)
+	# Taken away between the plan and the write, which is the TOCTOU the
+	# check cannot close and the reason write has to cope at all.
+	DirAccess.remove_absolute(gone)
+	var problems: PackedStringArray = Install.write(plan)
+	_ok("a cut that cannot be made is reported", not problems.is_empty())
+	_ok("and it says nothing was installed", _says(problems, "nothing was installed"))
+	_ok("and no folder is left behind", not DirAccess.dir_exists_absolute(target))
+
 
 # --- Scratch files -------------------------------------------------------
 

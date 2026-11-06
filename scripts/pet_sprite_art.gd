@@ -71,7 +71,15 @@ static func one(
 	if fps <= 0.0:
 		fps = 1.0
 
-	var path: String = folder.path_join(file)
+	# Through PackArchive rather than joined straight on: a pet.json that
+	# arrived in somebody else's zip may name "../../x.png", and the zip's own
+	# entries being safe says nothing at all about what its manifest asks for.
+	var path: String = PackArchive.inside(folder, file)
+	if path.is_empty():
+		problems.append(
+			"the %s animation names %s, which is outside the pack" % [state, file]
+		)
+		return {}
 	if not FileAccess.file_exists(path):
 		problems.append("the %s image %s is missing" % [state, path])
 		return {}

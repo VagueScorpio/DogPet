@@ -459,6 +459,35 @@ func _import_wizard_installs() -> void:
 		PetPack.load_from_dir(installed).problems.is_empty())
 	_ok("and the app can see it now", library.pet_ids().has("my_dog"))
 
+	# RT-17 and RT-23. The frames box used to run 1 to 64 whatever the piece
+	# was: a 32-pixel picture could be asked for 64 frames, which installed
+	# a pack whose art was never written. And a numbered run got a box it
+	# could not type in, showing 64 beside a label reading "200 files".
+	wizard.open()
+	wizard._on_files_chosen(PackedStringArray([idle, walk]))
+	wizard._go_next()
+	await _settle()
+	var boxes: RefCounted = wizard._form
+	var small: SpinBox = boxes._pictures[0]["frames"]
+	_ok("the frames box stops at the piece's own width", small.max_value <= 32.0)
+	_ok("and still allows more than one frame", small.max_value > 1.0)
+
+	var run_paths: PackedStringArray = []
+	for index in 6:
+		run_paths.append(_write_png(source.path_join("shot_%03d.png" % index), 24, 24))
+	wizard.open()
+	wizard._on_files_chosen(run_paths)
+	wizard._go_next()
+	await _settle()
+	var run_form: RefCounted = wizard._form
+	_ok("a numbered run is one piece", run_form._pictures.size() == 1)
+	_ok("with no box to type a frame count into",
+		run_form._pictures[0]["frames"] == null)
+	run_form._pictures[0]["job"].select(PetPack.VALID_STATES.find("idle") + 1)
+	var run_sheets: Array = run_form.answers()["sheets"]
+	_ok("and it still installs as many frames as it has files",
+		run_sheets.size() == 1 and int(run_sheets[0]["frames"]) == 6)
+
 	# The same picture, installed as a room instead - with a background
 	# DogPet draws itself, so the one small picture is just a thing standing
 	# in the room rather than the backdrop.

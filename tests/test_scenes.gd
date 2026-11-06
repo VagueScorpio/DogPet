@@ -145,6 +145,34 @@ func _test_backgrounds() -> void:
 	var ground: Color = coloured.background["ground"]
 	_ok("the ground colour came through", ground.is_equal_approx(Color("#112233")))
 
+	# RT-18. A scene.json out of somebody else's zip may name a picture
+	# outside its own folder. A room that reaches outside itself is broken
+	# the same way a room with a missing picture is, so it is treated the
+	# same: it falls back to something drawn.
+	_begin("A room cannot name pictures outside its own folder")
+	var climbing: ScenePack = Room.from_dictionary({
+		"role": "home",
+		"background": {"type": "image", "file": "../../photo.png"},
+	}, "res://rooms/x")
+	_ok("a background above the room is refused",
+		climbing.background["type"] == Room.BG_GENERATED)
+	_ok("and the room still works", climbing.is_usable())
+
+	var absolute: ScenePack = Room.from_dictionary({
+		"role": "home",
+		"background": {"type": "tiled", "wall": "C:/Windows/x.png", "floor": "f.png"},
+	}, "res://rooms/x")
+	_ok("so is a drive-absolute tile",
+		absolute.background["type"] == Room.BG_GENERATED)
+
+	var prop_out: ScenePack = Room.from_dictionary({
+		"role": "home",
+		"background": {"type": "generated", "style": "yard"},
+		"props": [{"file": "../../bowl.png", "x": 0.5, "y": 0.8, "scale": 1}],
+	}, "res://rooms/x")
+	_ok("a prop above the room is dropped", prop_out.props.is_empty())
+	_ok("and the room keeps working anyway", prop_out.is_usable())
+
 
 # --- Props ---------------------------------------------------------------
 

@@ -184,6 +184,11 @@ static func _check_room(answers: Dictionary, problems: PackedStringArray) -> voi
 static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 	var copies: Dictionary = {}
 	var cuts: Dictionary = {}
+	# Every name that will land in the pack folder, whether it is a file being
+	# copied in or a strip being cut. One list, because they share one folder:
+	# a chosen file called idle.png and a cut strip given the idle job both
+	# wanted idle.png, and the strip quietly overwrote the file afterwards.
+	var taken: Dictionary = {}
 	var local: Dictionary = answers.duplicate(true)
 
 	match kind:
@@ -191,31 +196,33 @@ static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 			# Models keep their own file names. A .gltf refers to its .bin and
 			# its textures by name, so renaming them would break the model in
 			# a way nothing here could see.
-			local["model"] = _take(copies, str(answers.get("model", "")), true)
+			local["model"] = _take(copies, taken, str(answers.get("model", "")), true)
 			for extra in answers.get("extras", []):
-				_take(copies, str(extra), true)
+				_take(copies, taken, str(extra), true)
 			local.erase("extras")
 		Builder.Kind.PET_SPRITE:
+			var entries: Array = answers.get("sheets", [])
+			# The cut strips claim their names first, because those names mean
+			# something and a copied file's name is incidental: when the two
+			# collide it is the copy that should move.
+			var cut_names: Array[String] = []
+			for entry in entries:
+				cut_names.append(_cut_name(taken, entry as Dictionary))
 			var sheets: Array = []
-			for entry in answers.get("sheets", []):
-				var sheet: Dictionary = (entry as Dictionary).duplicate()
+			# In the order they were given, which is the order a state's life
+			# stages are gathered in - youngest first.
+			for index in entries.size():
+				var sheet: Dictionary = (entries[index] as Dictionary).duplicate()
 				var state: String = str(sheet.get("state", ""))
 				if state.is_empty():
 					continue
 				var cut: Dictionary = sheet.get("cut", {})
 				if cut.is_empty():
-					sheet["file"] = _take(copies, str(sheet.get("path", "")), false)
-				else:
-					# Named for the job rather than for where it came from:
-					# a pack whose files are idle.png and walk.png can be
-					# opened afterwards and understood without the manifest.
-					# A state drawn at several ages puts the age in the name
-					# too, so idle_puppy.png sits beside idle_senior.png.
-					var stage: String = str(sheet.get("stage", ""))
-					sheet["file"] = (
-						"%s.png" % state if stage.is_empty()
-						else "%s_%s.png" % [state, stage]
+					sheet["file"] = _take(
+						copies, taken, str(sheet.get("path", "")), false
 					)
+				else:
+					sheet["file"] = cut_names[index]
 					sheet["frames"] = SheetCutter.frames_in(cut)
 					cuts[sheet["file"]] = cut
 					sheet.erase("cut")
@@ -225,11 +232,11 @@ static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 		Builder.Kind.ROOM:
 			for key in ["image", "wall", "floor"]:
 				if not str(answers.get(key, "")).is_empty():
-					local[key] = _take(copies, str(answers[key]), false)
+					local[key] = _take(copies, taken, str(answers[key]), false)
 			var props: Array = []
 			for entry in answers.get("props", []):
 				var prop: Dictionary = (entry as Dictionary).duplicate()
-				prop["file"] = _take(copies, str(prop.get("path", "")), false)
+				prop["file"] = _take(copies, taken, str(prop.get("path", "")), false)
 				prop.erase("path")
 				props.append(prop)
 			local["props"] = props
@@ -269,34 +276,87 @@ static func write(plan_data: Dictionary) -> PackedStringArray:
 		if not trouble.is_empty():
 			problems.append(trouble)
 
+	# A manifest naming art that was never written is not a partial success:
+	# it is a folder the pet picker lists as broken for ever, over something
+	# the owner did nothing wrong to cause.
+	if not problems.is_empty():
+		return _nothing_installed(target, problems)
+
 	var manifest: String = Builder.manifest_text(plan_data["manifest"])
 	var file: FileAccess = FileAccess.open(
 		target.path_join(str(plan_data["manifest_name"])), FileAccess.WRITE
 	)
 	if file == null:
 		problems.append("could not write %s" % str(plan_data["manifest_name"]))
-		return problems
+		return _nothing_installed(target, problems)
 	file.store_string(manifest)
 	file.close()
 	return problems
 
 
+# A pack is installed or it is not. Whatever was in this folder before the
+# install started is already in assets/_backup, taken by the wizard before it
+# called us, so there is nothing here worth keeping.
+static func _nothing_installed(
+	target: String, problems: PackedStringArray
+) -> PackedStringArray:
+	PackArchive.empty_folder(target)
+	DirAccess.remove_absolute(target)
+	var said: PackedStringArray = ["nothing was installed"]
+	said.append_array(problems)
+	return said
+
+
 # Register one file to copy and answer with the name it will have inside the
 # pack. Two files called idle.png from different folders would otherwise
 # overwrite each other, so the second one becomes idle_2.png.
-static func _take(copies: Dictionary, source: String, keep_name: bool) -> String:
+static func _take(
+	copies: Dictionary, taken: Dictionary, source: String, keep_name: bool
+) -> String:
 	if source.is_empty():
 		return ""
 	var wanted: String = (
 		source.get_file() if keep_name and PackArchive.is_safe_entry(source.get_file())
 		else Builder.safe_file_name(source)
 	)
+	var name: String = _reserve(taken, wanted, source)
+	copies[name] = source
+	return name
+
+
+# What a cut strip will be called inside the pack, reserved so nothing else
+# can take it. Empty for a sheet entry that is not a cut.
+#
+# Named for the job rather than for where it came from: a pack whose files are
+# idle.png and walk.png can be opened afterwards and understood without the
+# manifest. A state drawn at several ages puts the age in the name too, so
+# idle_puppy.png sits beside idle_senior.png.
+static func _cut_name(taken: Dictionary, sheet: Dictionary) -> String:
+	var state: String = str(sheet.get("state", ""))
+	if state.is_empty() or Dictionary(sheet.get("cut", {})).is_empty():
+		return ""
+	# The stage is cleaned before the name is built, not after. This was the
+	# one name in the installer that skipped the sanitising every other one
+	# takes, and a stage of "../../x" wrote the strip outside the pack folder
+	# while the manifest still named it inside. Cleaning the part rather than
+	# the whole keeps the state on the front, where it belongs.
+	var stage: String = Builder.clean_id(str(sheet.get("stage", "")))
+	var wanted: String = Builder.safe_file_name(
+		"%s.png" % state if stage.is_empty() else "%s_%s.png" % [state, stage]
+	)
+	return _reserve(taken, wanted, "")
+
+
+# The name a file will have inside the pack, kept unique across everything
+# that lands there. A source of "" is a cut strip, which never aliases a copy
+# the way two copies of one file legitimately do.
+static func _reserve(taken: Dictionary, wanted: String, source: String) -> String:
 	var name: String = wanted
 	var attempt: int = 2
-	while copies.has(name) and str(copies[name]) != source:
+	while taken.has(name) and str(taken[name]) != source:
 		name = "%s_%d.%s" % [wanted.get_basename(), attempt, wanted.get_extension()]
 		attempt += 1
-	copies[name] = source
+	taken[name] = source
 	return name
 
 

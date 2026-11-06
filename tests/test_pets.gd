@@ -168,6 +168,61 @@ func _test_pack_validation() -> void:
 	}, "res://nowhere")
 	_ok("a pack that does not say so is still asked", theirs.problems.has("no credit line"))
 
+	# RT-18. A zip whose entries are all impeccable can still carry a
+	# pet.json naming "../../x.png". The entries are what PackArchive guards;
+	# nothing used to read the manifest with the same suspicion, so a shared
+	# pack could draw a picture from anywhere on the machine.
+	_begin("A pack cannot name art outside its own folder")
+	var climbing: PetPack = Pack.from_dictionary({
+		"id": "x", "kind": "sprite2d", "credit": "c",
+		"animations": {"idle": {"file": "../../secret.png", "frames": 1, "fps": 1}},
+	}, "res://nowhere")
+	_ok("a state naming a file above the pack is refused", not climbing.is_usable())
+	_ok("and it says why", _says(climbing.problems, "outside the pack"))
+
+	var absolute: PetPack = Pack.from_dictionary({
+		"id": "x", "kind": "sprite2d", "credit": "c",
+		"animations": {"idle": {"file": "C:/Windows/x.png", "frames": 1, "fps": 1}},
+	}, "res://nowhere")
+	_ok("so is a drive-absolute one", _says(absolute.problems, "outside the pack"))
+
+	var staged_out: PetPack = Pack.from_dictionary({
+		"id": "x", "kind": "sprite2d", "credit": "c",
+		# Every stage is read exactly as a lone animation is, so the check
+		# applies per stage. The bad one is first here because reading stops
+		# at the first stage it cannot read.
+		"animations": {"idle": {"stages": [
+			{"file": "../../old.png", "frames": 1, "fps": 1},
+			{"file": "idle.png", "frames": 1, "fps": 1},
+		]}},
+	}, "res://nowhere")
+	_ok("and so is a life stage of a pack that ages",
+		_says(staged_out.problems, "outside the pack"))
+
+	var model_out: PetPack = Pack.from_dictionary({
+		"id": "x", "kind": "model3d", "credit": "c", "model": "../../dog.glb",
+	}, "res://nowhere")
+	_ok("a model above the pack is refused too",
+		_says(model_out.problems, "outside the pack"))
+
+	# A pack may still organise its own files into folders. That is not
+	# leaving, and refusing it would break a perfectly ordinary layout.
+	var tidy: PetPack = Pack.from_dictionary({
+		"id": "x", "kind": "sprite2d", "credit": "c",
+		"animations": {"idle": {"file": "art/idle.png", "frames": 1, "fps": 1}},
+	}, "res://nowhere")
+	_ok("but a subfolder inside the pack is still allowed",
+		not _says(tidy.problems, "outside the pack"))
+
+
+# Does any of these complaints mention this? The wording is written for
+# people, so the tests ask what it is about rather than matching it exactly.
+func _says(problems: PackedStringArray, phrase: String) -> bool:
+	for problem in problems:
+		if problem.contains(phrase):
+			return true
+	return false
+
 
 # --- Making every dog the same size -------------------------------------
 

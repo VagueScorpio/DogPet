@@ -1,6 +1,20 @@
-# Red team audit, October 2026
+# Red team audits
 
-**Everything described in this folder is fixed.** These are not live
+> **Second engagement, November 2026 — the import engine, at v1.42.**
+> **Ten findings (1 Critical, 1 High, 3 Medium, 4 Low, 1 Info), all ten
+> fixed** in v1.43. The Critical one is worth reading even if nothing else
+> here is: a sheet cropped tight had its dog keyed out as the background and
+> the white page installed in its place, and the only difference between that
+> sheet and one that worked was how much margin the artist left.
+>
+> See [`01-findings-import-engine.md`](01-findings-import-engine.md) for the
+> findings and [`99-master-report-import-engine.md`](99-master-report-import-engine.md)
+> for the engagement. Its harnesses are `tests/probe_p1` to `probe_p6`.
+> Everything below is the first engagement and is also closed.
+
+## Red team audit, October 2026
+
+**Everything described below is fixed.** These are not live
 vulnerabilities in DogPet. They were found by an outside audit of the whole of
 `scripts/` at **v1.21**, and fixed across **v1.22 – v1.25**; the proofs of
 concept are kept because a fix you cannot re-break is a fix you cannot trust.

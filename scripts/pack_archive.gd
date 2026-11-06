@@ -367,6 +367,23 @@ static func is_safe_entry(entry: String) -> bool:
 	return true
 
 
+## Where one file named by a pack's own manifest really sits, or "" when the
+## name tries to leave the pack folder.
+##
+## A zip with impeccable entries can still carry a pet.json naming
+## "../../x.png": the entries are what is_safe_entry guards, and this is the
+## other half of the same rule. One judgement, in one place, so a pack cannot
+## be read in a way it could not have been installed.
+##
+## Subfolders are allowed and meant to be: a pack may organise its own files.
+## What is refused is leaving.
+static func inside(folder: String, file: String) -> String:
+	var cleaned: String = file.strip_edges()
+	if cleaned.is_empty() or not is_safe_entry(cleaned):
+		return ""
+	return folder.path_join(cleaned)
+
+
 # The manifest nearest the top of the zip wins, so a pack folder containing
 # a stray nested pet.json cannot hijack the import.
 static func _find_manifest(entries: PackedStringArray) -> String:

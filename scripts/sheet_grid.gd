@@ -182,6 +182,10 @@ static func scan_cell_rect(grid: Dictionary, row: int, column: int) -> Rect2i:
 ## nothing is lost when the width does not divide at the measured size.
 static func even_parts(rect: Rect2i, count: int) -> Array[Rect2i]:
 	var parts: Array[Rect2i] = []
+	# Nothing divides into no parts, and asking cost an engine error in the
+	# log before it answered the empty array anyway.
+	if count < 1:
+		return parts
 	var width: int = rect.size.x / count
 	for index in count:
 		var left: int = rect.position.x + index * width
@@ -207,7 +211,9 @@ static func any_blank(scan: Dictionary, parts: Array[Rect2i]) -> bool:
 ## this, a backdrop handed to the wizard is sliced into four identical
 ## rectangles and called a four-frame animation.
 static func dips_at_joins(tally: PackedInt32Array, count: int) -> bool:
-	if tally.size() < count * 2:
+	# Fewer than two pieces have no join between them to look at, and
+	# answering "yes" to that was a nonsense answer to a nonsense question.
+	if count < 2 or tally.size() < count * 2:
 		return false
 	var average: float = 0.0
 	for value in tally:
