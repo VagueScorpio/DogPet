@@ -47,6 +47,11 @@ var _transfer: PackTransfer = null
 var _preview: Preview = null
 var _form: Form = null
 var _notes: Label = null
+# What the strips in the preview are cut by, and what remembers the ones it
+# has already cut.
+var _cuts := CutPreview.new()
+# The strips on screen now, so an unrelated change does not redraw them.
+var _shown: Array = []
 
 var _step: int = Step.FILES
 var _sources: Dictionary = {}
@@ -96,6 +101,7 @@ func _rebuild() -> void:
 	for child in _body.get_children():
 		child.queue_free()
 	_notes = null
+	_shown = []
 	_message.text = ""
 	_step_label.text = str(STEP_BLURBS[_step])
 
@@ -166,6 +172,8 @@ func _build_details() -> void:
 		if not _preview.show_model(model, _form.wanted_height(), _form.facing_degrees()):
 			_message.text = "That model could not be read. A .glb from Poly Pizza or"\
 				+ " Sketchfab is the safest kind."
+	elif _kind == Builder.Kind.PET_SPRITE:
+		_show_cut()
 	else:
 		_show_pictures()
 	_refresh_notes()
@@ -242,6 +250,10 @@ func _on_form_changed() -> void:
 	if _kind == Builder.Kind.PET_MODEL:
 		_preview.set_height(_form.wanted_height())
 		_preview.set_facing(_form.facing_degrees())
+	elif _kind == Builder.Kind.PET_SPRITE:
+		# So that correcting a frame count is answered by the strip it makes,
+		# which is the only place a bad cut can be seen before installing.
+		_show_cut()
 	_refresh_notes()
 
 
@@ -258,6 +270,41 @@ func _refresh_notes() -> void:
 
 func _show_pictures() -> void:
 	_preview.show_pictures(_sources["images"])
+
+
+# What the pack will hold, rather than the files it came from. A sheet that
+# looks perfect can still install a hollow dog or frames that walk off the
+# side of the window; the strip is where either shows up, and it shows up
+# before anything is written.
+#
+# Nothing has a job yet on the way in - or everything was set to "not used" -
+# so there is no cut to draw, and the chosen files are shown instead.
+func _show_cut() -> void:
+	var strips: Array = _cuts.of_sheets(_form.answers().get("sheets", []))
+	if strips.is_empty():
+		_show_pictures()
+		return
+	# Every change to the form arrives here, a letter typed into the name box
+	# included, and rebuilding the row of pictures each time would throw away
+	# the owner's scroll position while they were still typing.
+	if _same_strips(strips):
+		return
+	_shown = strips
+	_preview.show_strips(strips)
+
+
+# Is this the same set of strips already on screen? The images are the
+# objects CutPreview cached, so this is a comparison of what was cut rather
+# than of pixels.
+func _same_strips(strips: Array) -> bool:
+	if strips.size() != _shown.size():
+		return false
+	for index in strips.size():
+		var now: Dictionary = strips[index]
+		var before: Dictionary = _shown[index]
+		if now["image"] != before["image"] or str(now["label"]) != str(before["label"]):
+			return false
+	return true
 
 
 # --- Installing ----------------------------------------------------------

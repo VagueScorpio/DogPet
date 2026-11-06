@@ -7,15 +7,27 @@ extends Control
 ## dog was built facing - the shipped pug is 29 degrees off - so the wizard
 ## asks, and this shows the answer as it is dragged.
 ##
-## The pictures are shown too, with nearest filtering and no scaling, so a
-## sprite sheet that was chosen by mistake is obvious before it is installed.
+## For drawn art it shows the strips that are about to be written, not the
+## files they were cut from: see CutPreview for why those are different
+## pictures. The chosen files themselves are still shown while the wizard is
+## only asking what they are, before there is a cut to draw.
+##
+## Everything here is drawn over a checkerboard, as a paint program does.
+## Transparency against a dark panel looks like a dark drawing, and "the dog
+## came out hollow" is the one fault this preview exists to catch. *(v1.47)*
 
 const HEIGHT := 190.0
+
+## One strip's height on screen, and the size of one square of the
+## checkerboard behind it.
+const STRIP_HEIGHT := 64.0
+const CHECK := 8
 
 var _world: SubViewport = null
 var _holder: Node3D = null
 var _facing: Node3D = null
 var _row: HBoxContainer = null
+var _checks: ImageTexture = null
 
 
 func _ready() -> void:
@@ -82,6 +94,31 @@ func show_pictures(paths: PackedStringArray) -> void:
 		_row.add_child(frame)
 
 
+## Show the strips that are about to be installed, one per row, each with
+## the job it has been given written above it.
+##
+## "strips" is what CutPreview.of_sheets hands back. They are listed down the
+## panel rather than across it because a strip is a wide, short picture: side
+## by side, six frames of dog would be a few pixels each and the owner could
+## not see what they were being shown. More than fits is scrolled to.
+func show_strips(strips: Array) -> void:
+	_clear()
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(column)
+
+	for entry in strips:
+		var strip: Dictionary = entry
+		column.add_child(UiBits.dim(str(strip["label"]), 11, 0.0, false))
+		column.add_child(_over_checks(strip["image"]))
+
+
 func clear() -> void:
 	_clear()
 
@@ -94,6 +131,45 @@ func _clear() -> void:
 	_holder = null
 	_facing = null
 	_row = null
+
+
+# One strip, laid over a checkerboard so that a cleared pixel reads as
+# cleared whatever colour the art is.
+func _over_checks(image: Image) -> Control:
+	var box := Control.new()
+	box.custom_minimum_size = Vector2(0, STRIP_HEIGHT)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.clip_contents = true
+
+	var behind := TextureRect.new()
+	behind.texture = _checkerboard()
+	behind.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	behind.stretch_mode = TextureRect.STRETCH_TILE
+	behind.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(behind)
+	behind.set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	var front := TextureRect.new()
+	front.texture = ImageTexture.create_from_image(image)
+	front.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	front.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	front.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	front.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(front)
+	front.set_anchors_preset(Control.PRESET_FULL_RECT)
+	return box
+
+
+# Built once and kept: two greys in a 2x2 of squares, tiled.
+func _checkerboard() -> ImageTexture:
+	if _checks != null:
+		return _checks
+	var tile: Image = Image.create(CHECK * 2, CHECK * 2, false, Image.FORMAT_RGBA8)
+	tile.fill(Color(0.20, 0.21, 0.25))
+	tile.fill_rect(Rect2i(0, 0, CHECK, CHECK), Color(0.30, 0.31, 0.36))
+	tile.fill_rect(Rect2i(CHECK, CHECK, CHECK, CHECK), Color(0.30, 0.31, 0.36))
+	_checks = ImageTexture.create_from_image(tile)
+	return _checks
 
 
 # The same arrangement PetView uses: a transparent viewport so the dog can

@@ -16,6 +16,7 @@ const Series := preload("res://scripts/frame_series.gd")
 const Plan := preload("res://scripts/sheet_plan.gd")
 const Cutter := preload("res://scripts/sheet_cutter.gd")
 const Key := preload("res://scripts/sheet_key.gd")
+const Previewer := preload("res://scripts/cut_preview.gd")
 const Likeness := preload("res://scripts/sheet_likeness.gd")
 const Builder := preload("res://scripts/pack_builder.gd")
 const Install := preload("res://scripts/pack_install.gd")
@@ -41,6 +42,7 @@ func _initialize() -> void:
 	_test_cutting()
 	_test_keying()
 	_test_registering()
+	_test_previewing()
 	_test_texture_guard()
 	_test_recount()
 	_test_states()
@@ -514,6 +516,86 @@ func _test_registering() -> void:
 	# out of.
 	_ok("and the strip is as tall as the art, not the cells",
 		strip.get_height() == 12 + Cutter.PADDING * 2)
+
+
+# --- What the wizard shows before anything is installed ------------------
+
+func _test_previewing() -> void:
+	_begin("The preview is of the strip, not of the file it was cut from")
+	# The same wandering grid as above. What the owner chose looks perfect;
+	# what gets installed is a different picture, and that is the one worth
+	# showing them.
+	var sheet: Image = _page(90, 30)
+	_fill(sheet, Rect2i(2, 2, 10, 10), INK)
+	_fill(sheet, Rect2i(44, 16, 10, 12), INK)
+	_fill(sheet, Rect2i(64, 8, 10, 11), INK)
+	var drawn: String = _write("previewed.png", sheet)
+	var cut: Dictionary = {
+		"paths": PackedStringArray([drawn, drawn, drawn]),
+		"rects": [Rect2i(0, 0, 30, 30), Rect2i(30, 0, 30, 30), Rect2i(60, 0, 30, 30)],
+		"key": true,
+	}
+	var previewer: RefCounted = Previewer.new()
+	var shown: Array = previewer.of_sheets([
+		{"cut": cut, "state": "idle", "stage": "", "frames": 3, "fps": 6.0},
+	])
+	_ok("one strip comes back", shown.size() == 1)
+	var strip: Image = shown[0]["image"]
+	_ok("it is the cut strip, not the chosen sheet",
+		strip.get_width() != sheet.get_width() or strip.get_height() != sheet.get_height())
+	_ok("with the page already taken off it", not _holds_paper(strip))
+	_ok("and the whole of it drawn", not bool(shown[0]["partial"]))
+	_ok("named for the job it was given", str(shown[0]["label"]).begins_with("Idle"))
+	_ok("and for how many frames it holds", str(shown[0]["label"]).contains("3 frames"))
+
+	_begin("A strip already cut is not cut again")
+	# Typing a letter into the name box says "something changed" just as
+	# moving a frame count does, so without the cache every keystroke would
+	# read the sheets off the disk and key them again.
+	var again: Array = previewer.of_sheets([
+		{"cut": cut, "state": "idle", "stage": "", "frames": 3, "fps": 6.0},
+	])
+	_ok("the same cut hands back the same picture", again[0]["image"] == strip)
+	var moved: Dictionary = {
+		"paths": PackedStringArray([drawn, drawn]),
+		"rects": [Rect2i(0, 0, 45, 30), Rect2i(45, 0, 45, 30)],
+		"key": true,
+	}
+	_ok("a different cut is a different thing to remember",
+		Previewer.signature(moved) != Previewer.signature(cut))
+
+	_begin("Only as many strips as are worth looking at")
+	var several: Array = []
+	for _index in Previewer.MOST_SHOWN + 2:
+		several.append({"cut": cut, "state": "idle", "stage": "", "frames": 3, "fps": 6.0})
+	_ok("a long form does not render every row of itself",
+		previewer.of_sheets(several).size() == Previewer.MOST_SHOWN)
+
+	_begin("A run too long to draw is shown from the front")
+	var paths: PackedStringArray = []
+	var rects: Array[Rect2i] = []
+	for _index in Previewer.MOST_FRAMES + 12:
+		paths.append(drawn)
+		rects.append(Rect2i(0, 0, 30, 30))
+	var front: Array = previewer.of_sheets([{
+		"cut": {"paths": paths, "rects": rects, "key": false},
+		"state": "walk", "stage": "", "frames": paths.size(), "fps": 6.0,
+	}])
+	_ok("it is drawn", front.size() == 1)
+	_ok("from the first few frames only", bool(front[0]["partial"]))
+	_ok("and it says so rather than pretending",
+		str(front[0]["label"]).contains("first %d of %d" % [
+			Previewer.SHOWN_FRAMES, paths.size(),
+		]))
+	_ok("drawing only the front of it is what keeps it cheap",
+		(front[0]["image"] as Image).get_width() < Previewer.MOST_FRAMES * 30)
+
+	_begin("A life stage is named by its age")
+	_ok("the stage is part of the label", Previewer.label_for(
+		{"state": "idle", "stage": "puppy"}, 1, false
+	) == "Idle (puppy) - 1 frame")
+	_ok("and a cut with nothing in it draws nothing",
+		previewer.of_sheets([{"cut": {}, "state": "idle"}]).is_empty())
 
 
 # --- Not wider than a graphics card will take ----------------------------

@@ -444,6 +444,19 @@ func _import_wizard_installs() -> void:
 	_ok("both pictures have a job now", sheets.size() == 2)
 	_ok("the strip was counted at four frames", int(sheets[1]["frames"]) == 4)
 
+	# v1.47: the preview shows the strips about to be written rather than the
+	# files they came from. Clicking a job emits the form's "changed", which
+	# select() does not, so it is called the way the click would call it.
+	wizard._on_form_changed()
+	await _settle()
+	var stage: Control = wizard._preview.get_child(0)
+	_ok("the preview is showing cut strips", stage is ScrollContainer)
+	# Two rows per strip: what it is for, and the strip itself.
+	_ok("one for each picture that has a job",
+		stage.get_child(0).get_child_count() == 4)
+	_ok("each named for the job it was given",
+		(stage.get_child(0).get_child(0) as Label).text.begins_with("Idle"))
+
 	wizard._go_next()
 	await _settle()
 	_ok("it says it is done", wizard._step == 3)

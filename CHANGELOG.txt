@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.47 - The wizard shows the strip it is about to write
   v1.46 - Every imported dog lands in the same place
   v1.45 - Two more dogs, both drawn in the house
   v1.44 - The import wizard stops asking for a credit
@@ -49,6 +50,60 @@ TABLE OF CONTENTS
   v1.2 - GitHub repo and auto-save
   v1.1 - Pug credit and license links
   v1.0 - Starter kit and build blueprint
+
+
+------------------------------------------------------------
+v1.47 - The wizard shows the strip it is about to write
+------------------------------------------------------------
+
+What
+  - scripts/cut_preview.gd (new): renders the cuts the wizard is about to
+    install, through SheetCutter - the same code the installer runs - and
+    remembers what it has already cut, so a letter typed into the name box
+    does not read every sheet off the disk again. At most three strips, and
+    only the first eight frames of a run longer than forty-eight, with the
+    label saying so.
+  - scripts/import_preview.gd: show_strips. The strips are listed down the
+    panel, one per row with the job it has been given written above it, and
+    every one of them is drawn over a checkerboard.
+  - scripts/import_wizard.gd: a sprite import now previews the cut instead
+    of the chosen files. Correcting a frame count redraws it. Before
+    anything has a job - and for a room, and on the "what are these?" step -
+    the chosen files are still what is shown.
+  - tests/test_sheets.gd: fifteen checks on CutPreview, pure and headless.
+  - tests/test_integration.gd: the wizard scenario now looks at what is in
+    the preview, not only that a preview was built.
+
+Why
+  - The owner asked for this after v1.46, which fixed where an imported dog
+    lands. The fix was right, but the wizard still showed the files the
+    owner chose, and those are not the picture that gets installed: what
+    lands in a pack has had its page keyed off, every frame trimmed to the
+    drawing on it and stood on one baseline.
+  - That gap is exactly where both of the v1.46 faults lived. The raccoon
+    sheet looked perfect in the preview and installed six dogs standing in
+    six different places; the aged puppy looked perfect and installed as a
+    hollow outline. Neither could have been seen before clicking Install,
+    which is the one moment it would have been cheap to catch.
+  - The checkerboard is not decoration. The preview panel is nearly black,
+    so a keyed-out dog and a dark drawing look the same against it - and
+    "the dog came out hollow" is the fault this is here to catch.
+
+How
+  - Pure half separate from the node half, as everything in Add Art is:
+    CutPreview is cuts in, Images out, with no nodes in it, and
+    ImportPreview only puts what it hands back on screen.
+  - The cache is keyed on a signature of the cut - its paths, its rects and
+    whether it is keyed - so a frame count that moved is re-cut and nothing
+    else is. It is cleared past a dozen entries, since each one holds a
+    whole image.
+  - The wizard compares the strips it is handed against the ones on screen
+    before rebuilding the panel, so typing in the name box does not throw
+    away the owner's scroll position.
+  - Checked against the owner's own raccoon sheet, the 3348x480 original
+    kept in assets/_backup: the preview renders the same 2790x457 strip the
+    installer wrote, six raccoons on one line.
+  - All eleven suites pass: 1181 checks, 0 failures.
 
 
 ------------------------------------------------------------
