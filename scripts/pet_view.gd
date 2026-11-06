@@ -37,6 +37,10 @@ var _model: Node3D = null
 var _clips: AnimationPlayer = null
 var _spot: Vector2 = DEFAULT_SPOT
 var _sprite_scale: int = 1
+## Which of the pack's life-stage drawings is on screen. Kept so the sheets
+## are only rebuilt when the dog actually changes stage, rather than on
+## every tick of its age.
+var _stage_shown: int = -1
 var _body_height_px: float = 140.0
 var _zzz_labels: Array[Label] = []
 
@@ -49,6 +53,7 @@ func _ready() -> void:
 	_build_zzz()
 
 	AssetLibrary.pet_changed.connect(show_pack)
+	Needs.aged.connect(_on_aged)
 	if AssetLibrary.active_pet != null:
 		show_pack(AssetLibrary.active_pet)
 
@@ -124,8 +129,27 @@ func _show_model(pack: PetPack) -> void:
 	_body_height_px = 0.0  # worked out from the camera in _layout
 
 
+## The dog has got older. A pack whose art ages is redrawn at its new stage;
+## every other pack ignores this entirely.
+##
+## Rebuilding the SpriteFrames is the whole job, because each frame is an
+## AtlasTexture over one loaded sheet - so a stage change costs one image
+## read, and it happens at most a handful of times in a dog's life.
+func _on_aged(age_days: float, _stage: String) -> void:
+	if _pack == null or _pack.kind != PetPack.KIND_SPRITE2D:
+		return
+	var wanted: int = LifeStages.index_for(age_days, _pack.stage_count())
+	if wanted == _stage_shown:
+		return
+	var playing: String = _sprite.animation
+	_show_sprite(_pack)
+	if _sprite.sprite_frames != null and _sprite.sprite_frames.has_animation(playing):
+		_sprite.play(playing)
+
+
 func _show_sprite(pack: PetPack) -> void:
-	var frames: SpriteFrames = PetLoader.build_sprite_frames(pack)
+	_stage_shown = LifeStages.index_for(Needs.life.age_days, pack.stage_count())
+	var frames: SpriteFrames = PetLoader.build_sprite_frames(pack, Needs.life.age_days)
 	if frames.get_animation_names().is_empty():
 		Log.error("The pet \"%s\" has no usable frames." % pack.id)
 		return

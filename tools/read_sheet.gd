@@ -47,19 +47,29 @@ func _initialize() -> void:
 
 	var animations: int = 0
 	var stills: int = 0
+	var staged: int = 0
 	for entry in pieces:
 		var piece: Dictionary = entry
 		if bool(piece["animated"]):
 			animations += 1
 		else:
 			stills += 1
+		if not str(piece.get("stage", "")).is_empty():
+			staged += 1
 		if not options.has("quiet"):
-			print("  %-56s %2d frame(s)  %d x %d  %s" % [
+			var notes: PackedStringArray = []
+			if not str(piece["state"]).is_empty():
+				notes.append("state: %s" % piece["state"])
+			if not str(piece.get("stage", "")).is_empty():
+				notes.append("stage: %s" % piece["stage"])
+			print("  %-60s %2d frame(s)  %d x %d  %s" % [
 				piece["label"], piece["frames"],
 				Vector2i(piece["size"]).x, Vector2i(piece["size"]).y,
-				"state: %s" % piece["state"] if not str(piece["state"]).is_empty() else "",
+				" ".join(notes),
 			])
-	print("%d animations, %d still pictures" % [animations, stills])
+	print("%d animations, %d still pictures (%d of them life stages)" % [
+		animations, stills, staged,
+	])
 
 	if options.has("out"):
 		quit(_write_all(pieces, str(options["out"])))

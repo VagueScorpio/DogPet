@@ -57,7 +57,19 @@ var pixel_art: bool = true
 var display_height_px: float = DEFAULT_DISPLAY_HEIGHT_PX
 var faces_right: bool = true
 ## state -> {"file": String, "frames": int, "fps": float}
+##
+## For a pack that draws the dog differently as it ages, this holds the
+## drawing for the stage the dog is at today; sprite_stages holds them all.
+## Everything that only wants "the walk animation" reads this and is none
+## the wiser.
 var sprite_animations: Dictionary = {}
+
+## state -> Array of the same specs, youngest first, for a pack whose art
+## ages. Empty for a pack with one drawing per state.
+##
+## A state may age while another does not: a sheet often has four sleeping
+## dogs and a single walk cycle, and there is nothing wrong with that.
+var sprite_stages: Dictionary = {}
 
 ## Everything wrong with this pack, in plain English. Empty means usable.
 var problems: PackedStringArray = []
@@ -235,7 +247,7 @@ func _read_sprite2d(data: Dictionary) -> void:
 		if not spec is Dictionary:
 			problems.append("the %s animation is not described properly" % state)
 			continue
-		_read_one_sprite_animation(state, spec)
+		_read_sprite_state(state, spec as Dictionary)
 
 	if not sprite_animations.has("idle"):
 		problems.append("a sprite pack needs at least an idle animation")
@@ -243,6 +255,74 @@ func _read_sprite2d(data: Dictionary) -> void:
 	if display_height_px <= 0.0:
 		problems.append("display_height_px must be greater than 0")
 		display_height_px = DEFAULT_DISPLAY_HEIGHT_PX
+
+
+## One state's art: either a single drawing, or one per life stage.
+##
+## A state carrying a "stages" list is drawn differently as the dog ages.
+## Each entry is an ordinary animation spec, youngest first, so a stage may
+## itself be a single picture or a whole animation - which is exactly the
+## distinction the sheet reader makes when it cuts the art up.
+func _read_sprite_state(state: String, spec: Dictionary) -> void:
+	var staged: Variant = spec.get("stages", null)
+	if not staged is Array:
+		_read_one_sprite_animation(state, spec)
+		return
+
+	var list: Array = staged as Array
+	if list.is_empty():
+		problems.append("the %s animation lists no life stages" % state)
+		return
+	if list.size() > LifeStages.MAX_STAGES:
+		problems.append(
+			"the %s animation lists %d life stages, which is more than the %d this app"
+			% [state, list.size(), LifeStages.MAX_STAGES]
+			+ " can tell apart"
+		)
+		return
+
+	var read: Array[Dictionary] = []
+	for index in list.size():
+		if not list[index] is Dictionary:
+			problems.append(
+				"life stage %d of the %s animation is not described properly"
+				% [index + 1, state]
+			)
+			return
+		# Each stage is checked exactly as a lone animation would be, so a
+		# missing file or a sheet that does not divide is caught per stage
+		# and named by stage rather than blamed on the state as a whole.
+		var before: int = problems.size()
+		_read_one_sprite_animation(state, list[index] as Dictionary)
+		if problems.size() > before or not sprite_animations.has(state):
+			return
+		read.append(sprite_animations[state])
+
+	sprite_stages[state] = read
+	# What the rest of the app sees by default is the grown dog, so a pack
+	# that ages looks exactly like any other until something asks its age.
+	sprite_animations[state] = read[LifeStages.index_for_stage("Adult", read.size())]
+
+
+## How many life stages this pack's art is drawn at, counted from the state
+## that has the most. One means the art does not age.
+func stage_count() -> int:
+	var most: int = 1
+	for state in sprite_stages:
+		most = maxi(most, (sprite_stages[state] as Array).size())
+	return most
+
+
+## The drawing to use for a state at a given age, in dog-days.
+##
+## Falls back to the single drawing for a state that does not age, and to
+## an empty Dictionary for a state the pack does not draw at all, so a
+## caller may ask about anything.
+func sprite_for(state: String, age_days: float) -> Dictionary:
+	if sprite_stages.has(state):
+		var list: Array = sprite_stages[state]
+		return list[LifeStages.index_for(age_days, list.size())]
+	return sprite_animations.get(state, {})
 
 
 func _read_one_sprite_animation(state: String, spec: Dictionary) -> void:

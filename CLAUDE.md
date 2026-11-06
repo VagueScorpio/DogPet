@@ -136,6 +136,32 @@ A pack of the owner's own art may instead set `"credit_not_required": true` *(v1
 - `faces` says which way the art faces. Flip horizontally to face the other way.
 - Any state without its own animation falls back to `idle` plus the procedural layer.
 
+A state may instead carry a **`stages`** list *(v1.41)*, one entry per life
+stage, youngest first, for a pack that draws the dog differently as it ages:
+
+```json
+"animations": {
+  "idle": { "stages": [
+    { "file": "idle_puppy.png",    "frames": 1, "fps": 1 },
+    { "file": "idle_juvenile.png", "frames": 1, "fps": 1 },
+    { "file": "idle_adult.png",    "frames": 1, "fps": 1 },
+    { "file": "idle_senior.png",   "frames": 1, "fps": 1 }
+  ]},
+  "walk": { "file": "walk.png", "frames": 4, "fps": 6 }
+}
+```
+
+Each entry is an ordinary animation spec and is checked as one, so a stage may
+be a single picture **or** an animation of its own. States mix freely: a pack
+may age its `idle` and not its `walk`, which is how most sheets come. At most
+`LifeStages.MAX_STAGES` (8) entries.
+
+`PetPack.sprite_for(state, age_days)` picks one, and `sprite_animations[state]`
+still holds the grown dog, so everything that only wants "the walk animation"
+reads it unchanged and never learns the pack ages. `PetView` rebuilds its
+`SpriteFrames` on the `Needs.aged` signal, and only when the stage index
+actually changes — a handful of times in a dog's life, costing one image read.
+
 **Valid state names** for both kinds: `idle`, `happy`, `sad`, `eat`, `play`, `walk`, `restless`, `sleep`.
 
 ### 5.2 Rendering both kinds in one layout
@@ -296,6 +322,49 @@ drawn at `display_height_px`, which is smaller than art of that size anyway.
 Only a run of numbered files can reach a count where even shrinking would not
 help; past about 680 frames the pack is refused in `PackInstall.check`, while
 the pictures are still on screen.
+
+### 5.8.1 Life cycles *(v1.41, at the owner's request)*
+
+A row of drawings may be one dog moving **or one dog growing up**, and
+`SheetLikeness` cannot tell them apart: a puppy and the senior it becomes are
+plainly the same animal in the same pose, so a life cycle passes the
+one-animal test with room to spare and would otherwise be installed as an
+animation of the dog ageing several times a second.
+
+**`SheetStages`** asks the question `SheetLikeness` cannot, on the two signals
+the owner named — the drawing grows, and the colour drains out of it. Either
+is enough on its own:
+
+- **Size.** The first cell is clearly the smallest and the row grows by at
+  least a third. This catches a row of standing dogs.
+- **Greying.** Saturation falls steadily from the first cell to the last and
+  never climbs back. This catches a row of *sleeping* dogs, which barely grow
+  at all — a curled puppy and a curled senior take up much the same room — and
+  it is what keeps the test off a walk cycle, whose colour wanders rather than
+  drains.
+
+A row that collapses in size anywhere is neither. Fewer than three drawings is
+left alone, because two could as easily be a two-frame blink. Asked **before**
+the animation question, since a life cycle would pass that one.
+
+**`LifeStages`** names them, and hangs them on LifeModel's four stages. The
+count decides the names, exactly as the owner set out — 3 → puppy, adult,
+senior; 4 → puppy, juvenile, adult, senior; 5 → puppy, juvenile, young adult,
+adult, senior, or puppy, juvenile, **older adult**, senior when the greying
+has already begun before the last drawing. Three and up always run from puppy
+to senior; two are only a puppy and a grown dog, because nothing has greyed.
+
+`LifeStages.index_for(age_days, count)` is how the app picks one. The dog's
+age is put on a 0–1 scale where each of LifeModel's four stages takes a
+quarter — piecewise, because a puppy lasts three dog-days and an adult thirty
+— and that scale is divided into however many drawings the pack has. Four
+drawings therefore line up with the four stages exactly, and any other number
+divides the same arc evenly. **This is the "divide them by life span" rule.**
+
+Each stage may itself be a single picture or a whole animation; the piece
+carries `stage`, `stage_index` and `stage_count`, and `PackBuilder` gathers the
+stages of one state into the `stages` list of 5.1. Detection is a reading like
+any other and the owner overrides it in the wizard.
 
 Nothing it decides is final. Every piece is shown to the owner with its frame
 count, which `SheetPlan.recount` will re-cut on demand.

@@ -2,6 +2,7 @@ DOGPET CHANGELOG
 ================
 
 TABLE OF CONTENTS
+  v1.41 - A dog that grows up, and a reader that can tell
   v1.40 - The old frame guesser goes, and the guide catches up
   v1.39 - A strip no graphics card will refuse, and a beagle
   v1.38 - The sheet reader: Add Art cuts up whatever you give it
@@ -46,6 +47,85 @@ TABLE OF CONTENTS
 
 
 ------------------------------------------------------------
+v1.41 - A dog that grows up, and a reader that can tell
+------------------------------------------------------------
+
+What
+  - SheetStages: a new reading that tells a row of one dog *moving* from a
+    row of one dog *growing up*. Asked before the animation question,
+    because a life cycle passes the one-animal test with room to spare.
+  - LifeStages: names however many ages a sheet turned out to hold, and
+    says which one a dog of a given age should be drawn as.
+  - pet.json gains an optional "stages" list per state, youngest first.
+    Each entry is an ordinary animation spec, so a stage may be a single
+    picture or an animation of its own, and a pack may age its idle while
+    leaving its walk alone.
+  - PetPack.sprite_for(state, age_days) picks one; sprite_animations still
+    holds the grown dog, so nothing that does not care about age changed.
+  - PetView redraws on the Needs.aged signal, and only when the stage
+    index actually moves.
+  - The wizard carries the stage through: the drawings of one row are all
+    offered the same job, PackInstall names the files idle_puppy.png and
+    the like, and PackBuilder gathers them into the stages list.
+  - A row of captions under a row of art is no longer read as an
+    animation of five pieces of lettering.
+  - tests/test_stages.gd, 65 checks. 1053 in all, across eleven suites.
+
+Why
+  - The sheet reader was confidently wrong on a whole class of art. Handed
+    Code_Generated_Image (39).png - four columns of puppy-to-senior, six
+    rows of poses - it called every row a four-frame animation. Installed,
+    that is a dog ageing and un-ageing four times a second, forever.
+  - SheetLikeness could never have caught it, and not by oversight: it
+    asks whether the cells are the same animal, and a puppy and the senior
+    it becomes are emphatically the same animal in the same pose. The
+    answer was right; it was the wrong question.
+  - The two signals are the owner's own: the drawing grows, and the colour
+    drains out of it. Both were needed. Four standing dogs grow plainly
+    and the size test finds them. Four *sleeping* dogs hardly grow at all,
+    because a curled puppy takes up much the same room as a curled senior,
+    and only the greying finds those - rows 5 and 6 of that sheet, which
+    the size test alone still read as animations.
+  - Greying stands on its own with no size test under it, which looks
+    lax and is not: there is no honest size test to apply when the
+    drawings are the same size, and what keeps it off an animation is that
+    the draining has to be steady and one-way across the whole row. A walk
+    cycle's colour wanders instead. Checked on 74 files of real art: 153
+    animations, 63 life-stage drawings, and not one of the Bull, Calf,
+    Chick, Lamb, Piglet, Rooster, Sheep, Turkey, bunny, panda, run or jump
+    animations misread as a life cycle.
+  - The lifespan division is the owner's rule too. The dog's age goes on a
+    0-1 scale where each of LifeModel's four stages takes a quarter, and
+    that scale is divided into however many drawings the pack has. Four
+    line up with the four stages exactly; three and five divide the same
+    arc their own way. Nothing about LifeModel changed.
+
+How
+  - SheetScan.open hands back the decoded picture beside the scan, because
+    the colour is wanted as well as the shape and decoding a sheet twice
+    to ask two questions about it would be waste.
+  - The colour average is read out of the byte buffer, not through
+    get_pixel. The first attempt used get_pixel and did not finish a
+    single sheet in seven minutes - the same trap SheetPaper and
+    SheetCutter already avoid, fallen into again.
+  - The caption fix was a simplification rather than an addition. Bands
+    thinner than 45% of the median were already dropped when a sheet had
+    three or more; the two-band case was simply exempt, so the lettering
+    under a life-cycle sheet survived as a row. Now every sheet with two
+    or more bands is held to the same bar.
+  - Installing is checked end to end rather than asserted: a real sheet
+    goes through SheetPlan, PackInstall.check, plan and write, and the
+    folder is loaded back as a PetPack, which reports four stages and
+    answers idle_puppy.png at nought dog-days and idle_senior.png at 500.
+  - Known debt: pet_pack.gd is 382 lines, past the ~300 the blueprint
+    asks for. It was 302 before this. The stage parsing is the natural
+    thing to lift out and should be, but not in the same change that
+    introduces the behaviour - test_packs and test_pets cover that file
+    more heavily than any other.
+
+
+------------------------------------------------------------
+
 v1.40 - The old frame guesser goes, and the guide catches up
 ------------------------------------------------------------
 

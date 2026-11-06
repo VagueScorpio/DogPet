@@ -58,14 +58,15 @@ static func read(paths: PackedStringArray) -> Dictionary:
 		pieces.append(_series_piece(series, scan))
 
 	for path in PackedStringArray(grouped["loose"]):
-		var scan: Dictionary = SheetScan.read(path)
+		var opened: Dictionary = SheetScan.open(path)
+		var scan: Dictionary = opened["scan"]
 		if not str(scan["problem"]).is_empty():
 			notes.append(str(scan["problem"]))
 			continue
 		if not SheetScan.has_ink(scan):
 			notes.append("%s looks blank." % path.get_file())
 			continue
-		pieces.append_array(_pieces_in(scan, notes))
+		pieces.append_array(_pieces_in(scan, opened["image"], notes))
 
 	return {"pieces": pieces, "notes": notes}
 
@@ -143,14 +144,16 @@ static func _starts_a_word(text: String, word: String) -> bool:
 
 # --- What is in one picture ----------------------------------------------
 
-static func _pieces_in(scan: Dictionary, notes: PackedStringArray) -> Array[Dictionary]:
+static func _pieces_in(
+	scan: Dictionary, image: Image, notes: PackedStringArray
+) -> Array[Dictionary]:
 	var bands: Array[Dictionary] = SheetBands.of_scan(scan, SheetGrid.of_scan(scan))
 	if bands.is_empty():
 		return [_whole_piece(scan)]
 
 	var pieces: Array[Dictionary] = []
 	for index in bands.size():
-		pieces.append_array(_row_pieces(scan, bands[index], index, bands.size()))
+		pieces.append_array(_row_pieces(scan, image, bands[index], index, bands.size()))
 	if pieces.size() > SheetLikeness.MAX_FRAMES:
 		notes.append(
 			"%s is cut into %d pieces. Give a job to the ones you want and leave the rest."
@@ -161,7 +164,7 @@ static func _pieces_in(scan: Dictionary, notes: PackedStringArray) -> Array[Dict
 
 # Judge one band: one animation, or that many separate pictures.
 static func _row_pieces(
-	scan: Dictionary, band: Dictionary, row: int, of_rows: int
+	scan: Dictionary, image: Image, band: Dictionary, row: int, of_rows: int
 ) -> Array[Dictionary]:
 	var keep: PackedInt32Array = SheetLikeness.without_outliers(scan, band["scan_rects"])
 	var rects: Array[Rect2i] = []
@@ -180,6 +183,16 @@ static func _row_pieces(
 	var file: String = str(scan["path"]).get_file()
 	var name: String = file.get_basename()
 	var where: String = "" if of_rows <= 1 else ", row %d" % (row + 1)
+
+	# Asked before the animation question, and it has to be: a puppy and the
+	# senior it grows into are the same animal in the same pose, so a life
+	# cycle passes the one-animal test with flying colours and would be
+	# installed as an animation of the dog ageing four times a second.
+	if image != null:
+		var ages: Dictionary = SheetStages.of_cells(scan, image, scan_rects, rects)
+		if bool(ages["is_stages"]):
+			return _stage_pieces(scan, rects, ages, name, file, where)
+
 	if rects.size() > 1 and SheetLikeness.one_animal(scan, scan_rects):
 		return [_piece(
 			"%s%s - %d frames, one animation" % [file, where, rects.size()],
@@ -199,6 +212,30 @@ static func _row_pieces(
 			],
 			scan, [rects[index]], false
 		))
+	return pieces
+
+
+# One piece per age, each a still picture of the dog at that point in its
+# life. They carry the stage they belong to, so the wizard can offer them as
+# a set rather than as four unrelated drawings the owner has to sort out.
+static func _stage_pieces(
+	scan: Dictionary, rects: Array[Rect2i], ages: Dictionary,
+	name: String, file: String, where: String
+) -> Array[Dictionary]:
+	var names: PackedStringArray = SheetStages.names_for(ages)
+	var pieces: Array[Dictionary] = []
+	for index in rects.size():
+		var stage: String = names[index] if index < names.size() else "stage_%d" % (index + 1)
+		var piece: Dictionary = _piece(
+			"%s%s - %s (%d of %d life stages)" % [
+				file, where, LifeStages.label_for(stage), index + 1, rects.size(),
+			],
+			"%s_%s" % [name, stage], scan, [rects[index]], false
+		)
+		piece["stage"] = stage
+		piece["stage_index"] = index
+		piece["stage_count"] = rects.size()
+		pieces.append(piece)
 	return pieces
 
 
@@ -253,6 +290,11 @@ static func _piece(
 		"animated": animated and rects.size() > 1,
 		"size": Vector2i(widest, tallest),
 		"state": state_for(str(scan["path"])),
+		# Filled in by _stage_pieces for a life-cycle row. Every piece
+		# carries them so nothing downstream has to check first.
+		"stage": "",
+		"stage_index": -1,
+		"stage_count": 0,
 		"cut": {
 			"paths": paths,
 			"rects": rects,

@@ -96,6 +96,10 @@ var _pictures: Array[Dictionary] = []
 ## What the sheet reader found in the chosen pictures, for a sprite pack.
 var _found: Array[Dictionary] = []
 
+## The job the youngest drawing of the current life cycle was given, so the
+## older ones can be offered the same one.
+var _last_staged_state: String = "idle"
+
 var _model: String = ""
 var _extras: PackedStringArray = []
 
@@ -279,11 +283,25 @@ func _suggest(
 	piece: Dictionary, index: int, states: PackedStringArray, taken: PackedStringArray
 ) -> int:
 	var wanted: String = str(piece["state"])
+	# The drawings of one life cycle are the same job at different ages, so
+	# they are meant to share a state rather than compete for it: the four
+	# sleeping dogs are all "sleep". Only the youngest claims the name, and
+	# the rest fall in behind it.
+	var staged: bool = not str(piece.get("stage", "")).is_empty()
+	if staged and int(piece.get("stage_index", -1)) > 0:
+		return maxi(0, states.find(_last_staged_state.capitalize()))
 	if not wanted.is_empty() and not taken.has(wanted):
 		taken.append(wanted)
+		_last_staged_state = wanted
 		return maxi(0, states.find(wanted.capitalize()))
 	if index == 0 and not taken.has("idle"):
 		taken.append("idle")
+		_last_staged_state = "idle"
+		return maxi(0, states.find("Idle"))
+	if staged:
+		# A life cycle whose state could not be read from the name still
+		# wants one job across all of its ages; idle is the safe one.
+		_last_staged_state = "idle"
 		return maxi(0, states.find("Idle"))
 	return 0
 
@@ -368,6 +386,10 @@ func _sheets() -> Array:
 		sheets.append({
 			"cut": piece["cut"],
 			"state": PetPack.VALID_STATES[job.selected - 1],
+			# Empty for ordinary art. When the sheet reader found a life
+			# cycle, this is which age the piece is, and PackBuilder gathers
+			# the ages of one state back into a "stages" list.
+			"stage": str(piece.get("stage", "")),
 			"frames": int(piece["frames"]),
 			"fps": float((picture["fps"] as SpinBox).value),
 		})

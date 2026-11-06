@@ -23,13 +23,27 @@ const MAX_SCAN_PIXELS := 2097152
 ## Measure a PNG. Returns a scan; read "problem" first, because everything
 ## else is empty when it is not.
 static func read(path: String) -> Dictionary:
+	return open(path)["scan"]
+
+
+## The same, handing back the decoded picture alongside the scan.
+##
+## SheetStages needs the colours as well as the shape - a life-cycle row is
+## told from an animation partly by the grey creeping into it - and decoding
+## a sheet twice to ask two questions about it would be wasteful. "image" is
+## null whenever "problem" is set.
+static func open(path: String) -> Dictionary:
 	var size: Vector2i = ImageLimits.png_size_from_header(path)
 	if ImageLimits.is_too_large(size):
-		return _nothing(path, ImageLimits.describe(path, size))
+		return {"scan": _nothing(path, ImageLimits.describe(path, size)), "image": null}
 	var image: Image = Image.load_from_file(path)
 	if image == null:
-		return _nothing(path, "%s is not a picture this app can read" % path.get_file())
-	return of_image(path, image)
+		return {
+			"scan": _nothing(path, "%s is not a picture this app can read" % path.get_file()),
+			"image": null,
+		}
+	image.convert(Image.FORMAT_RGBA8)
+	return {"scan": of_image(path, image), "image": image}
 
 
 ## The same, for an image already in hand. The tests use this; so does the

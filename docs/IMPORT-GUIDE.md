@@ -143,6 +143,47 @@ from the command line — `--grid` adds the measurements behind the answer, and
 godot --headless --path . --script res://tools/read_sheet.gd -- --in "sheet.png" --out "out" --grid
 ```
 
+#### A dog that grows up
+
+Some sheets hold the same dog at several ages — a puppy, a grown dog, an old
+grey one. The reader spots those and installs them as a **life cycle** rather
+than as an animation, which matters: read as an animation, your dog would
+flicker through its whole lifetime four times a second.
+
+It knows one from the other by the two things that actually differ. A life
+cycle **grows** — the puppy is plainly the smallest — and the **colour drains
+out of it** as the dog greys. An animation's frames are all one size and one
+palette, because they are one dog a tenth of a second apart. Either signal on
+its own is enough, which is what catches a row of *sleeping* dogs: a curled
+puppy is much the same size as a curled senior, but it is not the same colour.
+
+How many ages the sheet holds decides what they are called:
+
+| Drawings | Named |
+|---|---|
+| 2 | puppy, adult — nothing has greyed, so neither is a "senior" |
+| 3 | puppy, adult, senior |
+| 4 | puppy, juvenile, adult, senior |
+| 5 | puppy, juvenile, young adult, adult, senior — or **older adult** in place of young adult, when the greying starts before the last drawing |
+| 6–8 | the same, with more of the middle |
+
+Each piece appears in the list as *"Puppy (1 of 4 life stages)"*, and the ones
+from a single row are all offered the **same job**, because they are the same
+job at different ages. Give that row **Sleep** and you have given DogPet four
+sleeping dogs, one per age. Each age can be a still picture or an animation in
+its own right — a 4-frame puppy walk beside a 4-frame senior walk works fine.
+
+DogPet then draws whichever matches your dog's age, and swaps as it grows
+older. Your dog's whole life is divided evenly between the drawings you gave
+it, so four line up with DogPet's own Puppy / Young / Adult / Senior exactly,
+and three or five divide the same span their own way. A state you give only
+one picture for simply never changes.
+
+> A sheet that is a **grid** of ages across and poses down — four columns of
+> puppy-to-senior, six rows of sitting, sleeping, chewing — is read the way it
+> looks: each row becomes four life stages of one pose. Give each row its own
+> job and the whole sheet goes in at once.
+
 #### The one sheet it cannot read: a contact sheet
 
 A **contact sheet** — a page of poses with titles, grid rules and numbers

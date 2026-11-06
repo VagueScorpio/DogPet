@@ -89,10 +89,30 @@ static func _check_sprites(answers: Dictionary, problems: PackedStringArray) -> 
 		var state: String = str(sheet.get("state", ""))
 		if state.is_empty():
 			continue
-		if states.has(state):
-			problems.append("two pictures are both set to %s; pick one each" % state)
+		# A state may be given more than once when each one is a different
+		# life stage - that is the whole point of a life-cycle sheet - so
+		# what has to be unique is the pair, not the state.
+		var stage: String = str(sheet.get("stage", ""))
+		var slot: String = state if stage.is_empty() else "%s@%s" % [state, stage]
+		if states.has(slot):
+			problems.append(
+				"two pictures are both set to %s; pick one each" % state if stage.is_empty()
+				else "two pictures are both set to %s as a %s; pick one each" % [
+					state, LifeStages.label_for(stage),
+				]
+			)
 			continue
-		states.append(state)
+		if not stage.is_empty() and states.has(state):
+			problems.append(
+				"%s is set both with a life stage and without one; pick one way" % state
+			)
+			continue
+		if stage.is_empty() and _any_staged(states, state):
+			problems.append(
+				"%s is set both with a life stage and without one; pick one way" % state
+			)
+			continue
+		states.append(slot)
 
 		# A sheet the reader cut out has no one file behind it - it may be a
 		# row of a grid, or twenty numbered files - so what is checked is
@@ -125,7 +145,7 @@ static func _check_sprites(answers: Dictionary, problems: PackedStringArray) -> 
 			problems.append(trouble)
 	if states.is_empty():
 		problems.append("none of the pictures has been given a job yet")
-	elif not states.has("idle"):
+	elif not states.has("idle") and not _any_staged(states, "idle"):
 		# Without idle the dog has no art for standing still, which is most
 		# of its life. PetPack falls everything else back to idle.
 		problems.append("one of the pictures has to be the idle one")
@@ -189,7 +209,13 @@ static func plan(kind: int, answers: Dictionary, target: String) -> Dictionary:
 					# Named for the job rather than for where it came from:
 					# a pack whose files are idle.png and walk.png can be
 					# opened afterwards and understood without the manifest.
-					sheet["file"] = "%s.png" % state
+					# A state drawn at several ages puts the age in the name
+					# too, so idle_puppy.png sits beside idle_senior.png.
+					var stage: String = str(sheet.get("stage", ""))
+					sheet["file"] = (
+						"%s.png" % state if stage.is_empty()
+						else "%s_%s.png" % [state, stage]
+					)
 					sheet["frames"] = SheetCutter.frames_in(cut)
 					cuts[sheet["file"]] = cut
 					sheet.erase("cut")
@@ -272,3 +298,12 @@ static func _take(copies: Dictionary, source: String, keep_name: bool) -> String
 		attempt += 1
 	copies[name] = source
 	return name
+
+
+# Has this state been given at any life stage? The slots are "idle@puppy"
+# and the like, so a plain name match is not enough to find one.
+static func _any_staged(slots: PackedStringArray, state: String) -> bool:
+	for slot in slots:
+		if slot.begins_with("%s@" % state):
+			return true
+	return false

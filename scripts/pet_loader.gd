@@ -106,13 +106,22 @@ static func find_animation_player(root: Node) -> AnimationPlayer:
 ## Each sheet is one horizontal row of equal-width cells. The cells are not
 ## copied; each frame is an AtlasTexture pointing at a region of the one
 ## loaded image, so a four-frame walk costs one texture, not four.
-static func build_sprite_frames(pack: PetPack) -> SpriteFrames:
+## age_days picks between a pack's life-stage drawings. The default draws
+## the grown dog, which is what a pack with one drawing per state has
+## anyway; PetView passes the dog's real age and rebuilds when it changes
+## stage, which is rare enough to cost nothing.
+static func build_sprite_frames(pack: PetPack, age_days: float = -1.0) -> SpriteFrames:
 	var frames := SpriteFrames.new()
 	# SpriteFrames always starts with a "default" animation we do not want.
 	frames.remove_animation("default")
 
 	for state in pack.sprite_animations.keys():
-		var spec: Dictionary = pack.sprite_animations[state]
+		var spec: Dictionary = (
+			pack.sprite_animations[state] if age_days < 0.0
+			else pack.sprite_for(state, age_days)
+		)
+		if spec.is_empty():
+			continue
 		var texture: ImageTexture = load_texture(pack.dir.path_join(str(spec["file"])))
 		if texture == null:
 			Log.warn("Could not read %s for the %s animation." % [spec["file"], state])

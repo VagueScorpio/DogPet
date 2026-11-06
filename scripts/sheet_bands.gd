@@ -133,13 +133,18 @@ static func _from_ink(scan: Dictionary) -> Array[Dictionary]:
 # palette sheet, or the caption under one. Dropped, because kept it becomes
 # a four-frame animation of coloured dots.
 static func _without_thin_bands(bands: Array[Dictionary]) -> Array[Dictionary]:
-	if bands.size() < 3:
+	if bands.size() < 2:
 		return bands
 	var heights: PackedInt32Array = []
 	for band in bands:
 		heights.append(Rect2i(band["scan_rects"][0]).size.y)
 	var sorted: PackedInt32Array = heights.duplicate()
 	sorted.sort()
+	# With two bands the median is simply the taller of them, which is the
+	# comparison wanted anyway: a row of captions under a row of dogs is a
+	# third of its height or less. Held to the same bar as a sheet with
+	# three bands on it, rather than to a looser one, because a caption is a
+	# caption whether or not anything else was printed below it.
 	var middle: int = sorted[sorted.size() / 2]
 	var kept: Array[Dictionary] = []
 	for index in bands.size():

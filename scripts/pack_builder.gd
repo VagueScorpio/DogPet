@@ -161,18 +161,36 @@ static func model_pet_manifest(answers: Dictionary) -> Dictionary:
 
 
 ## The pet.json for a pet drawn as pictures.
+## A state given several sheets at different life stages becomes a "stages"
+## list, youngest first, instead of a single file. One sheet per state is
+## written exactly as it always was, so an ordinary pack's manifest does not
+## change shape at all.
 static func sprite_pet_manifest(answers: Dictionary) -> Dictionary:
 	var animations: Dictionary = {}
+	var staged: Dictionary = {}
 	for entry in answers.get("sheets", []):
 		var sheet: Dictionary = entry
 		var state: String = str(sheet.get("state", ""))
-		if state.is_empty() or animations.has(state):
+		if state.is_empty():
 			continue
-		animations[state] = {
+		var clip: Dictionary = {
 			"file": str(sheet.get("file", "")),
 			"frames": maxi(1, int(sheet.get("frames", 1))),
 			"fps": _rounded(float(sheet.get("fps", DEFAULT_FPS))),
 		}
+		var stage: String = str(sheet.get("stage", ""))
+		if stage.is_empty():
+			if not animations.has(state):
+				animations[state] = clip
+			continue
+		if not staged.has(state):
+			staged[state] = []
+		# The order the stages were found in is the order they are written
+		# in, which the sheet reader already put youngest first.
+		(staged[state] as Array).append(clip)
+
+	for state in staged:
+		animations[state] = {"stages": staged[state]}
 	var data: Dictionary = {
 		"format_version": 1,
 		"id": str(answers.get("id", "")),
